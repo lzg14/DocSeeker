@@ -64,17 +64,15 @@ function SearchPage(): JSX.Element {
       </div>
 
       <div className="search-content">
-        <div className="file-list-area">
+        <div className="file-list-wrapper">
           <FileList
             files={files}
             selectedFile={selectedFile}
             onSelectFile={setSelectedFile}
             formatSize={formatSize}
             hasSearched={hasSearched}
-            searchQuery={searchQuery}
           />
         </div>
-
         {selectedFile && (
           <div className="file-detail-area">
             <FileDetail file={selectedFile} formatSize={formatSize} />
@@ -82,12 +80,10 @@ function SearchPage(): JSX.Element {
         )}
       </div>
 
-      <div className="search-footer">
-        {hasSearched ? (
-          <span>搜索结果: {files.length} 个文件</span>
-        ) : (
-          <span>请输入关键词搜索文件</span>
-        )}
+      <div className="search-footer-bar">
+        {hasSearched
+          ? `找到 ${files.length} 个文件`
+          : '请输入关键词搜索'}
       </div>
     </div>
   )

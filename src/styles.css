@@ -1294,6 +1294,29 @@ body {
   word-break: break-all;
 }
 
+/* === 搜索页 === */
+.search-page {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+}
+
+.search-content {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+}
+
+.search-footer-bar {
+  padding: 8px 20px;
+  font-size: 11px;
+  color: var(--text-muted);
+  border-top: 1px solid var(--border);
+  flex-shrink: 0;
+  background: var(--bg-secondary);
+}
+
 .detail-card {
   background: var(--bg-primary);
   border: 1px solid var(--border);
