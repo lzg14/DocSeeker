@@ -1,13 +1,13 @@
-import initSqlJs, { Database as SqlJsDatabase } from 'sql.js'
+import Database, { Database as BetterSqlite3Database } from 'better-sqlite3'
 import { app } from 'electron'
 import path from 'path'
 import fs from 'fs'
 import log from 'electron-log/main'
 
-let db: SqlJsDatabase | null = null
+let db: BetterSqlite3Database | null = null
 let dbPath: string = ''
 
-export function getDatabase(): SqlJsDatabase {
+export function getDatabase(): BetterSqlite3Database {
   if (!db) {
     throw new Error('Database not initialized')
   }
@@ -18,17 +18,17 @@ export async function initDatabase(): Promise<void> {
   dbPath = path.join(app.getPath('userData'), 'file-manager.db')
   log.info('Database path:', dbPath)
 
-  const SQL = await initSqlJs()
-
   // Always start fresh - delete existing database (no migration needed)
   if (fs.existsSync(dbPath)) {
     fs.unlinkSync(dbPath)
     log.info('Old database deleted, creating fresh database')
   }
-  db = new SQL.Database()
+
+  db = new Database(dbPath)
+  db.pragma('journal_mode = WAL')
 
   // Create files table
-  db.run(`
+  db.exec(`
     CREATE TABLE IF NOT EXISTS files (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       path TEXT UNIQUE NOT NULL,
@@ -43,7 +43,7 @@ export async function initDatabase(): Promise<void> {
   `)
 
   // Create scanned_folders table
-  db.run(`
+  db.exec(`
     CREATE TABLE IF NOT EXISTS scanned_folders (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       path TEXT UNIQUE NOT NULL,
@@ -58,13 +58,13 @@ export async function initDatabase(): Promise<void> {
   `)
 
   // Create indexes
-  db.run(`CREATE INDEX IF NOT EXISTS idx_files_path ON files(path)`)
-  db.run(`CREATE INDEX IF NOT EXISTS idx_files_hash ON files(hash)`)
-  db.run(`CREATE INDEX IF NOT EXISTS idx_files_size ON files(size)`)
-  db.run(`CREATE INDEX IF NOT EXISTS idx_files_file_type ON files(file_type)`)
+  db.exec(`CREATE INDEX IF NOT EXISTS idx_files_path ON files(path)`)
+  db.exec(`CREATE INDEX IF NOT EXISTS idx_files_hash ON files(hash)`)
+  db.exec(`CREATE INDEX IF NOT EXISTS idx_files_size ON files(size)`)
+  db.exec(`CREATE INDEX IF NOT EXISTS idx_files_file_type ON files(file_type)`)
 
   // Create FTS5 virtual table (full-text search index)
-  db.run(`
+  db.exec(`
     CREATE VIRTUAL TABLE IF NOT EXISTS files_fts USING fts5(
       name,
       content,
@@ -76,7 +76,7 @@ export async function initDatabase(): Promise<void> {
   `)
 
   // Trigger: sync FTS on INSERT
-  db.run(`
+  db.exec(`
     CREATE TRIGGER IF NOT EXISTS files_ai AFTER INSERT ON files BEGIN
       INSERT INTO files_fts(rowid, name, content, file_type)
       VALUES (new.id, new.name, new.content, new.file_type);
@@ -84,7 +84,7 @@ export async function initDatabase(): Promise<void> {
   `)
 
   // Trigger: sync FTS on DELETE
-  db.run(`
+  db.exec(`
     CREATE TRIGGER IF NOT EXISTS files_ad AFTER DELETE ON files BEGIN
       INSERT INTO files_fts(files_fts, rowid, name, content, file_type)
       VALUES ('delete', old.id, old.name, old.content, old.file_type);
@@ -92,7 +92,7 @@ export async function initDatabase(): Promise<void> {
   `)
 
   // Trigger: sync FTS on UPDATE
-  db.run(`
+  db.exec(`
     CREATE TRIGGER IF NOT EXISTS files_au AFTER UPDATE ON files BEGIN
       INSERT INTO files_fts(files_fts, rowid, name, content, file_type)
       VALUES ('delete', old.id, old.name, old.content, old.file_type);
@@ -102,23 +102,15 @@ export async function initDatabase(): Promise<void> {
   `)
 
   // Rebuild FTS index to ensure existing data is indexed
-  db.run("INSERT INTO files_fts(files_fts) VALUES('rebuild')")
+  db.exec("INSERT INTO files_fts(files_fts) VALUES('rebuild')")
 
-  saveDatabase()
   log.info('Database tables created/verified')
 }
 
-export function saveDatabase(): void {
-  if (db && dbPath) {
-    const data = db.export()
-    const buffer = Buffer.from(data)
-    fs.writeFileSync(dbPath, buffer)
-  }
-}
+// better-sqlite3 auto-persists changes, no manual save needed
 
 export function closeDatabase(): void {
   if (db) {
-    saveDatabase()
     db.close()
     db = null
     log.info('Database closed')
@@ -143,12 +135,9 @@ export function insertFile(file: FileRecord): number {
     INSERT INTO files (path, name, size, hash, file_type, content)
     VALUES (?, ?, ?, ?, ?, ?)
   `)
-  stmt.run([file.path, file.name, file.size, file.hash, file.file_type, file.content])
+  const result = stmt.run([file.path, file.name, file.size, file.hash, file.file_type, file.content])
   stmt.free()
-
-  const result = getDatabase().exec('SELECT last_insert_rowid() as id')
-  saveDatabase()
-  return result[0]?.values[0]?.[0] as number || 0
+  return result.lastInsertRowid as number
 }
 
 export function updateFile(id: number, file: Partial<FileRecord>): void {
@@ -165,11 +154,9 @@ export function updateFile(id: number, file: Partial<FileRecord>): void {
   if (fields.length > 0) {
     fields.push("updated_at = datetime('now')")
     values.push(id)
-
     const stmt = getDatabase().prepare(`UPDATE files SET ${fields.join(', ')} WHERE id = ?`)
     stmt.run(values)
     stmt.free()
-    saveDatabase()
   }
 }
 
@@ -177,41 +164,27 @@ export function deleteFile(id: number): void {
   const stmt = getDatabase().prepare('DELETE FROM files WHERE id = ?')
   stmt.run([id])
   stmt.free()
-  saveDatabase()
 }
 
 export function deleteFileByPath(filePath: string): void {
   const stmt = getDatabase().prepare('DELETE FROM files WHERE path = ?')
   stmt.run([filePath])
   stmt.free()
-  saveDatabase()
 }
 
 export function getFileByPath(filePath: string): FileRecord | undefined {
   const stmt = getDatabase().prepare('SELECT * FROM files WHERE path = ?')
   stmt.bind([filePath])
-
-  if (stmt.step()) {
-    const row = stmt.getAsObject() as FileRecord
-    stmt.free()
-    return row
-  }
+  const row = stmt.getAsObject() as FileRecord | undefined
   stmt.free()
-  return undefined
+  return row
 }
 
 export function getAllFiles(): FileRecord[] {
-  const results = getDatabase().exec('SELECT * FROM files ORDER BY updated_at DESC')
-  if (results.length === 0) return []
-
-  const columns = results[0].columns
-  return results[0].values.map(row => {
-    const file: any = {}
-    columns.forEach((col, i) => {
-      file[col] = row[i]
-    })
-    return file as FileRecord
-  })
+  const stmt = getDatabase().prepare('SELECT * FROM files ORDER BY updated_at DESC')
+  const rows = stmt.all() as FileRecord[]
+  stmt.free()
+  return rows
 }
 
 export interface SearchOptions {
@@ -259,8 +232,7 @@ export function searchFiles(query: string, options?: SearchOptions): FileRecord[
   const filterWhere = filterClauses.length > 0 ? ' AND ' + filterClauses.join(' AND ') : ''
 
   const stmt = getDatabase().prepare(`
-    SELECT f.*,
-           bm25(files_fts) as rank
+    SELECT f.*, bm25(files_fts) as rank
     FROM files_fts fts
     JOIN files f ON fts.rowid = f.id
     WHERE files_fts MATCH ?
@@ -270,13 +242,9 @@ export function searchFiles(query: string, options?: SearchOptions): FileRecord[
   `)
 
   stmt.bind([ftsQuery, ...filterParams, limit])
-
-  const files: FileRecord[] = []
-  while (stmt.step()) {
-    files.push(stmt.getAsObject() as FileRecord)
-  }
+  const rows = stmt.all() as FileRecord[]
   stmt.free()
-  return files
+  return rows
 }
 
 export function getSearchSnippets(query: string, fileIds: number[]): Map<number, string> {
@@ -285,28 +253,41 @@ export function getSearchSnippets(query: string, fileIds: number[]): Map<number,
   }
 
   const keywords = query.trim().split(/\s+/).filter(k => k.length > 0)
-  const ftsQuery = keywords.map(k => `"${k.replace(/"/g, '""')}"*`).join(' AND ')
+  const snippets = new Map<number, string>()
 
   const placeholders = fileIds.map(() => '?').join(', ')
   const stmt = getDatabase().prepare(`
-    SELECT rowid, snippet(files_fts, 1, '<mark>', '</mark>', '...', 32) as snippet
-    FROM files_fts
-    WHERE files_fts MATCH ?
-    AND rowid IN (${placeholders})
+    SELECT id, content FROM files WHERE id IN (${placeholders}) AND content IS NOT NULL
   `)
-  stmt.bind([ftsQuery, ...fileIds])
+  stmt.bind(fileIds)
 
-  const snippets = new Map<number, string>()
-  while (stmt.step()) {
-    const row = stmt.getAsObject()
-    snippets.set(row.rowid as number, row.snippet as string)
-  }
+  const rows = stmt.all() as { id: number; content: string }[]
   stmt.free()
+
+  for (const row of rows) {
+    for (const keyword of keywords) {
+      const idx = row.content.toLowerCase().indexOf(keyword.toLowerCase())
+      if (idx !== -1) {
+        const start = Math.max(0, idx - 40)
+        const end = Math.min(row.content.length, idx + keyword.length + 60)
+        const snippet = (start > 0 ? '...' : '') +
+          row.content.slice(start, end).replace(/</g, '&lt;').replace(/>/g, '&gt;') +
+          (end < row.content.length ? '...' : '')
+        const highlighted = snippet.replace(
+          new RegExp(`(${keyword.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi'),
+          '<mark>$1</mark>'
+        )
+        snippets.set(row.id, highlighted)
+        break
+      }
+    }
+  }
+
   return snippets
 }
 
 export function findDuplicates(): FileRecord[][] {
-  const results = getDatabase().exec(`
+  const stmt = getDatabase().prepare(`
     SELECT f.* FROM files f
     WHERE f.hash IS NOT NULL
     AND f.size > 0
@@ -317,20 +298,11 @@ export function findDuplicates(): FileRecord[][] {
     )
     ORDER BY f.hash, f.size
   `)
-
-  if (results.length === 0) return []
-
-  const columns = results[0].columns
-  const allFiles = results[0].values.map(row => {
-    const file: any = {}
-    columns.forEach((col, i) => {
-      file[col] = row[i]
-    })
-    return file as FileRecord
-  })
+  const rows = stmt.all() as FileRecord[]
+  stmt.free()
 
   const grouped = new Map<string, FileRecord[]>()
-  for (const file of allFiles) {
+  for (const file of rows) {
     if (file.hash) {
       const existing = grouped.get(file.hash) || []
       existing.push(file)
@@ -342,42 +314,29 @@ export function findDuplicates(): FileRecord[][] {
 }
 
 export function getFilesBySizeGroup(): Map<number, FileRecord[]> {
-  const results = getDatabase().exec(`
-    SELECT * FROM files
-    WHERE size > 0
-    ORDER BY size
-  `)
+  const stmt = getDatabase().prepare('SELECT * FROM files WHERE size > 0 ORDER BY size')
+  const rows = stmt.all() as FileRecord[]
+  stmt.free()
 
   const grouped = new Map<number, FileRecord[]>()
-
-  if (results.length > 0) {
-    const columns = results[0].columns
-    const allFiles = results[0].values.map(row => {
-      const file: any = {}
-      columns.forEach((col, i) => {
-        file[col] = row[i]
-      })
-      return file as FileRecord
-    })
-
-    for (const file of allFiles) {
-      const existing = grouped.get(file.size) || []
-      existing.push(file)
-      grouped.set(file.size, existing)
-    }
+  for (const file of rows) {
+    const existing = grouped.get(file.size) || []
+    existing.push(file)
+    grouped.set(file.size, existing)
   }
 
   return grouped
 }
 
 export function clearAllFiles(): void {
-  getDatabase().run('DELETE FROM files')
-  saveDatabase()
+  getDatabase().exec('DELETE FROM files')
 }
 
 export function getFileCount(): number {
-  const result = getDatabase().exec('SELECT COUNT(*) as count FROM files')
-  return result[0]?.values[0]?.[0] as number || 0
+  const stmt = getDatabase().prepare('SELECT COUNT(*) as count FROM files')
+  const row = stmt.getAsObject() as { count: number }
+  stmt.free()
+  return row.count || 0
 }
 
 // Scanned folders operations
@@ -402,12 +361,9 @@ export function addScannedFolder(folder: ScannedFolder): number {
       file_count = excluded.file_count,
       total_size = excluded.total_size
   `)
-  stmt.run([folder.path, folder.name, folder.file_count || 0, folder.total_size || 0, folder.schedule_enabled || 0, folder.schedule_day || null, folder.schedule_time || null])
+  const result = stmt.run([folder.path, folder.name, folder.file_count || 0, folder.total_size || 0, folder.schedule_enabled || 0, folder.schedule_day || null, folder.schedule_time || null])
   stmt.free()
-
-  const result = getDatabase().exec('SELECT last_insert_rowid() as id')
-  saveDatabase()
-  return result[0]?.values[0]?.[0] as number || 0
+  return result.lastInsertRowid as number
 }
 
 export function updateScannedFolder(id: number, updates: Partial<ScannedFolder>): void {
@@ -427,7 +383,6 @@ export function updateScannedFolder(id: number, updates: Partial<ScannedFolder>)
     const stmt = getDatabase().prepare(`UPDATE scanned_folders SET ${fields.join(', ')} WHERE id = ?`)
     stmt.run(values)
     stmt.free()
-    saveDatabase()
   }
 }
 
@@ -437,95 +392,62 @@ export function updateFolderScanComplete(id: number, fileCount: number, totalSiz
   `)
   stmt.run([fileCount, totalSize, id])
   stmt.free()
-  saveDatabase()
 }
 
 export function getScannedFolderByPath(folderPath: string): ScannedFolder | undefined {
   const stmt = getDatabase().prepare('SELECT * FROM scanned_folders WHERE path = ?')
   stmt.bind([folderPath])
-
-  if (stmt.step()) {
-    const row = stmt.getAsObject() as ScannedFolder
-    stmt.free()
-    return row
-  }
+  const row = stmt.getAsObject() as ScannedFolder | undefined
   stmt.free()
-  return undefined
+  return row
 }
 
 export function getScannedFolderById(id: number): ScannedFolder | undefined {
   const stmt = getDatabase().prepare('SELECT * FROM scanned_folders WHERE id = ?')
   stmt.bind([id])
-
-  if (stmt.step()) {
-    const row = stmt.getAsObject() as ScannedFolder
-    stmt.free()
-    return row
-  }
+  const row = stmt.getAsObject() as ScannedFolder | undefined
   stmt.free()
-  return undefined
+  return row
 }
 
 export function getAllScannedFolders(): ScannedFolder[] {
-  const results = getDatabase().exec('SELECT * FROM scanned_folders ORDER BY last_scan_at DESC')
-  if (results.length === 0) return []
-
-  const columns = results[0].columns
-  return results[0].values.map(row => {
-    const folder: any = {}
-    columns.forEach((col, i) => {
-      folder[col] = row[i]
-    })
-    return folder as ScannedFolder
-  })
+  const stmt = getDatabase().prepare('SELECT * FROM scanned_folders ORDER BY last_scan_at DESC')
+  const rows = stmt.all() as ScannedFolder[]
+  stmt.free()
+  return rows
 }
 
 export function getScheduledFolders(): ScannedFolder[] {
-  const results = getDatabase().exec('SELECT * FROM scanned_folders WHERE schedule_enabled = 1 ORDER BY last_scan_at ASC')
-  if (results.length === 0) return []
-
-  const columns = results[0].columns
-  return results[0].values.map(row => {
-    const folder: any = {}
-    columns.forEach((col, i) => {
-      folder[col] = row[i]
-    })
-    return folder as ScannedFolder
-  })
+  const stmt = getDatabase().prepare('SELECT * FROM scanned_folders WHERE schedule_enabled = 1 ORDER BY last_scan_at ASC')
+  const rows = stmt.all() as ScannedFolder[]
+  stmt.free()
+  return rows
 }
 
 export function deleteScannedFolder(id: number): void {
   const stmt = getDatabase().prepare('DELETE FROM scanned_folders WHERE id = ?')
   stmt.run([id])
   stmt.free()
-  saveDatabase()
 }
 
 export function removeFilesByFolderPath(folderPath: string): void {
   const stmt = getDatabase().prepare("DELETE FROM files WHERE path LIKE ?")
   stmt.run([folderPath + '%'])
   stmt.free()
-  saveDatabase()
 }
 
 export function getFileCountByFolder(folderPath: string): number {
   const stmt = getDatabase().prepare("SELECT COUNT(*) as count FROM files WHERE path LIKE ?")
   stmt.bind([folderPath + '%'])
-  let count = 0
-  if (stmt.step()) {
-    count = stmt.getAsObject().count as number || 0
-  }
+  const row = stmt.getAsObject() as { count: number }
   stmt.free()
-  return count
+  return row.count || 0
 }
 
 export function getTotalSizeByFolder(folderPath: string): number {
   const stmt = getDatabase().prepare("SELECT SUM(size) as total FROM files WHERE path LIKE ?")
   stmt.bind([folderPath + '%'])
-  let total = 0
-  if (stmt.step()) {
-    total = stmt.getAsObject().total as number || 0
-  }
+  const row = stmt.getAsObject() as { total: number | null }
   stmt.free()
-  return total
+  return row.total || 0
 }
