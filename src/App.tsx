@@ -1,10 +1,15 @@
 import { useState } from 'react'
 import { PageTab } from './types'
 import { AppProvider } from './context/AppContext'
-import TabNav from './components/TabNav'
+import TitleBar from './components/TitleBar'
+import SideNav from './components/SideNav'
+import StatusBar from './components/StatusBar'
 import ConfigPage from './pages/ConfigPage'
 import ScanPage from './pages/ScanPage'
 import SearchPage from './pages/SearchPage'
+import LanguagePage from './pages/LanguagePage'
+import GuidePage from './pages/GuidePage'
+import AboutPage from './pages/AboutPage'
 
 function App(): JSX.Element {
   const [activeTab, setActiveTab] = useState<PageTab>('search')
@@ -17,6 +22,12 @@ function App(): JSX.Element {
         return <ScanPage />
       case 'search':
         return <SearchPage />
+      case 'language':
+        return <LanguagePage />
+      case 'guide':
+        return <GuidePage />
+      case 'about':
+        return <AboutPage />
       default:
         return <SearchPage />
     }
@@ -25,19 +36,14 @@ function App(): JSX.Element {
   return (
     <AppProvider>
       <div className="app">
-        <header className="header">
-          <h1>DocSeeker - 个人文档搜索工具</h1>
-        </header>
-
-        <TabNav activeTab={activeTab} onTabChange={setActiveTab} />
-
-        <main className="main-content">
-          {renderPage()}
-        </main>
-
-        <footer className="footer">
-          <span>DocSeeker - 个人长期积累文档的搜索工具</span>
-        </footer>
+        <TitleBar />
+        <div className="main-layout">
+          <SideNav activeTab={activeTab} onTabChange={setActiveTab} />
+          <main className="main-content">
+            {renderPage()}
+          </main>
+        </div>
+        <StatusBar />
       </div>
     </AppProvider>
   )
