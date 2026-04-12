@@ -30,7 +30,8 @@ function createWindow(): void {
     minWidth: 900,
     minHeight: 600,
     show: false,
-    autoHideMenuBar: false,
+    autoHideMenuBar: true,
+    frame: false,
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),
       sandbox: false,
@@ -42,6 +43,14 @@ function createWindow(): void {
   mainWindow.on('ready-to-show', () => {
     mainWindow?.show()
     log.info('Main window ready to show')
+  })
+
+  mainWindow.on('maximize', () => {
+    mainWindow?.webContents.send('window-maximized-changed', true)
+  })
+
+  mainWindow.on('unmaximize', () => {
+    mainWindow?.webContents.send('window-maximized-changed', false)
   })
 
   mainWindow.webContents.setWindowOpenHandler((details) => {

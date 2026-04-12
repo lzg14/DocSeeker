@@ -1,4 +1,4 @@
-import { ipcMain, dialog, shell } from 'electron'
+import { ipcMain, dialog, shell, BrowserWindow } from 'electron'
 import log from 'electron-log/main'
 import { Worker } from 'worker_threads'
 import { join } from 'path'
@@ -461,6 +461,30 @@ export function registerIpcHandlers(): void {
         resolve({ success: false, filesProcessed: 0, errors: [(error as Error).message] })
       }
     })
+  })
+
+  ipcMain.handle('window-minimize', () => {
+    BrowserWindow.getFocusedWindow()?.minimize()
+  })
+
+  ipcMain.handle('window-maximize', () => {
+    const win = BrowserWindow.getFocusedWindow()
+    if (!win) return
+    if (win.isMaximized()) {
+      win.unmaximize()
+      win.webContents.send('window-maximized-changed', false)
+    } else {
+      win.maximize()
+      win.webContents.send('window-maximized-changed', true)
+    }
+  })
+
+  ipcMain.handle('window-close', () => {
+    BrowserWindow.getFocusedWindow()?.close()
+  })
+
+  ipcMain.handle('window-is-maximized', () => {
+    return BrowserWindow.getFocusedWindow()?.isMaximized() ?? false
   })
 
   log.info('All IPC handlers registered')

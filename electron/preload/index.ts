@@ -80,6 +80,11 @@ export interface ElectronAPI {
   isScanning: () => Promise<{ scanning: boolean; paused: boolean }>
   onScanPaused: (callback: (data: { paused: boolean }) => void) => () => void
   onScanCancelled: (callback: (data: { cancelled: boolean }) => void) => () => void
+  minimizeWindow: () => Promise<void>
+  maximizeWindow: () => Promise<void>
+  closeWindow: () => Promise<void>
+  isMaximized: () => Promise<boolean>
+  onWindowMaximized: (callback: (isMaximized: boolean) => void) => () => void
 }
 
 const electronAPI: ElectronAPI = {
@@ -168,6 +173,22 @@ const electronAPI: ElectronAPI = {
     ipcRenderer.on('scan-cancelled', handler)
     return () => {
       ipcRenderer.removeListener('scan-cancelled', handler)
+    }
+  },
+
+  minimizeWindow: () => ipcRenderer.invoke('window-minimize'),
+
+  maximizeWindow: () => ipcRenderer.invoke('window-maximize'),
+
+  closeWindow: () => ipcRenderer.invoke('window-close'),
+
+  isMaximized: () => ipcRenderer.invoke('window-is-maximized'),
+
+  onWindowMaximized: (callback) => {
+    const handler = (_: Electron.IpcRendererEvent, isMaximized: boolean) => callback(isMaximized)
+    ipcRenderer.on('window-maximized-changed', handler)
+    return () => {
+      ipcRenderer.removeListener('window-maximized-changed', handler)
     }
   }
 }
