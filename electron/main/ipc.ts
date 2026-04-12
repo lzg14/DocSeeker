@@ -81,17 +81,13 @@ export function registerIpcHandlers(): void {
           })
 
           currentWorker.on('message', (message) => {
-            if (isPaused) {
-              // Skip processing while paused
-              return
-            }
-
             switch (message.type) {
               case 'progress':
-                event.sender.send('scan-progress', { ...message.data, paused: isPaused })
+                if (!isPaused) {
+                  event.sender.send('scan-progress', { ...message.data, paused: isPaused })
+                }
                 break
               case 'batch': {
-                log.info(`IPC: received batch of ${message.data.length} files`)
                 // Process batch of files
                 const batch: FileRecord[] = []
                 for (const fileInfo of message.data) {
@@ -122,6 +118,13 @@ export function registerIpcHandlers(): void {
               }
               case 'complete':
                 log.info(`Scan complete: ${message.data.filesProcessed} files, cancelled: ${cancelled}`)
+                // 通知前端扫描完成，更新进度显示
+                event.sender.send('scan-progress', {
+                  current: message.data.filesProcessed,
+                  total: message.data.filesProcessed,
+                  currentFile: '扫描完成',
+                  phase: 'complete'
+                })
                 cleanupWorker()
                 resolve({ success: true, filesProcessed, errors, cancelled })
                 break
@@ -357,6 +360,12 @@ export function registerIpcHandlers(): void {
             }
             case 'complete':
               log.info(`Incremental scan complete: ${filesProcessed} files updated`)
+              event.sender.send('scan-progress', {
+                current: filesProcessed,
+                total: filesProcessed,
+                currentFile: '扫描完成',
+                phase: 'complete'
+              })
               resolve({ success: true, filesProcessed, skipped, errors })
               worker.terminate()
               break
@@ -425,6 +434,12 @@ export function registerIpcHandlers(): void {
             }
             case 'complete':
               log.info(`Full rescan complete: ${filesProcessed} files`)
+              event.sender.send('scan-progress', {
+                current: filesProcessed,
+                total: filesProcessed,
+                currentFile: '扫描完成',
+                phase: 'complete'
+              })
               resolve({ success: true, filesProcessed, errors })
               worker.terminate()
               break
