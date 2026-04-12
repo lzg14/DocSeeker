@@ -1,4 +1,3 @@
-import chokidar, { FSWatcher } from 'chokidar'
 import log from 'electron-log/main'
 import { getFileByPath, insertFile, deleteFileByPath, updateFile, getAllScannedFolders } from './database'
 import crypto from 'crypto'
@@ -20,6 +19,10 @@ const FILE_TYPE_MAP: Record<string, string> = {
   '.xls': 'xlsx', '.xlsx': 'xlsx',
   '.ppt': 'pptx', '.pptx': 'pptx',
   '.pdf': 'pdf'
+}
+
+type FSWatcher = {
+  close: () => Promise<void>
 }
 
 let watcher: FSWatcher | null = null
@@ -69,7 +72,7 @@ async function processFile(filePath: string): Promise<void> {
   }
 }
 
-export function startFileWatcher(): void {
+export async function startFileWatcher(): Promise<void> {
   const folders = getAllScannedFolders()
   if (folders.length === 0) {
     log.info('File watcher: no folders to watch')
@@ -77,6 +80,8 @@ export function startFileWatcher(): void {
   }
 
   const paths = folders.map(f => f.path)
+
+  const chokidar = await import('chokidar')
 
   watcher = chokidar.watch(paths, {
     persistent: true,
@@ -86,23 +91,23 @@ export function startFileWatcher(): void {
       stabilityThreshold: 2000,
       pollInterval: 100
     }
-  })
+  }) as unknown as FSWatcher
 
   watcher
-    .on('add', (filePath) => processFile(filePath))
-    .on('change', (filePath) => processFile(filePath))
-    .on('unlink', (filePath) => {
+    .on('add', (filePath: string) => processFile(filePath))
+    .on('change', (filePath: string) => processFile(filePath))
+    .on('unlink', (filePath: string) => {
       deleteFileByPath(filePath)
       log.info(`File watcher: removed ${filePath} from index`)
     })
-    .on('error', (error) => log.error('File watcher error:', error))
+    .on('error', (error: Error) => log.error('File watcher error:', error))
 
   log.info(`File watcher started for ${paths.length} folders`)
 }
 
-export function stopFileWatcher(): void {
+export async function stopFileWatcher(): Promise<void> {
   if (watcher) {
-    watcher.close()
+    await watcher.close()
     watcher = null
     log.info('File watcher stopped')
   }

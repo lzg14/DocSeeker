@@ -66,7 +66,7 @@ app.whenReady().then(async () => {
   // Initialize database
   try {
     await initDatabase()
-    startFileWatcher()
+    await startFileWatcher()
     log.info('Database initialized successfully')
   } catch (error) {
     log.error('Failed to initialize database:', error)
