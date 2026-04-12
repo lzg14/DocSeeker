@@ -136,7 +136,7 @@ export function insertFile(file: FileRecord): number {
     VALUES (?, ?, ?, ?, ?, ?)
   `)
   const result = stmt.run([file.path, file.name, file.size, file.hash, file.file_type, file.content])
-  stmt.free()
+  
   return result.lastInsertRowid as number
 }
 
@@ -156,34 +156,34 @@ export function updateFile(id: number, file: Partial<FileRecord>): void {
     values.push(id)
     const stmt = getDatabase().prepare(`UPDATE files SET ${fields.join(', ')} WHERE id = ?`)
     stmt.run(values)
-    stmt.free()
+    
   }
 }
 
 export function deleteFile(id: number): void {
   const stmt = getDatabase().prepare('DELETE FROM files WHERE id = ?')
   stmt.run([id])
-  stmt.free()
+  
 }
 
 export function deleteFileByPath(filePath: string): void {
   const stmt = getDatabase().prepare('DELETE FROM files WHERE path = ?')
   stmt.run([filePath])
-  stmt.free()
+  
 }
 
 export function getFileByPath(filePath: string): FileRecord | undefined {
   const stmt = getDatabase().prepare('SELECT * FROM files WHERE path = ?')
   stmt.bind([filePath])
   const row = stmt.getAsObject() as FileRecord | undefined
-  stmt.free()
+  
   return row
 }
 
 export function getAllFiles(): FileRecord[] {
   const stmt = getDatabase().prepare('SELECT * FROM files ORDER BY updated_at DESC')
   const rows = stmt.all() as FileRecord[]
-  stmt.free()
+  
   return rows
 }
 
@@ -243,7 +243,7 @@ export function searchFiles(query: string, options?: SearchOptions): FileRecord[
 
   stmt.bind([ftsQuery, ...filterParams, limit])
   const rows = stmt.all() as FileRecord[]
-  stmt.free()
+  
   return rows
 }
 
@@ -262,7 +262,7 @@ export function getSearchSnippets(query: string, fileIds: number[]): Map<number,
   stmt.bind(fileIds)
 
   const rows = stmt.all() as { id: number; content: string }[]
-  stmt.free()
+  
 
   for (const row of rows) {
     for (const keyword of keywords) {
@@ -299,7 +299,7 @@ export function findDuplicates(): FileRecord[][] {
     ORDER BY f.hash, f.size
   `)
   const rows = stmt.all() as FileRecord[]
-  stmt.free()
+  
 
   const grouped = new Map<string, FileRecord[]>()
   for (const file of rows) {
@@ -316,7 +316,7 @@ export function findDuplicates(): FileRecord[][] {
 export function getFilesBySizeGroup(): Map<number, FileRecord[]> {
   const stmt = getDatabase().prepare('SELECT * FROM files WHERE size > 0 ORDER BY size')
   const rows = stmt.all() as FileRecord[]
-  stmt.free()
+  
 
   const grouped = new Map<number, FileRecord[]>()
   for (const file of rows) {
@@ -335,7 +335,7 @@ export function clearAllFiles(): void {
 export function getFileCount(): number {
   const stmt = getDatabase().prepare('SELECT COUNT(*) as count FROM files')
   const row = stmt.getAsObject() as { count: number }
-  stmt.free()
+  
   return row.count || 0
 }
 
@@ -362,7 +362,7 @@ export function addScannedFolder(folder: ScannedFolder): number {
       total_size = excluded.total_size
   `)
   const result = stmt.run([folder.path, folder.name, folder.file_count || 0, folder.total_size || 0, folder.schedule_enabled || 0, folder.schedule_day || null, folder.schedule_time || null])
-  stmt.free()
+  
   return result.lastInsertRowid as number
 }
 
@@ -382,7 +382,7 @@ export function updateScannedFolder(id: number, updates: Partial<ScannedFolder>)
     values.push(id)
     const stmt = getDatabase().prepare(`UPDATE scanned_folders SET ${fields.join(', ')} WHERE id = ?`)
     stmt.run(values)
-    stmt.free()
+    
   }
 }
 
@@ -391,14 +391,14 @@ export function updateFolderScanComplete(id: number, fileCount: number, totalSiz
     UPDATE scanned_folders SET last_scan_at = datetime('now'), file_count = ?, total_size = ? WHERE id = ?
   `)
   stmt.run([fileCount, totalSize, id])
-  stmt.free()
+  
 }
 
 export function getScannedFolderByPath(folderPath: string): ScannedFolder | undefined {
   const stmt = getDatabase().prepare('SELECT * FROM scanned_folders WHERE path = ?')
   stmt.bind([folderPath])
   const row = stmt.getAsObject() as ScannedFolder | undefined
-  stmt.free()
+  
   return row
 }
 
@@ -406,41 +406,41 @@ export function getScannedFolderById(id: number): ScannedFolder | undefined {
   const stmt = getDatabase().prepare('SELECT * FROM scanned_folders WHERE id = ?')
   stmt.bind([id])
   const row = stmt.getAsObject() as ScannedFolder | undefined
-  stmt.free()
+  
   return row
 }
 
 export function getAllScannedFolders(): ScannedFolder[] {
   const stmt = getDatabase().prepare('SELECT * FROM scanned_folders ORDER BY last_scan_at DESC')
   const rows = stmt.all() as ScannedFolder[]
-  stmt.free()
+  
   return rows
 }
 
 export function getScheduledFolders(): ScannedFolder[] {
   const stmt = getDatabase().prepare('SELECT * FROM scanned_folders WHERE schedule_enabled = 1 ORDER BY last_scan_at ASC')
   const rows = stmt.all() as ScannedFolder[]
-  stmt.free()
+  
   return rows
 }
 
 export function deleteScannedFolder(id: number): void {
   const stmt = getDatabase().prepare('DELETE FROM scanned_folders WHERE id = ?')
   stmt.run([id])
-  stmt.free()
+  
 }
 
 export function removeFilesByFolderPath(folderPath: string): void {
   const stmt = getDatabase().prepare("DELETE FROM files WHERE path LIKE ?")
   stmt.run([folderPath + '%'])
-  stmt.free()
+  
 }
 
 export function getFileCountByFolder(folderPath: string): number {
   const stmt = getDatabase().prepare("SELECT COUNT(*) as count FROM files WHERE path LIKE ?")
   stmt.bind([folderPath + '%'])
   const row = stmt.getAsObject() as { count: number }
-  stmt.free()
+  
   return row.count || 0
 }
 
@@ -448,6 +448,6 @@ export function getTotalSizeByFolder(folderPath: string): number {
   const stmt = getDatabase().prepare("SELECT SUM(size) as total FROM files WHERE path LIKE ?")
   stmt.bind([folderPath + '%'])
   const row = stmt.getAsObject() as { total: number | null }
-  stmt.free()
+  
   return row.total || 0
 }
