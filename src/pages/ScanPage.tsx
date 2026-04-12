@@ -74,10 +74,8 @@ function ScanPage(): JSX.Element {
   }
 
   return (
-    <div className="scan-page">
-      <div className="scan-header">
-        <h2>文件扫描</h2>
-      </div>
+    <div className="settings-page">
+      <h2 className="page-title">扫描管理</h2>
 
       <div className="scan-controls-section">
         <button

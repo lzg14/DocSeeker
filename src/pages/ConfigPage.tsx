@@ -194,11 +194,17 @@ function ConfigPage(): JSX.Element {
   }
 
   if (loading) {
-    return <div className="config-page"><div className="loading">加载中...</div></div>
+    return (
+      <div className="settings-page">
+        <h2 className="page-title">配置</h2>
+        <div className="loading">加载中...</div>
+      </div>
+    )
   }
 
   return (
-    <div className="config-page">
+    <div className="settings-page">
+      <h2 className="page-title">配置</h2>
       {/* 全局定时设置 */}
       <div className="schedule-global">
         <h3>定时增量扫描</h3>

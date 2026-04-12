@@ -227,12 +227,6 @@ body {
   justify-content: flex-end;
 }
 
-/* Main Content */
-.main-content {
-  display: flex;
-  flex: 1;
-  overflow: hidden;
-}
 
 /* File List */
 .file-list-container {
@@ -1404,9 +1398,9 @@ body {
 
 /* === 关于页 === */
 .settings-page {
-  padding: 20px;
-  flex: 1;
+  padding: 24px;
   overflow-y: auto;
+  height: 100%;
 }
 
 .page-title {
