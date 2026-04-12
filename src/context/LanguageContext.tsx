@@ -91,7 +91,7 @@ const translations: Record<Language, Record<string, string>> = {
     // Guide page
     'guide.title': '使用说明',
     'guide.intro': '功能介绍',
-    'guide.introDesc': 'DocSeeker 是一款高效的本地文档搜索工具，支持全文搜索和定时扫描功能。',
+    'guide.introDesc': 'DocSeeker 是一款高效的本地文档搜索工具，支持全文检索和定时扫描。',
     'guide.features': '主要功能',
     'guide.feature1': '全文搜索：支持搜索文件名和文件内容（docx、xlsx、pdf、txt 等格式）',
     'guide.feature2': '定时扫描：可配置定时任务，自动增量扫描指定文件夹',
@@ -111,7 +111,7 @@ const translations: Record<Language, Record<string, string>> = {
     // About page
     'about.title': '关于 DocSeeker',
     'about.version': '版本 1.0.0',
-    'about.desc': '个人长期积累文档的搜索工具，支持全文搜索、定时扫描、重复文件检测等功能。',
+    'about.desc': '面向个人的本地文档搜索工具，支持全文检索、定时扫描和重复文件检测。',
     'about.contact': '联系方式',
     'about.email': '电子邮件',
     'about.emailAddr': 'docseeker@example.com',
