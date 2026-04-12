@@ -2,6 +2,7 @@ import { useState, useCallback } from 'react'
 import FileList from '../components/FileList'
 import FileDetail from '../components/FileDetail'
 import { FileRecord } from '../types'
+import { useLanguage } from '../context/LanguageContext'
 
 function SearchPage(): JSX.Element {
   const [files, setFiles] = useState<FileRecord[]>([])
@@ -9,6 +10,7 @@ function SearchPage(): JSX.Element {
   const [searchQuery, setSearchQuery] = useState('')
   const [hasSearched, setHasSearched] = useState(false)
   const [isSearching, setIsSearching] = useState(false)
+  const { t } = useLanguage()
 
   const handleSearch = useCallback(async () => {
     if (!searchQuery.trim()) {
@@ -48,7 +50,7 @@ function SearchPage(): JSX.Element {
         <div className="search-box-wrapper">
           <input
             type="text"
-            placeholder="输入关键词搜索文件名或内容..."
+            placeholder={t('search.placeholder')}
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             onKeyDown={handleKeyDown}
@@ -58,7 +60,7 @@ function SearchPage(): JSX.Element {
             onClick={handleSearch}
             disabled={isSearching}
           >
-            {isSearching ? '搜索中...' : '搜索'}
+            {isSearching ? t('search.searching') : t('search.btn')}
           </button>
         </div>
       </div>
@@ -82,8 +84,8 @@ function SearchPage(): JSX.Element {
 
       <div className="search-footer-bar">
         {hasSearched
-          ? `找到 ${files.length} 个文件`
-          : '请输入关键词搜索'}
+          ? t('search.result').replace('{count}', files.length.toString())
+          : t('search.noQueryHint')}
       </div>
     </div>
   )

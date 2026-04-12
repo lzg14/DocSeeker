@@ -1,16 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { ScannedFolder } from '../types'
 import { useAppContext } from '../context/AppContext'
-
-const WEEKDAYS = [
-  { value: 'monday', label: '周一' },
-  { value: 'tuesday', label: '周二' },
-  { value: 'wednesday', label: '周三' },
-  { value: 'thursday', label: '周四' },
-  { value: 'friday', label: '周五' },
-  { value: 'saturday', label: '周六' },
-  { value: 'sunday', label: '周日' }
-]
+import { useLanguage } from '../context/LanguageContext'
 
 const TIME_OPTIONS = Array.from({ length: 24 }, (_, i) =>
   `${i.toString().padStart(2, '0')}:00`
@@ -32,6 +23,17 @@ function ConfigPage(): JSX.Element {
     time: '09:00'
   })
   const { refreshKey, isScanning } = useAppContext()
+  const { t } = useLanguage()
+
+  const WEEKDAYS = [
+    { value: 'monday', label: t('weekday.monday') },
+    { value: 'tuesday', label: t('weekday.tuesday') },
+    { value: 'wednesday', label: t('weekday.wednesday') },
+    { value: 'thursday', label: t('weekday.thursday') },
+    { value: 'friday', label: t('weekday.friday') },
+    { value: 'saturday', label: t('weekday.saturday') },
+    { value: 'sunday', label: t('weekday.sunday') }
+  ]
 
   const loadFolders = useCallback(async () => {
     try {
@@ -59,7 +61,7 @@ function ConfigPage(): JSX.Element {
   }, [loadFolders, refreshKey])
 
   const formatDate = (dateStr?: string): string => {
-    if (!dateStr) return '从未'
+    if (!dateStr) return t('config.never')
     const date = new Date(dateStr)
     return date.toLocaleString('zh-CN', {
       year: 'numeric',
@@ -173,7 +175,8 @@ function ConfigPage(): JSX.Element {
   }
 
   const handleDelete = async (folder: ScannedFolder) => {
-    if (!confirm(`确定要删除 "${folder.name}" 的扫描记录吗？这不会删除实际文件。`)) {
+    const msg = t('config.deleteConfirm').replace('{name}', folder.name)
+    if (!confirm(msg)) {
       return
     }
     try {
@@ -185,7 +188,7 @@ function ConfigPage(): JSX.Element {
   }
 
   const handleScanAll = async () => {
-    if (!confirm('确定要对所有目录进行增量扫描吗？')) {
+    if (!confirm(t('config.scanAllConfirm'))) {
       return
     }
     for (const folder of folders) {
@@ -196,18 +199,18 @@ function ConfigPage(): JSX.Element {
   if (loading) {
     return (
       <div className="settings-page">
-        <h2 className="page-title">配置</h2>
-        <div className="loading">加载中...</div>
+        <h2 className="page-title">{t('config.title')}</h2>
+        <div className="loading">{t('config.loading')}</div>
       </div>
     )
   }
 
   return (
     <div className="settings-page">
-      <h2 className="page-title">配置</h2>
+      <h2 className="page-title">{t('config.title')}</h2>
       {/* 全局定时设置 */}
       <div className="schedule-global">
-        <h3>定时增量扫描</h3>
+        <h3>{t('config.schedule')}</h3>
         <div className="schedule-controls">
           <label className="checkbox-label">
             <input
@@ -216,7 +219,7 @@ function ConfigPage(): JSX.Element {
               onChange={(e) => handleScheduleChange(e.target.checked)}
               disabled={isScanning || folders.length === 0}
             />
-            启用定时扫描
+            {t('config.scheduleEnable')}
           </label>
 
           {scheduleConfig.enabled && (
@@ -246,30 +249,30 @@ function ConfigPage(): JSX.Element {
 
       {/* 文件夹列表 */}
       <div className="config-header">
-        <h2>扫描目录</h2>
+        <h2>{t('config.scanDirs')}</h2>
         <div className="config-header-actions">
-          <span className="folder-count">{folders.length} 个目录</span>
+          <span className="folder-count">{t('config.dirCount').replace('{count}', folders.length.toString())}</span>
           <button
-            className="btn btn-sm btn-secondary"
+            className="detail-btn-secondary"
             onClick={handleScanAll}
             disabled={isScanning || folders.length === 0}
           >
-            扫描全部
+            {t('config.scanAll')}
           </button>
           <button
-            className="btn btn-sm btn-primary"
+            className="search-btn"
             onClick={handleAddFolder}
             disabled={isScanning}
           >
-            添加目录
+            {t('config.addDir')}
           </button>
         </div>
       </div>
 
       {folders.length === 0 ? (
         <div className="empty-state">
-          <p>还没有配置任何扫描目录</p>
-          <p>点击「添加目录」开始配置</p>
+          <p>{t('config.noFolders')}</p>
+          <p>{t('config.addHint')}</p>
         </div>
       ) : (
         <div className="folder-list">
@@ -287,7 +290,7 @@ function ConfigPage(): JSX.Element {
                   <span className="folder-path" title={folder.path}>{folder.path}</span>
                 </div>
                 <div className="folder-meta">
-                  <span className="file-count">{folder.file_count || 0} 个文件</span>
+                  <span className="file-count">{folder.file_count || 0} {t('config.files')}</span>
                   <span className="last-scan">{formatDate(folder.last_scan_at)}</span>
                 </div>
               </div>
@@ -295,31 +298,31 @@ function ConfigPage(): JSX.Element {
               {expandedId === folder.id && (
                 <div className="folder-details">
                   <div className="detail-row">
-                    <span>总大小:</span>
+                    <span>{t('config.totalSize')}</span>
                     <span>{formatSize(folder.total_size)}</span>
                   </div>
 
                   <div className="action-buttons">
                     <button
-                      className="btn btn-sm btn-secondary"
+                      className="detail-btn-secondary"
                       onClick={() => handleIncrementalScan(folder)}
                       disabled={isScanning}
                     >
-                      增量扫描
+                      {t('config.incrementalScan')}
                     </button>
                     <button
-                      className="btn btn-sm btn-secondary"
+                      className="detail-btn-secondary"
                       onClick={() => handleFullRescan(folder)}
                       disabled={isScanning}
                     >
-                      完整扫描
+                      {t('config.fullScan')}
                     </button>
                     <button
-                      className="btn btn-sm btn-danger"
+                      className="detail-btn-secondary"
                       onClick={() => handleDelete(folder)}
                       disabled={isScanning}
                     >
-                      删除
+                      {t('config.delete')}
                     </button>
                   </div>
                 </div>

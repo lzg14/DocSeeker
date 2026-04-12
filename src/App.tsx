@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { PageTab } from './types'
 import { AppProvider } from './context/AppContext'
+import { LanguageProvider } from './context/LanguageContext'
 import TitleBar from './components/TitleBar'
 import SideNav from './components/SideNav'
 import StatusBar from './components/StatusBar'
@@ -35,16 +36,18 @@ function App(): JSX.Element {
 
   return (
     <AppProvider>
-      <div className="app">
-        <TitleBar />
-        <div className="main-layout">
-          <SideNav activeTab={activeTab} onTabChange={setActiveTab} />
-          <main className="main-content">
-            {renderPage()}
-          </main>
+      <LanguageProvider>
+        <div className="app">
+          <TitleBar />
+          <div className="main-layout">
+            <SideNav activeTab={activeTab} onTabChange={setActiveTab} />
+            <main className="main-content">
+              {renderPage()}
+            </main>
+          </div>
+          <StatusBar />
         </div>
-        <StatusBar />
-      </div>
+      </LanguageProvider>
     </AppProvider>
   )
 }

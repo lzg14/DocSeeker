@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useAppContext } from '../context/AppContext'
+import { useLanguage } from '../context/LanguageContext'
 
 function ScanPage(): JSX.Element {
   const {
@@ -11,6 +12,7 @@ function ScanPage(): JSX.Element {
     cancelScan,
     triggerRefresh
   } = useAppContext()
+  const { t } = useLanguage()
   const [lastResult, setLastResult] = useState<{ filesProcessed: number; errors: number } | null>(null)
 
   // 扫描完成时保留结果
@@ -52,38 +54,27 @@ function ScanPage(): JSX.Element {
   }
 
   const handleCancel = async (): Promise<void> => {
-    if (!confirm('确定要取消扫描吗？')) {
+    if (!confirm(t('scan.cancelConfirm'))) {
       return
     }
     await cancelScan()
   }
 
   const getPhaseText = (phase: string): string => {
-    switch (phase) {
-      case 'scanning':
-        return '扫描文件'
-      case 'indexing':
-        return '建立索引'
-      case 'hashing':
-        return '计算哈希'
-      case 'complete':
-        return '完成'
-      default:
-        return '处理中'
-    }
+    return t(`scan.phase.${phase}` as any) || t('scan.phase.processing')
   }
 
   return (
     <div className="settings-page">
-      <h2 className="page-title">扫描管理</h2>
+      <h2 className="page-title">{t('scan.title')}</h2>
 
       <div className="scan-controls-section">
         <button
-          className="btn btn-primary btn-large"
+          className="search-btn"
           onClick={handleSelectDirectory}
           disabled={isScanning}
         >
-          {isScanning ? '扫描中...' : '选择目录并扫描'}
+          {isScanning ? t('scan.scanning') : t('scan.selectDir')}
         </button>
       </div>
 
@@ -94,14 +85,14 @@ function ScanPage(): JSX.Element {
             <span className="file-count">
               {scanProgress.total > 0
                 ? `${scanProgress.current} / ${scanProgress.total}`
-                : '准备中...'}
+                : t('scan.preparing')}
             </span>
           </div>
 
           <div className="current-file">
-            <span className="label">当前文件:</span>
+            <span className="label">{t('scan.currentFile')}</span>
             <span className="path" title={scanProgress.currentFile}>
-              {scanProgress.currentFile || '准备中...'}
+              {scanProgress.currentFile || t('scan.preparing')}
             </span>
           </div>
 
@@ -119,16 +110,16 @@ function ScanPage(): JSX.Element {
           {scanProgress.phase !== 'complete' && (
             <div className="scan-action-buttons">
               <button
-                className={`btn ${isPaused ? 'btn-primary' : 'btn-secondary'}`}
+                className="detail-btn-secondary"
                 onClick={handlePauseResume}
               >
-                {isPaused ? '继续' : '暂停'}
+                {isPaused ? t('scan.resume') : t('scan.pause')}
               </button>
               <button
-                className="btn btn-danger"
+                className="detail-btn-secondary"
                 onClick={handleCancel}
               >
-                取消
+                {t('scan.cancel')}
               </button>
             </div>
           )}
@@ -139,17 +130,17 @@ function ScanPage(): JSX.Element {
         <div className="scan-tips">
           {lastResult ? (
             <div className="scan-complete-info">
-              <p>扫描完成，共处理 <strong>{lastResult.filesProcessed}</strong> 个文件</p>
-              <p>数据已保存到数据库，可在「搜索」页面进行搜索</p>
+              <p>{t('scan.complete').replace('{count}', lastResult.filesProcessed.toString())}</p>
+              <p>{t('scan.completeHint')}</p>
             </div>
           ) : (
             <div>
-              <h3>使用说明</h3>
+              <h3>{t('scan.tips.title')}</h3>
               <ul>
-                <li>点击「选择目录并扫描」按钮，选择要扫描的文件夹</li>
-                <li>扫描完成后，数据会自动保存到数据库</li>
-                <li>可在「配置」页面管理已扫描的目录</li>
-                <li>可在「搜索」页面搜索已扫描的文件</li>
+                <li>{t('scan.tips.1')}</li>
+                <li>{t('scan.tips.2')}</li>
+                <li>{t('scan.tips.3')}</li>
+                <li>{t('scan.tips.4')}</li>
               </ul>
             </div>
           )}

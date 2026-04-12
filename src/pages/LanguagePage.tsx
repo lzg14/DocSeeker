@@ -1,14 +1,13 @@
 import { useState, useEffect } from 'react'
+import { useLanguage } from '../context/LanguageContext'
 
 function LanguagePage(): JSX.Element {
+  const { language, setLanguage, t } = useLanguage()
   const [theme, setTheme] = useState<'light' | 'dark'>('light')
-  const [language, setLanguage] = useState('zh-CN')
 
   useEffect(() => {
     const savedTheme = localStorage.getItem('theme') as 'light' | 'dark' | null
-    const savedLang = localStorage.getItem('language') as string | null
     if (savedTheme) setTheme(savedTheme)
-    if (savedLang) setLanguage(savedLang)
     document.documentElement.setAttribute('data-theme', savedTheme || 'light')
   }, [])
 
@@ -19,34 +18,34 @@ function LanguagePage(): JSX.Element {
   }
 
   const handleLanguageChange = (newLang: string) => {
-    setLanguage(newLang)
-    localStorage.setItem('language', newLang)
+    setLanguage(newLang as 'zh-CN' | 'en')
+    document.documentElement.setAttribute('lang', newLang)
   }
 
   return (
     <div className="settings-page">
-      <h2 className="page-title">语言与主题设置</h2>
+      <h2 className="page-title">{t('lang.title')}</h2>
 
       <div className="settings-section">
-        <div className="settings-section-title">主题</div>
+        <div className="settings-section-title">{t('lang.theme')}</div>
         <div className="settings-card">
           <div className="settings-row">
             <div className="settings-row-info">
-              <div className="settings-row-label">界面主题</div>
-              <div className="settings-row-desc">选择浅色或深色主题</div>
+              <div className="settings-row-label">{t('lang.themeLabel')}</div>
+              <div className="settings-row-desc">{t('lang.themeDesc')}</div>
             </div>
             <div className="theme-toggle">
               <button
                 className={`theme-btn ${theme === 'light' ? 'active' : ''}`}
                 onClick={() => handleThemeChange('light')}
               >
-                浅色
+                {t('lang.light')}
               </button>
               <button
                 className={`theme-btn ${theme === 'dark' ? 'active' : ''}`}
                 onClick={() => handleThemeChange('dark')}
               >
-                深色
+                {t('lang.dark')}
               </button>
             </div>
           </div>
@@ -54,12 +53,12 @@ function LanguagePage(): JSX.Element {
       </div>
 
       <div className="settings-section">
-        <div className="settings-section-title">语言</div>
+        <div className="settings-section-title">{t('lang.language')}</div>
         <div className="settings-card">
           <div className="settings-row">
             <div className="settings-row-info">
-              <div className="settings-row-label">界面语言</div>
-              <div className="settings-row-desc">选择应用界面显示的语言</div>
+              <div className="settings-row-label">{t('lang.languageLabel')}</div>
+              <div className="settings-row-desc">{t('lang.languageDesc')}</div>
             </div>
             <select
               className="settings-select"

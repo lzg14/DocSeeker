@@ -1,7 +1,9 @@
 import { useEffect, useState } from 'react'
+import { useLanguage } from '../context/LanguageContext'
 
 function StatusBar(): JSX.Element {
   const [fileCount, setFileCount] = useState<number | null>(null)
+  const { t } = useLanguage()
 
   useEffect(() => {
     // Try to get file count from preload API
@@ -18,7 +20,9 @@ function StatusBar(): JSX.Element {
     <div className="status-bar">
       <span>DocSeeker v1.0.0</span>
       <span>
-        {fileCount !== null ? `已索引 ${fileCount.toLocaleString()} 个文件` : '正在加载...'}
+        {fileCount !== null
+          ? t('status.indexed').replace('{count}', fileCount.toLocaleString())
+          : t('status.loading')}
       </span>
     </div>
   )
