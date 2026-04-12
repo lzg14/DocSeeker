@@ -9,17 +9,16 @@ function SearchPage(): JSX.Element {
   const [searchQuery, setSearchQuery] = useState('')
   const [hasSearched, setHasSearched] = useState(false)
   const [isSearching, setIsSearching] = useState(false)
-  const [selectedTypes, setSelectedTypes] = useState<string[]>([])
-  const [dateRange, setDateRange] = useState<{ from: string; to: string }>({ from: '', to: '' })
 
-  const searchFiles = useCallback(async (query: string) => {
+  const handleSearch = useCallback(async () => {
+    if (!searchQuery.trim()) {
+      setFiles([])
+      setHasSearched(false)
+      return
+    }
     setIsSearching(true)
     try {
-      const result = await window.electron.searchFiles(query, {
-        fileTypes: selectedTypes.length > 0 ? selectedTypes : undefined,
-        dateFrom: dateRange.from || undefined,
-        dateTo: dateRange.to || undefined,
-      })
+      const result = await window.electron.searchFiles(searchQuery)
       setFiles(result)
       setHasSearched(true)
     } catch (error) {
@@ -27,16 +26,7 @@ function SearchPage(): JSX.Element {
     } finally {
       setIsSearching(false)
     }
-  }, [selectedTypes, dateRange])
-
-  const handleSearch = (): void => {
-    if (searchQuery.trim()) {
-      searchFiles(searchQuery)
-    } else {
-      setFiles([])
-      setHasSearched(false)
-    }
-  }
+  }, [searchQuery])
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>): void => {
     if (e.key === 'Enter') {
@@ -69,55 +59,6 @@ function SearchPage(): JSX.Element {
             disabled={isSearching}
           >
             {isSearching ? '搜索中...' : '搜索'}
-          </button>
-        </div>
-
-        <div className="search-filters">
-          <div className="filter-group">
-            <label>文件类型:</label>
-            <div className="filter-checkboxes">
-              {['pdf', 'docx', 'xlsx', 'pptx', 'txt', 'md'].map(type => (
-                <label key={type} className="checkbox-label">
-                  <input
-                    type="checkbox"
-                    checked={selectedTypes.includes(type)}
-                    onChange={(e) => {
-                      if (e.target.checked) {
-                        setSelectedTypes([...selectedTypes, type])
-                      } else {
-                        setSelectedTypes(selectedTypes.filter(t => t !== type))
-                      }
-                    }}
-                  />
-                  {type.toUpperCase()}
-                </label>
-              ))}
-            </div>
-          </div>
-          <div className="filter-group">
-            <label>修改时间:</label>
-            <input
-              type="date"
-              value={dateRange.from}
-              onChange={(e) => setDateRange({ ...dateRange, from: e.target.value })}
-              placeholder="从"
-            />
-            <span>至</span>
-            <input
-              type="date"
-              value={dateRange.to}
-              onChange={(e) => setDateRange({ ...dateRange, to: e.target.value })}
-              placeholder="至"
-            />
-          </div>
-          <button
-            className="btn btn-small"
-            onClick={() => {
-              setSelectedTypes([])
-              setDateRange({ from: '', to: '' })
-            }}
-          >
-            清除筛选
           </button>
         </div>
       </div>

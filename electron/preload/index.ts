@@ -57,7 +57,7 @@ export interface ElectronAPI {
   scanDirectory: (dirPath: string) => Promise<ScanResult>
   onScanProgress: (callback: (progress: ScanProgress) => void) => () => void
   getAllFiles: () => Promise<FileRecord[]>
-  searchFiles: (query: string, options?: SearchOptions) => Promise<FileRecord[]>
+  searchFiles: (query: string) => Promise<FileRecord[]>
   deleteFile: (filePath: string) => Promise<boolean>
   getSearchSnippets: (query: string, fileIds: number[]) => Promise<Record<number, string>>
   findDuplicates: () => Promise<FileRecord[][]>
@@ -99,7 +99,7 @@ const electronAPI: ElectronAPI = {
 
   getAllFiles: () => ipcRenderer.invoke('get-all-files'),
 
-  searchFiles: (query: string, options?: SearchOptions) => ipcRenderer.invoke('search-files', query, options),
+  searchFiles: (query: string) => ipcRenderer.invoke('search-files', query),
 
   deleteFile: (filePath: string) => ipcRenderer.invoke('delete-file', filePath),
 

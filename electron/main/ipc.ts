@@ -193,8 +193,8 @@ export function registerIpcHandlers(): void {
   })
 
   // Search files
-  ipcMain.handle('search-files', async (_, query: string, options?: any): Promise<FileRecord[]> => {
-    return searchFiles(query, options)
+  ipcMain.handle('search-files', async (_, query: string): Promise<FileRecord[]> => {
+    return searchFiles(query)
   })
 
   // Get search snippets with highlighted keywords

@@ -187,14 +187,7 @@ export function getAllFiles(): FileRecord[] {
   return rows
 }
 
-export interface SearchOptions {
-  fileTypes?: string[]
-  dateFrom?: string
-  dateTo?: string
-  limit?: number
-}
-
-export function searchFiles(query: string, options?: SearchOptions): FileRecord[] {
+export function searchFiles(query: string): FileRecord[] {
   if (!query.trim()) {
     return []
   }
@@ -204,46 +197,21 @@ export function searchFiles(query: string, options?: SearchOptions): FileRecord[
     return []
   }
 
-  const limit = options?.limit ?? 200
-
   // Build FTS5 MATCH query (each keyword with AND, supports prefix search)
   const ftsQuery = keywords.map(k => `"${k.replace(/"/g, '""')}"*`).join(' AND ')
-
-  // Build filter conditions
-  const filterClauses: string[] = []
-  const filterParams: any[] = []
-
-  if (options?.fileTypes && options.fileTypes.length > 0) {
-    const placeholders = options.fileTypes.map(() => '?').join(', ')
-    filterClauses.push(`f.file_type IN (${placeholders})`)
-    filterParams.push(...options.fileTypes)
-  }
-
-  if (options?.dateFrom) {
-    filterClauses.push('f.updated_at >= ?')
-    filterParams.push(options.dateFrom)
-  }
-
-  if (options?.dateTo) {
-    filterClauses.push('f.updated_at <= ?')
-    filterParams.push(options.dateTo)
-  }
-
-  const filterWhere = filterClauses.length > 0 ? ' AND ' + filterClauses.join(' AND ') : ''
 
   const stmt = getDatabase().prepare(`
     SELECT f.*, bm25(files_fts) as rank
     FROM files_fts fts
     JOIN files f ON fts.rowid = f.id
     WHERE files_fts MATCH ?
-    ${filterWhere}
     ORDER BY rank
-    LIMIT ?
+    LIMIT 200
   `)
 
-  stmt.bind([ftsQuery, ...filterParams, limit])
+  stmt.bind([ftsQuery])
   const rows = stmt.all() as FileRecord[]
-  
+
   return rows
 }
 
