@@ -45,7 +45,7 @@ function SearchPage(): JSX.Element {
   return (
     <div className="search-page">
       <div className="search-header">
-        <div className="search-box">
+        <div className="search-box-wrapper">
           <input
             type="text"
             placeholder="输入关键词搜索文件名或内容..."
@@ -54,7 +54,7 @@ function SearchPage(): JSX.Element {
             onKeyDown={handleKeyDown}
           />
           <button
-            className="btn btn-primary search-btn"
+            className="search-btn"
             onClick={handleSearch}
             disabled={isSearching}
           >
