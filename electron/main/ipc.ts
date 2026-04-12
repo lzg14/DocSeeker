@@ -91,6 +91,7 @@ export function registerIpcHandlers(): void {
                 event.sender.send('scan-progress', { ...message.data, paused: isPaused })
                 break
               case 'batch': {
+                log.info(`IPC: received batch of ${message.data.length} files`)
                 // Process batch of files
                 const batch: FileRecord[] = []
                 for (const fileInfo of message.data) {

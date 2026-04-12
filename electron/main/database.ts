@@ -175,7 +175,7 @@ export function deleteFileByPath(filePath: string): void {
 export function getFileByPath(filePath: string): FileRecord | undefined {
   const stmt = getDatabase().prepare('SELECT * FROM files WHERE path = ?')
   stmt.bind([filePath])
-  const row = stmt.getAsObject() as FileRecord | undefined
+  const row = stmt.get() as FileRecord | undefined
   
   return row
 }
@@ -302,7 +302,7 @@ export function clearAllFiles(): void {
 
 export function getFileCount(): number {
   const stmt = getDatabase().prepare('SELECT COUNT(*) as count FROM files')
-  const row = stmt.getAsObject() as { count: number }
+  const row = stmt.get() as { count: number }
   
   return row.count || 0
 }
@@ -365,7 +365,7 @@ export function updateFolderScanComplete(id: number, fileCount: number, totalSiz
 export function getScannedFolderByPath(folderPath: string): ScannedFolder | undefined {
   const stmt = getDatabase().prepare('SELECT * FROM scanned_folders WHERE path = ?')
   stmt.bind([folderPath])
-  const row = stmt.getAsObject() as ScannedFolder | undefined
+  const row = stmt.get() as ScannedFolder | undefined
   
   return row
 }
@@ -373,7 +373,7 @@ export function getScannedFolderByPath(folderPath: string): ScannedFolder | unde
 export function getScannedFolderById(id: number): ScannedFolder | undefined {
   const stmt = getDatabase().prepare('SELECT * FROM scanned_folders WHERE id = ?')
   stmt.bind([id])
-  const row = stmt.getAsObject() as ScannedFolder | undefined
+  const row = stmt.get() as ScannedFolder | undefined
   
   return row
 }
@@ -407,7 +407,7 @@ export function removeFilesByFolderPath(folderPath: string): void {
 export function getFileCountByFolder(folderPath: string): number {
   const stmt = getDatabase().prepare("SELECT COUNT(*) as count FROM files WHERE path LIKE ?")
   stmt.bind([folderPath + '%'])
-  const row = stmt.getAsObject() as { count: number }
+  const row = stmt.get() as { count: number }
   
   return row.count || 0
 }
@@ -415,7 +415,7 @@ export function getFileCountByFolder(folderPath: string): number {
 export function getTotalSizeByFolder(folderPath: string): number {
   const stmt = getDatabase().prepare("SELECT SUM(size) as total FROM files WHERE path LIKE ?")
   stmt.bind([folderPath + '%'])
-  const row = stmt.getAsObject() as { total: number | null }
+  const row = stmt.get() as { total: number | null }
   
   return row.total || 0
 }

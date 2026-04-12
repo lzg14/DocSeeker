@@ -216,6 +216,9 @@ function getFileType(ext: string): string {
 async function runScan(): Promise<void> {
   const { dirPath, incremental, lastScanAt } = workerData as ScanWorkerData
 
+  // Debug: confirm worker is running
+  parentPort?.postMessage({ type: 'progress', data: { current: 0, total: 0, currentFile: 'Worker started', phase: 'scanning' } })
+
   const isIncremental = incremental === true && lastScanAt
   const lastScanTime = isIncremental ? new Date(lastScanAt!).getTime() : 0
 
