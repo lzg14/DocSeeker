@@ -792,6 +792,7 @@ body {
   font-size: 13px;
   cursor: pointer;
   transition: background-color 0.15s;
+  white-space: nowrap;
 }
 
 .search-btn:hover {
@@ -1052,6 +1053,7 @@ body {
   font-size: 13px;
   cursor: pointer;
   transition: background-color 0.15s;
+  white-space: nowrap;
 }
 
 .detail-btn-primary:hover {
@@ -1068,6 +1070,7 @@ body {
   font-size: 13px;
   cursor: pointer;
   transition: all 0.15s;
+  white-space: nowrap;
 }
 
 .detail-btn-secondary:hover {
@@ -1263,6 +1266,7 @@ body {
   color: var(--text-muted);
   cursor: pointer;
   transition: all 0.15s;
+  white-space: nowrap;
 }
 
 .theme-btn:first-child {
