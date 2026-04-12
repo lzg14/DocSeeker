@@ -30,3 +30,6 @@ package-lock.json
 
 # Skills lock
 skills-lock.json
+
+# Claude settings
+.claude/
