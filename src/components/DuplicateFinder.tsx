@@ -9,6 +9,27 @@ function DuplicateFinder({ formatSize }: DuplicateFinderProps): JSX.Element {
   const [duplicates, setDuplicates] = useState<FileRecord[][]>([])
   const [isLoading, setIsLoading] = useState(false)
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set())
+  const [confirmDelete, setConfirmDelete] = useState<string | null>(null)
+
+  const handleDeleteFile = async (filePath: string): Promise<void> => {
+    if (confirmDelete !== filePath) {
+      setConfirmDelete(filePath)
+      return
+    }
+    // Confirm delete
+    try {
+      const success = await window.electron.deleteFile(filePath)
+      if (success) {
+        setDuplicates(prev => prev.map(group =>
+          group.filter(f => f.path !== filePath)
+        ).filter(group => group.length > 1))
+      }
+    } catch (error) {
+      console.error('Failed to delete file:', error)
+    } finally {
+      setConfirmDelete(null)
+    }
+  }
 
   const loadDuplicates = useEffect(() => {
     const fetchDuplicates = async (): Promise<void> => {
@@ -106,6 +127,13 @@ function DuplicateFinder({ formatSize }: DuplicateFinderProps): JSX.Element {
                           onClick={() => handleOpenFile(file.path)}
                         >
                           打开
+                        </button>
+                        <button
+                          className={`btn btn-small ${confirmDelete === file.path ? 'btn-danger' : ''}`}
+                          onClick={() => handleDeleteFile(file.path)}
+                          onBlur={() => setConfirmDelete(null)}
+                        >
+                          {confirmDelete === file.path ? '确认删除' : '删除'}
                         </button>
                       </div>
                     </div>
