@@ -954,6 +954,62 @@ body {
   color: #666;
 }
 
+/* Search Filters */
+.search-filters {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 8px 20px;
+  flex-wrap: wrap;
+  border-bottom: 1px solid #eee;
+  background-color: #fafafa;
+}
+
+.filter-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.filter-group label {
+  font-size: 13px;
+  color: #666;
+  white-space: nowrap;
+}
+
+.filter-checkboxes {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.filter-group input[type="date"] {
+  padding: 4px 8px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 12px;
+}
+
+/* Search Snippets */
+.file-name-cell {
+  display: flex;
+  flex-direction: column;
+}
+
+.search-snippet {
+  font-size: 11px;
+  color: #888;
+  margin-top: 2px;
+  line-height: 1.4;
+}
+
+.search-snippet mark {
+  background: #fff3cd;
+  color: #856404;
+  padding: 0 2px;
+  border-radius: 2px;
+}
+
 /* ========== Responsive Adjustments ========== */
 @media (max-width: 768px) {
   .tab-btn {
