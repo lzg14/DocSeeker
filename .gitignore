@@ -33,3 +33,6 @@ skills-lock.json
 
 # Claude settings
 .claude/
+
+# Worktrees
+.worktrees/
