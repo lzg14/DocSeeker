@@ -1,9 +1,9 @@
 {
-  "name": "file-tool",
+  "name": "docseeker",
   "version": "1.0.0",
-  "description": "File management tool with full-text search",
+  "description": "Personal document search tool with full-text search and scheduled scanning",
   "main": "./out/main/index.js",
-  "author": "file-tool",
+  "author": "DocSeeker",
   "license": "MIT",
   "scripts": {
     "dev": "electron-vite dev",

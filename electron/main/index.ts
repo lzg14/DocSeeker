@@ -60,7 +60,7 @@ app.whenReady().then(async () => {
   log.info('App ready, initializing...')
 
   // Set app user model id for windows
-  electronApp.setAppUserModelId('com.file-tool.app')
+  electronApp.setAppUserModelId('com.docseeker.app')
 
   // Initialize database
   try {

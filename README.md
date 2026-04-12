@@ -1,6 +1,8 @@
-# FileTool - 文件管理工具
+# DocSeeker - 个人文档搜索工具
 
-一个基于 Electron + React + TypeScript 的桌面文件管理工具，支持文档扫描、全文搜索和定时增量扫描。
+一个基于 Electron + React + TypeScript 的桌面文档搜索工具，专为个人长期积累的文档设计，支持文档扫描、全文搜索和定时增量扫描。
+
+**定位**：帮助个人用户管理和搜索长期积累的各类文档（Word、Excel、PPT、PDF、TXT 等），通过定时增量扫描自动保持索引更新，随时快速找到需要的文件。
 
 ## 功能特性
 
@@ -63,7 +65,7 @@ npm run build
 ## 项目结构
 
 ```
-fileTool/
+docseeker/
 ├── src/                      # React 前端源码
 │   ├── components/           # React 组件
 │   ├── context/              # React Context (全局状态)

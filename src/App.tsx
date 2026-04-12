@@ -26,7 +26,7 @@ function App(): JSX.Element {
     <AppProvider>
       <div className="app">
         <header className="header">
-          <h1>FileTool - 文件管理工具</h1>
+          <h1>DocSeeker - 个人文档搜索工具</h1>
         </header>
 
         <TabNav activeTab={activeTab} onTabChange={setActiveTab} />
@@ -36,7 +36,7 @@ function App(): JSX.Element {
         </main>
 
         <footer className="footer">
-          <span>三个独立功能：配置 | 扫描 | 搜索</span>
+          <span>DocSeeker - 个人长期积累文档的搜索工具</span>
         </footer>
       </div>
     </AppProvider>

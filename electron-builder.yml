@@ -1,5 +1,5 @@
-appId: com.file-tool.app
-productName: FileTool
+appId: com.docseeker.app
+productName: DocSeeker
 directories:
   buildResources: build
   output: dist
@@ -16,7 +16,7 @@ asarUnpack:
   - resources/**
   - node_modules/better-sqlite3/**
 win:
-  executableName: FileTool
+  executableName: DocSeeker
   target:
     - target: nsis
       arch:
