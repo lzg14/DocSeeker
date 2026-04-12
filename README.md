@@ -68,13 +68,13 @@ fileTool/
 │   ├── components/           # React 组件
 │   ├── context/              # React Context (全局状态)
 │   ├── pages/                # 页面组件
-│   │   ├── ConfigPage.tsx   # 配置页面
+│   │   ├── ConfigPage.tsx    # 配置页面
 │   │   ├── ScanPage.tsx      # 扫描页面
 │   │   └── SearchPage.tsx    # 搜索页面
-│   ├── App.tsx               # 主应用组件
+│   ├── App.tsx                # 主应用组件
 │   ├── main.tsx              # React 入口
-│   ├── styles.css            # 全局样式
-│   └── types.ts              # TypeScript 类型定义
+│   ├── styles.css             # 全局样式
+│   └── types.ts               # TypeScript 类型定义
 ├── electron/                  # Electron 后端源码
 │   ├── main/                 # 主进程
 │   │   ├── index.ts          # 主进程入口
@@ -85,9 +85,32 @@ fileTool/
 │   │   └── scheduler.ts      # 定时扫描调度器
 │   └── preload/              # 预加载脚本
 │       └── index.ts          # API 桥接
-├── index.html                # HTML 入口
-├── package.json              # 项目配置
-└── tsconfig.json             # TypeScript 配置
+├── index.html                 # HTML 入口
+├── package.json              # 依赖管理 + 脚本命令
+├── tsconfig.json             # TypeScript 前端编译配置
+├── tsconfig.node.json        # TypeScript Node.js/Electron 配置
+├── electron.vite.config.ts   # Vite 构建配置
+└── electron-builder.yml      # 打包成 .exe 安装包的配置
+```
+
+## 配置文件说明
+
+| 文件 | 用途 |
+|------|------|
+| `package.json` | 依赖管理、脚本命令（`npm run dev`、`npm run build`） |
+| `tsconfig.json` | TypeScript 编译配置（编译 `src/` 目录的前端代码） |
+| `tsconfig.node.json` | TypeScript 配置（编译 `electron/` 目录的后端代码） |
+| `electron.vite.config.ts` | Vite 构建配置（前端构建工具的配置） |
+| `electron-builder.yml` | 打包配置（将项目打包成 Windows .exe 安装包） |
+| `.gitignore` | 指定哪些文件不提交到 Git（node_modules、dist 等） |
+
+### 常用命令
+
+```bash
+npm install        # 安装依赖（首次运行或拉取代码后）
+npm run dev        # 启动开发服务器
+npm run build      # 编译 TypeScript → JavaScript
+npm run dist       # 打包成 .exe 安装包（输出到 dist/ 目录）
 ```
 
 ## 使用说明
