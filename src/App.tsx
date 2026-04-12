@@ -5,8 +5,8 @@ import { LanguageProvider } from './context/LanguageContext'
 import TitleBar from './components/TitleBar'
 import SideNav from './components/SideNav'
 import StatusBar from './components/StatusBar'
-import ConfigPage from './pages/ConfigPage'
 import ScanPage from './pages/ScanPage'
+import SchedulePage from './pages/SchedulePage'
 import SearchPage from './pages/SearchPage'
 import LanguagePage from './pages/LanguagePage'
 import GuidePage from './pages/GuidePage'
@@ -17,17 +17,17 @@ function App(): JSX.Element {
 
   const renderPage = (): JSX.Element => {
     switch (activeTab) {
-      case 'config':
-        return <ConfigPage />
       case 'scan':
         return <ScanPage />
+      case 'schedule':
+        return <SchedulePage />
       case 'search':
         return <SearchPage />
       case 'language':
         return <LanguagePage />
       case 'guide':
         return <GuidePage />
-      case 'about':
+      case 'donate':
         return <AboutPage />
       default:
         return <SearchPage />

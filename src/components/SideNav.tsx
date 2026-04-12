@@ -9,10 +9,10 @@ interface SideNavProps {
 const navItems: { id: PageTab; labelKey: string; icon: string; group: string }[] = [
   { id: 'search', labelKey: 'nav.search', icon: '🔎', group: '导航' },
   { id: 'scan', labelKey: 'nav.scan', icon: '📁', group: '导航' },
-  { id: 'config', labelKey: 'nav.config', icon: '⚙️', group: '导航' },
   { id: 'language', labelKey: 'nav.language', icon: '🌐', group: '设置' },
-  { id: 'guide', labelKey: 'nav.guide', icon: '📖', group: '帮助' },
-  { id: 'about', labelKey: 'nav.about', icon: '✉️', group: '帮助' },
+  { id: 'schedule', labelKey: 'nav.schedule', icon: '⏰', group: '设置' },
+  { id: 'guide', labelKey: 'nav.guide', icon: '❓', group: '帮助' },
+  { id: 'donate', labelKey: 'nav.donate', icon: '💬', group: '帮助' },
 ]
 
 function SideNav({ activeTab, onTabChange }: SideNavProps): JSX.Element {

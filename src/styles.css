@@ -112,7 +112,7 @@ body {
 .duplicate-finder {
   flex: 1;
   overflow: auto;
-  background-color: #fff;
+  background-color: var(--bg-primary);
   padding: 20px;
 }
 
@@ -142,7 +142,7 @@ body {
   align-items: center;
   gap: 10px;
   padding: 12px 15px;
-  background-color: #f8f9fa;
+  background-color: var(--bg-secondary);
   cursor: pointer;
   transition: background-color 0.2s;
 }
@@ -170,7 +170,7 @@ body {
   justify-content: space-between;
   align-items: center;
   padding: 10px 15px;
-  border-bottom: 1px solid #eee;
+  border-bottom: 1px solid var(--border);
 }
 
 .duplicate-file:last-child {
@@ -264,7 +264,7 @@ body {
   justify-content: space-between;
   align-items: center;
   padding: 12px 15px;
-  border-bottom: 1px solid #eee;
+  border-bottom: 1px solid var(--border);
 }
 
 .scanned-folders-header h3 {
@@ -287,7 +287,7 @@ body {
 }
 
 .folder-item {
-  border-bottom: 1px solid #eee;
+  border-bottom: 1px solid var(--border);
 }
 
 .folder-item.active {
@@ -301,7 +301,7 @@ body {
 }
 
 .folder-header:hover {
-  background-color: #f8f9fa;
+  background-color: var(--bg-secondary);
 }
 
 .folder-info {
@@ -334,8 +334,8 @@ body {
 
 .folder-details {
   padding: 12px 15px;
-  background-color: #f8f9fa;
-  border-top: 1px solid #eee;
+  background-color: var(--bg-secondary);
+  border-top: 1px solid var(--border);
 }
 
 .detail-row {
@@ -352,7 +352,7 @@ body {
 .schedule-section {
   margin: 12px 0;
   padding-top: 12px;
-  border-top: 1px solid #eee;
+  border-top: 1px solid var(--border);
 }
 
 .schedule-section h4 {
@@ -389,10 +389,11 @@ body {
 .schedule-options select {
   flex: 1;
   padding: 6px 8px;
-  border: 1px solid #ddd;
-  border-radius: 4px;
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius);
   font-size: 12px;
-  background-color: #fff;
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
   cursor: pointer;
 }
 
@@ -406,7 +407,7 @@ body {
   gap: 8px;
   margin-top: 12px;
   padding-top: 12px;
-  border-top: 1px solid #eee;
+  border-top: 1px solid var(--border);
 }
 
 .scanned-folders .empty-state {
@@ -420,8 +421,8 @@ body {
 .tab-nav {
   display: flex;
   gap: 0;
-  background-color: #fff;
-  border-bottom: 1px solid #ddd;
+  background-color: var(--bg-primary);
+  border-bottom: 1px solid var(--border);
   padding: 0 20px;
 }
 
@@ -438,8 +439,8 @@ body {
 }
 
 .tab-btn:hover {
-  color: #333;
-  background-color: #f8f9fa;
+  color: var(--text-primary);
+  background-color: var(--bg-secondary);
 }
 
 .tab-btn.active {
@@ -450,15 +451,15 @@ body {
 /* ========== Config Page ========== */
 .schedule-global {
   padding: 20px;
-  background-color: #f8f9fa;
-  border-bottom: 1px solid #eee;
+  background-color: var(--bg-secondary);
+  border-bottom: 1px solid var(--border);
 }
 
 .schedule-global h3 {
   font-size: 15px;
   font-weight: 600;
   margin-bottom: 12px;
-  color: #333;
+  color: var(--text-primary);
 }
 
 .schedule-global .schedule-controls {
@@ -475,16 +476,17 @@ body {
 
 .schedule-global .schedule-options select {
   padding: 8px 12px;
-  border: 1px solid #ddd;
-  border-radius: 4px;
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius);
   font-size: 14px;
-  background-color: #fff;
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
   cursor: pointer;
 }
 
 .schedule-global .schedule-options select:focus {
   outline: none;
-  border-color: #3498db;
+  border-color: var(--accent);
 }
 
 .config-page .config-header,
@@ -493,7 +495,7 @@ body {
   justify-content: space-between;
   align-items: center;
   padding: 15px 20px;
-  border-bottom: 1px solid #eee;
+  border-bottom: 1px solid var(--border);
 }
 
 .config-header-actions {
@@ -502,10 +504,20 @@ body {
   gap: 12px;
 }
 
-.config-page .config-header h2,
+.config-page .config-header h3,
 .scan-page .scan-header h2 {
-  font-size: 18px;
+  font-size: 15px;
   font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 12px;
+}
+
+.config-page .folder-count,
+.scan-page .folder-count {
+  font-size: 12px;
+  color: var(--text-muted);
+  white-space: nowrap;
+  margin-right: auto;
 }
 
 .config-page .folder-list {
@@ -514,7 +526,7 @@ body {
 }
 
 .config-page .folder-item {
-  border-bottom: 1px solid #eee;
+  border-bottom: 1px solid var(--border);
 }
 
 .config-page .folder-header {
@@ -524,13 +536,13 @@ body {
 }
 
 .config-page .folder-header:hover {
-  background-color: #f8f9fa;
+  background-color: var(--bg-secondary);
 }
 
 .config-page .folder-details {
   padding: 15px 20px;
-  background-color: #f8f9fa;
-  border-top: 1px solid #eee;
+  background-color: var(--bg-secondary);
+  border-top: 1px solid var(--border);
 }
 
 /* ========== Scan Page ========== */
@@ -538,7 +550,7 @@ body {
   padding: 30px 20px;
   display: flex;
   justify-content: center;
-  border-bottom: 1px solid #eee;
+  border-bottom: 1px solid var(--border);
 }
 
 .btn-large {
@@ -548,7 +560,7 @@ body {
 
 .scan-progress-section {
   padding: 20px;
-  background-color: #f8f9fa;
+  background-color: var(--bg-secondary);
 }
 
 .progress-status {
@@ -616,8 +628,8 @@ body {
   gap: 16px;
   padding: 8px 20px;
   flex-wrap: wrap;
-  border-bottom: 1px solid #eee;
-  background-color: #fafafa;
+  border-bottom: 1px solid var(--border);
+  background-color: var(--bg-tertiary);
 }
 
 .filter-group {
@@ -640,9 +652,11 @@ body {
 
 .filter-group input[type="date"] {
   padding: 4px 8px;
-  border: 1px solid #ddd;
-  border-radius: 4px;
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius);
   font-size: 12px;
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
 }
 
 /* Search Snippets */
@@ -1083,6 +1097,7 @@ body {
   padding: 24px;
   overflow-y: auto;
   height: 100%;
+  background: var(--bg-primary);
 }
 
 .page-title {
@@ -1219,6 +1234,40 @@ body {
 .faq-item:last-child {
   border-bottom: none;
   margin-bottom: 0;
+}
+
+/* === 打赏收款码 === */
+.donate-desc {
+  font-size: 13px;
+  color: var(--text-muted);
+  margin-bottom: 16px;
+}
+
+.donate-qrcodes {
+  display: flex;
+  gap: 16px;
+}
+
+.donate-qr {
+  flex: 1;
+  max-width: 200px;
+}
+
+.donate-qr-label {
+  font-size: 12px;
+  color: var(--text-muted);
+  text-align: center;
+  margin-bottom: 8px;
+}
+
+.donate-qr img {
+  width: 200px;
+  height: 200px;
+  object-fit: contain;
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  display: block;
+  margin: 0 auto;
 }
 
 /* === 设置行 === */
