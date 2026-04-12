@@ -8,34 +8,14 @@ function AboutPage(): JSX.Element {
       <h2 className="page-title">{t('about.title')}</h2>
 
       <div className="settings-section">
-        <div className="settings-card">
-          <div className="about-content">
-            <div className="about-logo">🔍</div>
-            <div className="about-name">DocSeeker</div>
-            <div className="about-version">{t('about.version')}</div>
-            <div className="about-desc">
-              {t('about.desc')}
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div className="settings-section">
         <div className="settings-section-title">{t('about.contact')}</div>
         <div className="settings-card">
           <div className="about-contact">
             <div className="contact-item">
               <span className="contact-icon">✉️</span>
               <div>
-                <div className="contact-label">{t('about.email')}</div>
-                <div className="contact-value">{t('about.emailAddr')}</div>
-              </div>
-            </div>
-            <div className="contact-item">
-              <span className="contact-icon">🐙</span>
-              <div>
-                <div className="contact-label">{t('about.github')}</div>
-                <div className="contact-value">{t('about.githubAddr')}</div>
+                <div className="contact-label">{t('about.devName')}</div>
+                <div className="contact-value">lzg14@qq.com</div>
               </div>
             </div>
           </div>
@@ -43,10 +23,20 @@ function AboutPage(): JSX.Element {
       </div>
 
       <div className="settings-section">
-        <div className="settings-section-title">{t('about.license')}</div>
+        <div className="settings-section-title">{t('about.donate')}</div>
         <div className="settings-card">
-          <div className="about-license">
-            {t('about.licenseText')}
+          <div className="guide-content">
+            <p className="donate-desc">{t('about.donateDesc')}</p>
+            <div className="donate-qrcodes">
+              <div className="donate-qr">
+                <div className="donate-qr-label">{t('about.wechat')}</div>
+                <img src="./resources/wechat-pay.jpg" alt="WeChat Pay" />
+              </div>
+              <div className="donate-qr">
+                <div className="donate-qr-label">{t('about.alipay')}</div>
+                <img src="./resources/alipay.jpg" alt="Alipay" />
+              </div>
+            </div>
           </div>
         </div>
       </div>

@@ -7,17 +7,34 @@ function GuidePage(): JSX.Element {
     <div className="settings-page">
       <h2 className="page-title">{t('guide.title')}</h2>
 
+      {/* 介绍 + 技术栈 + 优势 整合 */}
       <div className="settings-section">
         <div className="settings-section-title">{t('guide.intro')}</div>
         <div className="settings-card">
           <div className="guide-content">
-            <p>{t('guide.introDesc')}</p>
+            <p>{t('guide.overviewDesc')}</p>
+
             <h3>{t('guide.features')}</h3>
             <ul>
-              <li><strong>{t('guide.feature1').split(':')[0]}</strong>：{t('guide.feature1').split(':').slice(1).join(':')}</li>
-              <li><strong>{t('guide.feature2').split(':')[0]}</strong>：{t('guide.feature2').split(':').slice(1).join(':')}</li>
-              <li><strong>{t('guide.feature3').split(':')[0]}</strong>：{t('guide.feature3').split(':').slice(1).join(':')}</li>
-              <li><strong>{t('guide.feature4').split(':')[0]}</strong>：{t('guide.feature4').split(':').slice(1).join(':')}</li>
+              <li><strong>{t('guide.feature1').split('：')[0]}</strong>：{t('guide.feature1').split('：').slice(1).join('：')}</li>
+              <li><strong>{t('guide.feature2').split('：')[0]}</strong>：{t('guide.feature2').split('：').slice(1).join('：')}</li>
+              <li><strong>{t('guide.feature3').split('：')[0]}</strong>：{t('guide.feature3').split('：').slice(1).join('：')}</li>
+              <li><strong>{t('guide.feature4').split('：')[0]}</strong>：{t('guide.feature4').split('：').slice(1).join('：')}</li>
+            </ul>
+
+            <h3>{t('guide.advantages')}</h3>
+            <ul>
+              <li>{t('guide.advantage1')}</li>
+              <li>{t('guide.advantage2')}</li>
+              <li>{t('guide.advantage3')}</li>
+              <li>{t('guide.advantage4')}</li>
+            </ul>
+
+            <h3>{t('guide.tech')}</h3>
+            <ul>
+              <li>{t('guide.techFE')}</li>
+              <li>{t('guide.techBE')}</li>
+              <li>{t('guide.techBuild')}</li>
             </ul>
           </div>
         </div>
@@ -53,6 +70,7 @@ function GuidePage(): JSX.Element {
           </div>
         </div>
       </div>
+
     </div>
   )
 }
