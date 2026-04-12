@@ -19,10 +19,8 @@ function GuidePage(): JSX.Element {
               <li>{t('guide.feature2')}</li>
               <li>{t('guide.feature3')}</li>
               <li>{t('guide.feature4')}</li>
-              <li>{t('guide.advantage1')}</li>
-              <li>{t('guide.advantage2')}</li>
-              <li>{t('guide.advantage3')}</li>
-              <li>{t('guide.advantage4')}</li>
+              <li>{t('guide.feature5')}</li>
+              <li>{t('guide.feature6')}</li>
             </ul>
 
             <h3>{t('guide.tech')}</h3>
