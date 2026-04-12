@@ -31,4 +31,4 @@ export interface ScanProgress {
   phase: 'scanning' | 'indexing' | 'hashing' | 'complete'
 }
 
-export type PageTab = 'config' | 'scan' | 'search'
+export type PageTab = 'config' | 'scan' | 'search' | 'language' | 'guide' | 'about'
