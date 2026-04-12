@@ -45,6 +45,11 @@ export interface ScanProgress {
 export type ProgressCallback = (progress: ScanProgress) => void
 
 // Text extraction functions
+export async function extractContent(filePath: string): Promise<string> {
+  const ext = path.extname(filePath).toLowerCase()
+  return extractText(filePath, ext)
+}
+
 async function extractTextFromDocx(filePath: string): Promise<string> {
   try {
     const mammoth = require('mammoth')

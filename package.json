@@ -15,11 +15,13 @@
     "build:linux": "npm run build && electron-builder --linux --config"
   },
   "dependencies": {
-    "sql.js": "^1.11.0",
+    "@types/chokidar": "^1.7.5",
+    "chokidar": "^5.0.0",
     "electron-log": "^5.2.0",
     "jszip": "^3.10.1",
     "mammoth": "^1.8.0",
     "pdf-parse": "^1.1.1",
+    "sql.js": "^1.11.0",
     "xlsx": "^0.18.5"
   },
   "devDependencies": {

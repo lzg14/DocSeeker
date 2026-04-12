@@ -5,6 +5,7 @@ import log from 'electron-log/main'
 import { initDatabase, closeDatabase } from './database'
 import { registerIpcHandlers } from './ipc'
 import { startScheduler, stopScheduler } from './scheduler'
+import { startFileWatcher, stopFileWatcher } from './fileWatcher'
 
 // Initialize logging
 log.initialize()
@@ -65,6 +66,7 @@ app.whenReady().then(async () => {
   // Initialize database
   try {
     await initDatabase()
+    startFileWatcher()
     log.info('Database initialized successfully')
   } catch (error) {
     log.error('Failed to initialize database:', error)
@@ -103,6 +105,7 @@ app.on('window-all-closed', () => {
 
 app.on('before-quit', () => {
   log.info('Application quitting...')
+  stopFileWatcher()
   stopScheduler()
   closeDatabase()
 })
