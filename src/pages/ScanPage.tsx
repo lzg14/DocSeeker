@@ -1,4 +1,4 @@
-import { useCallback } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useAppContext } from '../context/AppContext'
 
 function ScanPage(): JSX.Element {
@@ -11,8 +11,17 @@ function ScanPage(): JSX.Element {
     cancelScan,
     triggerRefresh
   } = useAppContext()
+  const [lastResult, setLastResult] = useState<{ filesProcessed: number; errors: number } | null>(null)
+
+  // 扫描完成时保留结果
+  useEffect(() => {
+    if (scanProgress.phase === 'complete' && scanProgress.total > 0) {
+      setLastResult({ filesProcessed: scanProgress.total, errors: 0 })
+    }
+  }, [scanProgress.phase, scanProgress.total])
 
   const handleSelectDirectory = useCallback(async (): Promise<void> => {
+    setLastResult(null)
     const dirPath = await window.electron.selectDirectory()
     if (dirPath) {
       try {
@@ -109,32 +118,43 @@ function ScanPage(): JSX.Element {
             />
           </div>
 
-          <div className="scan-action-buttons">
-            <button
-              className={`btn ${isPaused ? 'btn-primary' : 'btn-secondary'}`}
-              onClick={handlePauseResume}
-            >
-              {isPaused ? '继续' : '暂停'}
-            </button>
-            <button
-              className="btn btn-danger"
-              onClick={handleCancel}
-            >
-              取消
-            </button>
-          </div>
+          {scanProgress.phase !== 'complete' && (
+            <div className="scan-action-buttons">
+              <button
+                className={`btn ${isPaused ? 'btn-primary' : 'btn-secondary'}`}
+                onClick={handlePauseResume}
+              >
+                {isPaused ? '继续' : '暂停'}
+              </button>
+              <button
+                className="btn btn-danger"
+                onClick={handleCancel}
+              >
+                取消
+              </button>
+            </div>
+          )}
         </div>
       )}
 
       {!isScanning && (
         <div className="scan-tips">
-          <h3>使用说明</h3>
-          <ul>
-            <li>点击「选择目录并扫描」按钮，选择要扫描的文件夹</li>
-            <li>扫描完成后，数据会自动保存到数据库</li>
-            <li>可在「配置」页面管理已扫描的目录</li>
-            <li>可在「搜索」页面搜索已扫描的文件</li>
-          </ul>
+          {lastResult ? (
+            <div className="scan-complete-info">
+              <p>扫描完成，共处理 <strong>{lastResult.filesProcessed}</strong> 个文件</p>
+              <p>数据已保存到数据库，可在「搜索」页面进行搜索</p>
+            </div>
+          ) : (
+            <div>
+              <h3>使用说明</h3>
+              <ul>
+                <li>点击「选择目录并扫描」按钮，选择要扫描的文件夹</li>
+                <li>扫描完成后，数据会自动保存到数据库</li>
+                <li>可在「配置」页面管理已扫描的目录</li>
+                <li>可在「搜索」页面搜索已扫描的文件</li>
+              </ul>
+            </div>
+          )}
         </div>
       )}
     </div>
