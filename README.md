@@ -1,6 +1,6 @@
 # DocSeeker - 个人文档搜索工具
 
-一个基于 Electron + React + TypeScript 的桌面文档搜索工具，专为个人长期积累的文档设计，支持文档扫描、全文搜索和定时增量扫描。
+一个基于 Electron + React + TypeScript 的桌面文档搜索工具，专为查找个人长期积累的文档设计，支持文档扫描、全文搜索和定时增量扫描。
 
 **定位**：帮助个人用户管理和搜索长期积累的各类文档（Word、Excel、PPT、PDF、TXT 等），通过定时增量扫描自动保持索引更新，随时快速找到需要的文件。
 
@@ -19,10 +19,14 @@
 - 自动提取文档内容并建立索引
 
 ### 3. 搜索页面
-- 支持文件名和文档内容关键词搜索
-- 显示搜索结果列表（支持排序）
+- 支持文件名和文档内容关键词搜索（FTS5 全文索引 + BM25 相关性排序）
+- 显示搜索结果列表（按相关性排序）
 - 文件详情查看
 - 快速打开文件或在文件夹中显示
+
+### 4. 去重页面
+- 自动查找内容完全相同的文件（基于 MD5 哈希）
+- 一键移至回收站删除重复文件
 
 ## 支持的文件类型
 
@@ -35,20 +39,25 @@
 
 - **前端**: React 18 + TypeScript + Vite
 - **桌面框架**: Electron
-- **数据库**: SQLite (better-sqlite3)
+- **数据库**: SQLite (better-sqlite3)，支持 FTS5 全文索引
 - **文档解析**: mammoth (docx), xlsx (Excel), pdf-parse (PDF), jszip (PPTX)
 - **哈希计算**: MD5
+- **文件监听**: chokidar（自动检测文件增删变化）
 
 ## 开发
 
 ### 环境要求
 - Node.js 18+
 - npm 9+
+- Python 3.x（编译 better-sqlite3 原生模块）
+- Visual Studio Build Tools 2022（Windows 上编译原生模块）
 
 ### 安装依赖
 ```bash
 npm install
 ```
+
+首次安装会自动重建 better-sqlite3 原生模块适配 Electron 版本。
 
 ### 启动开发服务器
 ```bash
@@ -81,10 +90,11 @@ docseeker/
 │   ├── main/                 # 主进程
 │   │   ├── index.ts          # 主进程入口
 │   │   ├── ipc.ts            # IPC 处理器
-│   │   ├── database.ts       # SQLite 数据库操作
+│   │   ├── database.ts       # SQLite 数据库操作（FTS5 + BM25）
 │   │   ├── scanner.ts        # 文件扫描逻辑
 │   │   ├── scanWorker.ts     # Worker 线程扫描
-│   │   └── scheduler.ts      # 定时扫描调度器
+│   │   ├── scheduler.ts       # 定时扫描调度器
+│   │   └── fileWatcher.ts   # 实时文件监听（chokidar）
 │   └── preload/              # 预加载脚本
 │       └── index.ts          # API 桥接
 ├── index.html                 # HTML 入口
@@ -132,5 +142,11 @@ npm run dist       # 打包成 .exe 安装包（输出到 dist/ 目录）
 
 ### 搜索技巧
 - 输入文件名关键词直接搜索
-- 输入文档内容中的关键词搜索
+- 输入文档内容中的关键词搜索（全文检索）
+- 支持多关键词搜索（用空格分隔，结果按相关性排序）
 - 点击搜索结果可查看文件详情
+
+### 实时监听
+- 添加扫描目录后，chokidar 会自动监听文件变化
+- 新增或修改的文件自动更新索引
+- 删除的文件自动从索引移除
