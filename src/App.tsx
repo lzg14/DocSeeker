@@ -10,7 +10,6 @@ import SchedulePage from './pages/SchedulePage'
 import SearchPage from './pages/SearchPage'
 import LanguagePage from './pages/LanguagePage'
 import GuidePage from './pages/GuidePage'
-import AboutPage from './pages/AboutPage'
 
 function App(): JSX.Element {
   const [activeTab, setActiveTab] = useState<PageTab>('search')
@@ -27,8 +26,6 @@ function App(): JSX.Element {
         return <LanguagePage />
       case 'guide':
         return <GuidePage />
-      case 'donate':
-        return <AboutPage />
       default:
         return <SearchPage />
     }

@@ -3,16 +3,6 @@ import { ScannedFolder } from '../types'
 import { useAppContext } from '../context/AppContext'
 import { useLanguage } from '../context/LanguageContext'
 
-const TIME_OPTIONS = Array.from({ length: 24 }, (_, i) =>
-  `${i.toString().padStart(2, '0')}:00`
-)
-
-interface ScheduleConfig {
-  enabled: boolean
-  day: string
-  time: string
-}
-
 function ScanPage(): JSX.Element {
   const {
     isScanning,
@@ -29,35 +19,11 @@ function ScanPage(): JSX.Element {
   const [expandedId, setExpandedId] = useState<number | null>(null)
   const [loading, setLoading] = useState(true)
   const [lastResult, setLastResult] = useState<{ filesProcessed: number; errors: number } | null>(null)
-  const [scheduleConfig, setScheduleConfig] = useState<ScheduleConfig>({
-    enabled: false,
-    day: 'monday',
-    time: '09:00'
-  })
-
-  const WEEKDAYS = [
-    { value: 'monday', label: t('weekday.monday') },
-    { value: 'tuesday', label: t('weekday.tuesday') },
-    { value: 'wednesday', label: t('weekday.wednesday') },
-    { value: 'thursday', label: t('weekday.thursday') },
-    { value: 'friday', label: t('weekday.friday') },
-    { value: 'saturday', label: t('weekday.saturday') },
-    { value: 'sunday', label: t('weekday.sunday') }
-  ]
 
   const loadFolders = useCallback(async () => {
     try {
       const result = await window.electron.getScannedFolders()
       setFolders(result)
-
-      const enabledFolder = result.find(f => f.schedule_enabled === 1)
-      if (enabledFolder) {
-        setScheduleConfig({
-          enabled: true,
-          day: enabledFolder.schedule_day || 'monday',
-          time: enabledFolder.schedule_time || '09:00'
-        })
-      }
     } catch (error) {
       console.error('Failed to load scanned folders:', error)
     } finally {
@@ -69,7 +35,6 @@ function ScanPage(): JSX.Element {
     loadFolders()
   }, [loadFolders])
 
-  // 扫描完成时保留结果
   useEffect(() => {
     if (scanProgress.phase === 'complete' && scanProgress.total > 0) {
       setLastResult({ filesProcessed: scanProgress.total, errors: 0 })
@@ -96,20 +61,15 @@ function ScanPage(): JSX.Element {
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i]
   }
 
-  // 选择目录并扫描（添加目录后自动执行首次扫描）
   const handleSelectDirectory = useCallback(async (): Promise<void> => {
     setLastResult(null)
     const dirPath = await window.electron.selectDirectory()
     if (dirPath) {
       try {
-        // 添加文件夹到扫描列表
         await window.electron.addScannedFolder(dirPath)
-        // 执行扫描
         const result = await window.electron.scanDirectory(dirPath)
         console.log('Scan result:', result)
-        // 更新文件夹记录
         await window.electron.updateFolderAfterScan(dirPath, result)
-        // 刷新列表
         await loadFolders()
         triggerRefresh()
       } catch (error) {
@@ -185,64 +145,6 @@ function ScanPage(): JSX.Element {
     }
   }
 
-  const handleScheduleChange = async (enabled: boolean): Promise<void> => {
-    try {
-      const newConfig = { ...scheduleConfig, enabled }
-      setScheduleConfig(newConfig)
-
-      for (const folder of folders) {
-        await window.electron.updateFolderSchedule(
-          folder.id!,
-          enabled,
-          newConfig.day,
-          newConfig.time
-        )
-      }
-    } catch (error) {
-      console.error('Failed to update schedule:', error)
-    }
-  }
-
-  const handleDayChange = async (day: string): Promise<void> => {
-    try {
-      const newConfig = { ...scheduleConfig, day }
-      setScheduleConfig(newConfig)
-
-      if (scheduleConfig.enabled) {
-        for (const folder of folders) {
-          await window.electron.updateFolderSchedule(
-            folder.id!,
-            true,
-            day,
-            newConfig.time
-          )
-        }
-      }
-    } catch (error) {
-      console.error('Failed to update schedule day:', error)
-    }
-  }
-
-  const handleTimeChange = async (time: string): Promise<void> => {
-    try {
-      const newConfig = { ...scheduleConfig, time }
-      setScheduleConfig(newConfig)
-
-      if (scheduleConfig.enabled) {
-        for (const folder of folders) {
-          await window.electron.updateFolderSchedule(
-            folder.id!,
-            true,
-            newConfig.day,
-            time
-          )
-        }
-      }
-    } catch (error) {
-      console.error('Failed to update schedule time:', error)
-    }
-  }
-
   const getPhaseText = (phase: string): string => {
     return t(`scan.phase.${phase}` as any) || t('scan.phase.processing')
   }
@@ -260,7 +162,6 @@ function ScanPage(): JSX.Element {
     <div className="settings-page">
       <h2 className="page-title">{t('scan.title')}</h2>
 
-      {/* 扫描操作区 */}
       <div className="scan-controls-section">
         <button
           className="search-btn"
@@ -271,7 +172,6 @@ function ScanPage(): JSX.Element {
         </button>
       </div>
 
-      {/* 扫描进度 */}
       {isScanning && (
         <div className="scan-progress-section">
           <div className="progress-status">
@@ -320,7 +220,6 @@ function ScanPage(): JSX.Element {
         </div>
       )}
 
-      {/* 扫描完成提示 */}
       {!isScanning && lastResult && (
         <div className="scan-tips">
           <div className="scan-complete-info">
@@ -330,46 +229,6 @@ function ScanPage(): JSX.Element {
         </div>
       )}
 
-      {/* 定时设置 */}
-      <div className="schedule-global">
-        <h3>{t('config.schedule')}</h3>
-        <div className="schedule-controls">
-          <label className="checkbox-label">
-            <input
-              type="checkbox"
-              checked={scheduleConfig.enabled}
-              onChange={(e) => handleScheduleChange(e.target.checked)}
-              disabled={isScanning || folders.length === 0}
-            />
-            {t('config.scheduleEnable')}
-          </label>
-
-          {scheduleConfig.enabled && (
-            <div className="schedule-options">
-              <select
-                value={scheduleConfig.day}
-                onChange={(e) => handleDayChange(e.target.value)}
-                disabled={isScanning}
-              >
-                {WEEKDAYS.map((d) => (
-                  <option key={d.value} value={d.value}>{d.label}</option>
-                ))}
-              </select>
-              <select
-                value={scheduleConfig.time}
-                onChange={(e) => handleTimeChange(e.target.value)}
-                disabled={isScanning}
-              >
-                {TIME_OPTIONS.map((t) => (
-                  <option key={t} value={t}>{t}</option>
-                ))}
-              </select>
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* 文件夹列表 */}
       <div className="config-header">
         <h3>{t('config.scanDirs')}</h3>
         <div className="config-header-actions">
