@@ -7,7 +7,6 @@ function GuidePage(): JSX.Element {
     <div className="settings-page">
       <h2 className="page-title">{t('guide.title')}</h2>
 
-      {/* 介绍 + 技术栈 + 优势 整合 */}
       <div className="settings-section">
         <div className="settings-section-title">{t('guide.intro')}</div>
         <div className="settings-card">
@@ -67,6 +66,28 @@ function GuidePage(): JSX.Element {
               <summary>{t('guide.faq2.q')}</summary>
               <p>{t('guide.faq2.a')}</p>
             </details>
+          </div>
+        </div>
+      </div>
+
+      <div className="settings-section">
+        <div className="settings-section-title">{t('guide.donate')}</div>
+        <div className="settings-card">
+          <div className="guide-content">
+            <p>{t('guide.donateDesc')}</p>
+            <p style={{ marginTop: '8px' }}>
+              <strong>{t('guide.devName')}:</strong> Zhigang Li &lt;lzg14@qq.com&gt;
+            </p>
+            <div className="donate-qrcodes">
+              <div className="donate-qr">
+                <div className="donate-qr-label">{t('guide.wechat')}</div>
+                <img src="./resources/wechat-pay.jpg" alt="WeChat Pay" />
+              </div>
+              <div className="donate-qr">
+                <div className="donate-qr-label">{t('guide.alipay')}</div>
+                <img src="./resources/alipay.jpg" alt="Alipay" />
+              </div>
+            </div>
           </div>
         </div>
       </div>
