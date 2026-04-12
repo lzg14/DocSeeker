@@ -1250,3 +1250,73 @@ body {
   overflow: hidden;
   text-overflow: ellipsis;
 }
+
+/* === 文件列表 === */
+.file-list-wrapper {
+  flex: 1;
+  overflow-y: auto;
+  padding: 0 20px;
+}
+
+.file-table-header {
+  display: grid;
+  grid-template-columns: 1fr 80px 80px 120px;
+  background: var(--bg-secondary);
+  padding: 8px 12px;
+  font-size: 10px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  border-bottom: 1px solid var(--border);
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+
+.file-row {
+  display: grid;
+  grid-template-columns: 1fr 80px 80px 120px;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--border);
+  align-items: center;
+  cursor: pointer;
+  transition: background-color 0.1s;
+  font-size: 13px;
+  color: var(--text-primary);
+}
+
+.file-row:last-child {
+  border-bottom: none;
+}
+
+.file-row:hover {
+  background: var(--bg-secondary);
+}
+
+.file-row.selected {
+  background: var(--selected-bg);
+}
+
+.file-name-cell {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  overflow: hidden;
+}
+
+.file-name-text {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.file-list-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 60px 20px;
+  color: var(--text-muted);
+  gap: 8px;
+  font-size: 13px;
+}

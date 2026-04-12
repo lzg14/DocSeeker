@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { FileRecord } from '../types'
 
 interface FileListProps {
@@ -7,23 +7,14 @@ interface FileListProps {
   onSelectFile: (file: FileRecord) => void
   formatSize: (bytes: number) => string
   hasSearched: boolean
-  searchQuery?: string
 }
 
 type SortField = 'name' | 'size' | 'updated_at'
 type SortOrder = 'asc' | 'desc'
 
-function FileList({ files, selectedFile, onSelectFile, formatSize, hasSearched, searchQuery }: FileListProps): JSX.Element {
+function FileList({ files, selectedFile, onSelectFile, formatSize, hasSearched }: FileListProps): JSX.Element {
   const [sortField, setSortField] = useState<SortField>('updated_at')
   const [sortOrder, setSortOrder] = useState<SortOrder>('desc')
-  const [snippets, setSnippets] = useState<Record<number, string>>({})
-
-  useEffect(() => {
-    if (hasSearched && searchQuery && files.length > 0) {
-      const fileIds = files.map(f => f.id!).filter(id => id)
-      window.electron.getSearchSnippets(searchQuery, fileIds).then(setSnippets)
-    }
-  }, [hasSearched, searchQuery, files])
 
   const handleSort = (field: SortField): void => {
     if (sortField === field) {
@@ -73,72 +64,43 @@ function FileList({ files, selectedFile, onSelectFile, formatSize, hasSearched, 
     return date.toLocaleString('zh-CN')
   }
 
-  // 未搜索时显示空白
-  if (!hasSearched) {
-    return (
-      <div className="file-list-container">
-        <div className="empty-state">
-          <p>请在上方输入关键词进行搜索</p>
-        </div>
-      </div>
-    )
-  }
-
-  // 搜索无结果
-  if (files.length === 0) {
-    return (
-      <div className="file-list-container">
-        <div className="empty-state">
-          <p>未找到匹配的文件</p>
-        </div>
-      </div>
-    )
-  }
-
   return (
-    <div className="file-list-container">
-      <table className="file-list">
-        <thead>
-          <tr>
-            <th className="col-icon"></th>
-            <th className="col-name sortable" onClick={() => handleSort('name')}>
-              文件名 {sortField === 'name' && (sortOrder === 'asc' ? '▲' : '▼')}
-            </th>
-            <th className="col-type">类型</th>
-            <th className="col-size sortable" onClick={() => handleSort('size')}>
-              大小 {sortField === 'size' && (sortOrder === 'asc' ? '▲' : '▼')}
-            </th>
-            <th className="col-date sortable" onClick={() => handleSort('updated_at')}>
-              修改时间 {sortField === 'updated_at' && (sortOrder === 'asc' ? '▲' : '▼')}
-            </th>
-          </tr>
-        </thead>
-        <tbody>
+    <div className="file-list-wrapper">
+      {!hasSearched ? (
+        <div className="file-list-empty">
+          <div style={{ fontSize: 32, marginBottom: 8 }}>🔍</div>
+          <div>请在上方输入关键词进行搜索</div>
+        </div>
+      ) : files.length === 0 ? (
+        <div className="file-list-empty">
+          <div style={{ fontSize: 32, marginBottom: 8 }}>📭</div>
+          <div>未找到匹配的文件</div>
+        </div>
+      ) : (
+        <>
+          <div className="file-table-header">
+            <div>文件名</div>
+            <div>类型</div>
+            <div>大小</div>
+            <div>修改时间</div>
+          </div>
           {sortedFiles.map((file) => (
-            <tr
+            <div
               key={file.id}
-              className={selectedFile?.id === file.id ? 'selected' : ''}
+              className={`file-row ${selectedFile?.id === file.id ? 'selected' : ''}`}
               onClick={() => onSelectFile(file)}
             >
-              <td className="col-icon">{getFileIcon(file.file_type)}</td>
-              <td className="col-name" title={file.path}>
-                <div className="file-name-cell">
-                  <span>{file.name}</span>
-                  {snippets[file.id!] && (
-                    <div
-                      className="search-snippet"
-                      dangerouslySetInnerHTML={{ __html: snippets[file.id!] }}
-                    />
-                  )}
-                </div>
-              </td>
-              <td className="col-type">{file.file_type || '-'}</td>
-              <td className="col-size">{formatSize(file.size)}</td>
-              <td className="col-date">{formatDate(file.updated_at)}</td>
-            </tr>
+              <div className="file-name-cell">
+                <span>{getFileIcon(file.file_type)}</span>
+                <span className="file-name-text" title={file.path}>{file.name}</span>
+              </div>
+              <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>{file.file_type || '-'}</div>
+              <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>{formatSize(file.size)}</div>
+              <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>{formatDate(file.updated_at)}</div>
+            </div>
           ))}
-        </tbody>
-      </table>
+        </>
+      )}
     </div>
   )
 }
