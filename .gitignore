@@ -1,0 +1,32 @@
+# Dependencies
+node_modules/
+
+# Build outputs
+dist/
+out/
+
+# IDE
+.idea/
+.vscode/
+
+# Logs
+*.log
+bash.exe.stackdump
+
+# Config files (local only)
+.env
+.env.local
+.env.*.local
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# TypeScript
+*.tsbuildinfo
+
+# Package lock (use npm install instead)
+package-lock.json
+
+# Skills lock
+skills-lock.json
