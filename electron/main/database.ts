@@ -214,38 +214,62 @@ export function getAllFiles(): FileRecord[] {
   })
 }
 
-export function searchFiles(query: string): FileRecord[] {
+export interface SearchOptions {
+  fileTypes?: string[]
+  dateFrom?: string
+  dateTo?: string
+  limit?: number
+}
+
+export function searchFiles(query: string, options?: SearchOptions): FileRecord[] {
   if (!query.trim()) {
     return []
   }
 
-  // Split by whitespace and filter empty strings
   const keywords = query.trim().split(/\s+/).filter(k => k.length > 0)
-
   if (keywords.length === 0) {
     return []
   }
 
-  // Build dynamic SQL with AND conditions for each keyword
-  let whereClause = ''
-  const params: string[] = []
+  const limit = options?.limit ?? 200
 
-  for (const keyword of keywords) {
-    const pattern = `%${keyword}%`
-    if (whereClause) {
-      whereClause += ' AND '
-    }
-    whereClause += '(name LIKE ? OR content LIKE ? OR file_type LIKE ?)'
-    params.push(pattern, pattern, pattern)
+  // Build FTS5 MATCH query (each keyword with AND, supports prefix search)
+  const ftsQuery = keywords.map(k => `"${k.replace(/"/g, '""')}"*`).join(' AND ')
+
+  // Build filter conditions
+  const filterClauses: string[] = []
+  const filterParams: any[] = []
+
+  if (options?.fileTypes && options.fileTypes.length > 0) {
+    const placeholders = options.fileTypes.map(() => '?').join(', ')
+    filterClauses.push(`f.file_type IN (${placeholders})`)
+    filterParams.push(...options.fileTypes)
   }
 
+  if (options?.dateFrom) {
+    filterClauses.push('f.updated_at >= ?')
+    filterParams.push(options.dateFrom)
+  }
+
+  if (options?.dateTo) {
+    filterClauses.push('f.updated_at <= ?')
+    filterParams.push(options.dateTo)
+  }
+
+  const filterWhere = filterClauses.length > 0 ? ' AND ' + filterClauses.join(' AND ') : ''
+
   const stmt = getDatabase().prepare(`
-    SELECT * FROM files
-    WHERE ${whereClause}
-    ORDER BY updated_at DESC
-    LIMIT 200
+    SELECT f.*,
+           bm25(files_fts) as rank
+    FROM files_fts fts
+    JOIN files f ON fts.rowid = f.id
+    WHERE files_fts MATCH ?
+    ${filterWhere}
+    ORDER BY rank
+    LIMIT ?
   `)
-  stmt.bind(params)
+
+  stmt.bind([ftsQuery, ...filterParams, limit])
 
   const files: FileRecord[] = []
   while (stmt.step()) {
