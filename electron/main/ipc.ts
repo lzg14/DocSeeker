@@ -17,6 +17,7 @@ import {
   removeFilesByFolderPath,
   getFileCountByFolder,
   getTotalSizeByFolder,
+  getSearchSnippets,
   FileRecord,
   addScannedFolder,
   updateScannedFolder,
@@ -194,6 +195,16 @@ export function registerIpcHandlers(): void {
   // Search files
   ipcMain.handle('search-files', async (_, query: string, options?: any): Promise<FileRecord[]> => {
     return searchFiles(query, options)
+  })
+
+  // Get search snippets with highlighted keywords
+  ipcMain.handle('get-search-snippets', async (_, query: string, fileIds: number[]): Promise<Record<number, string>> => {
+    const snippets = getSearchSnippets(query, fileIds)
+    const result: Record<number, string> = {}
+    snippets.forEach((snippet, id) => {
+      result[id] = snippet
+    })
+    return result
   })
 
   // Delete a file (move to trash)

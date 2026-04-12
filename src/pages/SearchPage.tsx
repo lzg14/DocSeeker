@@ -130,6 +130,7 @@ function SearchPage(): JSX.Element {
             onSelectFile={setSelectedFile}
             formatSize={formatSize}
             hasSearched={hasSearched}
+            searchQuery={searchQuery}
           />
         </div>
 

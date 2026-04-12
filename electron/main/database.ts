@@ -279,6 +279,32 @@ export function searchFiles(query: string, options?: SearchOptions): FileRecord[
   return files
 }
 
+export function getSearchSnippets(query: string, fileIds: number[]): Map<number, string> {
+  if (!query.trim() || fileIds.length === 0) {
+    return new Map()
+  }
+
+  const keywords = query.trim().split(/\s+/).filter(k => k.length > 0)
+  const ftsQuery = keywords.map(k => `"${k.replace(/"/g, '""')}"*`).join(' AND ')
+
+  const placeholders = fileIds.map(() => '?').join(', ')
+  const stmt = getDatabase().prepare(`
+    SELECT rowid, snippet(files_fts, 1, '<mark>', '</mark>', '...', 32) as snippet
+    FROM files_fts
+    WHERE files_fts MATCH ?
+    AND rowid IN (${placeholders})
+  `)
+  stmt.bind([ftsQuery, ...fileIds])
+
+  const snippets = new Map<number, string>()
+  while (stmt.step()) {
+    const row = stmt.getAsObject()
+    snippets.set(row.rowid as number, row.snippet as string)
+  }
+  stmt.free()
+  return snippets
+}
+
 export function findDuplicates(): FileRecord[][] {
   const results = getDatabase().exec(`
     SELECT f.* FROM files f

@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { FileRecord } from '../types'
 
 interface FileListProps {
@@ -7,14 +7,23 @@ interface FileListProps {
   onSelectFile: (file: FileRecord) => void
   formatSize: (bytes: number) => string
   hasSearched: boolean
+  searchQuery?: string
 }
 
 type SortField = 'name' | 'size' | 'updated_at'
 type SortOrder = 'asc' | 'desc'
 
-function FileList({ files, selectedFile, onSelectFile, formatSize, hasSearched }: FileListProps): JSX.Element {
+function FileList({ files, selectedFile, onSelectFile, formatSize, hasSearched, searchQuery }: FileListProps): JSX.Element {
   const [sortField, setSortField] = useState<SortField>('updated_at')
   const [sortOrder, setSortOrder] = useState<SortOrder>('desc')
+  const [snippets, setSnippets] = useState<Record<number, string>>({})
+
+  useEffect(() => {
+    if (hasSearched && searchQuery && files.length > 0) {
+      const fileIds = files.map(f => f.id!).filter(id => id)
+      window.electron.getSearchSnippets(searchQuery, fileIds).then(setSnippets)
+    }
+  }, [hasSearched, searchQuery, files])
 
   const handleSort = (field: SortField): void => {
     if (sortField === field) {
@@ -113,7 +122,15 @@ function FileList({ files, selectedFile, onSelectFile, formatSize, hasSearched }
             >
               <td className="col-icon">{getFileIcon(file.file_type)}</td>
               <td className="col-name" title={file.path}>
-                {file.name}
+                <div className="file-name-cell">
+                  <span>{file.name}</span>
+                  {snippets[file.id!] && (
+                    <div
+                      className="search-snippet"
+                      dangerouslySetInnerHTML={{ __html: snippets[file.id!] }}
+                    />
+                  )}
+                </div>
               </td>
               <td className="col-type">{file.file_type || '-'}</td>
               <td className="col-size">{formatSize(file.size)}</td>
