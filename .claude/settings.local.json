@@ -1,0 +1,42 @@
+{
+  "permissions": {
+    "allow": [
+      "WebSearch",
+      "Bash(cd \"D:/ProjectFile/fileTool\" && npm create @quick-start/electron@latest . -- --template react-ts --skip-git)",
+      "Bash(cd \"D:/ProjectFile/fileTool\" && echo y | npm create @quick-start/electron@latest . -- --template react-ts --skip-git)",
+      "Bash(cd \"D:/ProjectFile/fileTool\" && npm install)",
+      "Bash(cd \"D:/ProjectFile/fileTool\" && npm install 2>&1)",
+      "Bash(cd \"D:/ProjectFile/fileTool\" && rm -rf node_modules package-lock.json)",
+      "Bash(cd \"D:/ProjectFile/fileTool\" && npm install --prefer-offline 2>&1)",
+      "Bash(cd \"D:/ProjectFile/fileTool\" && rm -rf node_modules package-lock.json && npm install 2>&1)",
+      "Bash(npm config:*)",
+      "Bash(cd \"D:/ProjectFile/fileTool\" && rm -rf node_modules package-lock.json 2>/dev/null; npm install 2>&1)",
+      "Bash(cd \"D:/ProjectFile/fileTool\" && npm run dev 2>&1)",
+      "Bash(cd \"D:/ProjectFile/fileTool\" && npm run build 2>&1)",
+      "Bash(cd \"D:/ProjectFile/fileTool\" && npm run build:win 2>&1)",
+      "Bash(cd \"D:/ProjectFile/fileTool\" && runas /user:Administrator \"npm run build:win\" 2>&1)",
+      "Bash(cd \"D:/ProjectFile/fileTool/dist\" && powershell -Command \"Compress-Archive -Path 'win-unpacked' -DestinationPath 'FileTool-win-x64.zip' -Force\" && ls -la FileTool-win-x64.zip)",
+      "WebFetch(domain:docs.anthropic.com)",
+      "Bash(npm run:*)",
+      "WebFetch(domain:minimax-algeng-chat-tts.oss-cn-wulanchabu.aliyuncs.com)",
+      "Bash(taskkill /F /IM FileTool.exe 2>/dev/null; rm -rf \"D:/ProjectFile/fileTool/dist/win-unpacked\" 2>/dev/null; echo \"Cleaned\")",
+      "Bash(taskkill //F //IM FileTool.exe 2>/dev/null; rm -rf \"D:/ProjectFile/fileTool/dist/win-unpacked\"; echo \"Done\")",
+      "WebFetch(domain:claude.ai)",
+      "Skill(statusline)",
+      "Bash(dir ~/)",
+      "Bash(findstr /i \"bash profile ps1\")",
+      "Bash(claude --version)",
+      "Bash(claude --update-check)",
+      "Bash(npm show:*)",
+      "Bash(npx skills:*)",
+      "Bash(npx electron-builder:*)",
+      "Bash(powershell -Command \"Compress-Archive -Path * -DestinationPath ../FileTool-win-x64-new.zip -Force\")",
+      "Read(//d/ProjectFile/**)",
+      "Bash(taskkill /F /IM FileTool.exe)",
+      "Bash(tasklist)",
+      "Bash(npx asar:*)",
+      "Bash(powershell -Command \"Compress-Archive -Path * -DestinationPath ../FileTool-win-x64-v2.zip -Force\")",
+      "Bash(curl -s http://localhost:5173)"
+    ]
+  }
+}
