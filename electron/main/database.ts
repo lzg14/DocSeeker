@@ -20,13 +20,12 @@ export async function initDatabase(): Promise<void> {
 
   const SQL = await initSqlJs()
 
-  // Load existing database or create new one
+  // Always start fresh - delete existing database (no migration needed)
   if (fs.existsSync(dbPath)) {
-    const fileBuffer = fs.readFileSync(dbPath)
-    db = new SQL.Database(fileBuffer)
-  } else {
-    db = new SQL.Database()
+    fs.unlinkSync(dbPath)
+    log.info('Old database deleted, creating fresh database')
   }
+  db = new SQL.Database()
 
   // Create files table
   db.run(`
@@ -63,6 +62,47 @@ export async function initDatabase(): Promise<void> {
   db.run(`CREATE INDEX IF NOT EXISTS idx_files_hash ON files(hash)`)
   db.run(`CREATE INDEX IF NOT EXISTS idx_files_size ON files(size)`)
   db.run(`CREATE INDEX IF NOT EXISTS idx_files_file_type ON files(file_type)`)
+
+  // Create FTS5 virtual table (full-text search index)
+  db.run(`
+    CREATE VIRTUAL TABLE IF NOT EXISTS files_fts USING fts5(
+      name,
+      content,
+      file_type,
+      content='files',
+      content_rowid='id',
+      tokenize='unicode61 remove_diacritics 1'
+    )
+  `)
+
+  // Trigger: sync FTS on INSERT
+  db.run(`
+    CREATE TRIGGER IF NOT EXISTS files_ai AFTER INSERT ON files BEGIN
+      INSERT INTO files_fts(rowid, name, content, file_type)
+      VALUES (new.id, new.name, new.content, new.file_type);
+    END
+  `)
+
+  // Trigger: sync FTS on DELETE
+  db.run(`
+    CREATE TRIGGER IF NOT EXISTS files_ad AFTER DELETE ON files BEGIN
+      INSERT INTO files_fts(files_fts, rowid, name, content, file_type)
+      VALUES ('delete', old.id, old.name, old.content, old.file_type);
+    END
+  `)
+
+  // Trigger: sync FTS on UPDATE
+  db.run(`
+    CREATE TRIGGER IF NOT EXISTS files_au AFTER UPDATE ON files BEGIN
+      INSERT INTO files_fts(files_fts, rowid, name, content, file_type)
+      VALUES ('delete', old.id, old.name, old.content, old.file_type);
+      INSERT INTO files_fts(rowid, name, content, file_type)
+      VALUES (new.id, new.name, new.content, new.file_type);
+    END
+  `)
+
+  // Rebuild FTS index to ensure existing data is indexed
+  db.run("INSERT INTO files_fts(files_fts) VALUES('rebuild')")
 
   saveDatabase()
   log.info('Database tables created/verified')
