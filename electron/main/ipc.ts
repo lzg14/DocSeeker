@@ -192,8 +192,22 @@ export function registerIpcHandlers(): void {
   })
 
   // Search files
-  ipcMain.handle('search-files', async (_, query: string): Promise<FileRecord[]> => {
-    return searchFiles(query)
+  ipcMain.handle('search-files', async (_, query: string, options?: any): Promise<FileRecord[]> => {
+    return searchFiles(query, options)
+  })
+
+  // Delete a file (move to trash)
+  ipcMain.handle('delete-file', async (_, filePath: string): Promise<boolean> => {
+    try {
+      const success = await shell.trashItem(filePath)
+      if (success) {
+        deleteFileByPath(filePath)
+      }
+      return success
+    } catch (error) {
+      log.error('Failed to delete file:', error)
+      return false
+    }
   })
 
   // Find duplicates

@@ -45,12 +45,20 @@ export interface IncrementalScanResult {
   errors: string[]
 }
 
+export interface SearchOptions {
+  fileTypes?: string[]
+  dateFrom?: string
+  dateTo?: string
+  limit?: number
+}
+
 export interface ElectronAPI {
   selectDirectory: () => Promise<string | null>
   scanDirectory: (dirPath: string) => Promise<ScanResult>
   onScanProgress: (callback: (progress: ScanProgress) => void) => () => void
   getAllFiles: () => Promise<FileRecord[]>
-  searchFiles: (query: string) => Promise<FileRecord[]>
+  searchFiles: (query: string, options?: SearchOptions) => Promise<FileRecord[]>
+  deleteFile: (filePath: string) => Promise<boolean>
   findDuplicates: () => Promise<FileRecord[][]>
   clearAllFiles: () => Promise<void>
   getFileCount: () => Promise<number>
@@ -90,7 +98,9 @@ const electronAPI: ElectronAPI = {
 
   getAllFiles: () => ipcRenderer.invoke('get-all-files'),
 
-  searchFiles: (query: string) => ipcRenderer.invoke('search-files', query),
+  searchFiles: (query: string, options?: SearchOptions) => ipcRenderer.invoke('search-files', query, options),
+
+  deleteFile: (filePath: string) => ipcRenderer.invoke('delete-file', filePath),
 
   findDuplicates: () => ipcRenderer.invoke('find-duplicates'),
 
