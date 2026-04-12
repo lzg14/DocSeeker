@@ -6,82 +6,61 @@ interface FileDetailProps {
 }
 
 function FileDetail({ file, formatSize }: FileDetailProps): JSX.Element {
-  const handleShowInFolder = (): void => {
-    window.electron.showInFolder(file.path)
-  }
-
-  const handleOpenFile = (): void => {
-    window.electron.openFile(file.path)
-  }
+  const handleShowInFolder = () => window.electron.showInFolder(file.path)
+  const handleOpenFile = () => window.electron.openFile(file.path)
 
   const formatDate = (dateStr: string | undefined): string => {
     if (!dateStr) return '-'
-    const date = new Date(dateStr)
-    return date.toLocaleString('zh-CN')
-  }
-
-  const truncateContent = (content: string | null, maxLength: number = 500): string => {
-    if (!content) return '无内容'
-    if (content.length <= maxLength) return content
-    return content.substring(0, maxLength) + '...'
+    return new Date(dateStr).toLocaleString('zh-CN')
   }
 
   return (
     <div className="file-detail">
-      <div className="file-detail-header">
-        <h3>文件详情</h3>
-        <div className="file-actions">
-          <button className="btn btn-small" onClick={handleShowInFolder}>
-            在文件夹中显示
-          </button>
-          <button className="btn btn-small" onClick={handleOpenFile}>
-            打开文件
-          </button>
+      <div className="file-detail-name">
+        <span>{file.name}</span>
+      </div>
+      <div className="file-detail-path">{file.path}</div>
+
+      <div className="detail-card">
+        <div className="detail-card-title">文件信息</div>
+        <div className="detail-grid">
+          <div className="detail-grid-item">
+            <div className="detail-grid-label">大小</div>
+            <div className="detail-grid-value">{formatSize(file.size)}</div>
+          </div>
+          <div className="detail-grid-item">
+            <div className="detail-grid-label">类型</div>
+            <div className="detail-grid-value">{file.file_type || '-'}</div>
+          </div>
+          <div className="detail-grid-item">
+            <div className="detail-grid-label">修改</div>
+            <div className="detail-grid-value">{formatDate(file.updated_at)}</div>
+          </div>
+          <div className="detail-grid-item">
+            <div className="detail-grid-label">MD5</div>
+            <div className="detail-grid-value detail-hash">
+              {file.hash ? `${file.hash.slice(0, 8)}...${file.hash.slice(-4)}` : '-'}
+            </div>
+          </div>
         </div>
       </div>
 
-      <div className="file-detail-content">
-        <div className="detail-row">
-          <label>文件名:</label>
-          <span>{file.name}</span>
+      <div className="detail-card">
+        <div className="detail-card-title">内容预览</div>
+        <div className="detail-content-preview">
+          {file.content
+            ? file.content.slice(0, 500) + (file.content.length > 500 ? '...' : '')
+            : '无内容'}
         </div>
+      </div>
 
-        <div className="detail-row">
-          <label>完整路径:</label>
-          <span className="path" title={file.path}>
-            {file.path}
-          </span>
-        </div>
-
-        <div className="detail-row">
-          <label>文件大小:</label>
-          <span>{formatSize(file.size)}</span>
-        </div>
-
-        <div className="detail-row">
-          <label>文件类型:</label>
-          <span>{file.file_type || '-'}</span>
-        </div>
-
-        <div className="detail-row">
-          <label>MD5 哈希:</label>
-          <span className="hash">{file.hash || '-'}</span>
-        </div>
-
-        <div className="detail-row">
-          <label>创建时间:</label>
-          <span>{formatDate(file.created_at)}</span>
-        </div>
-
-        <div className="detail-row">
-          <label>更新时间:</label>
-          <span>{formatDate(file.updated_at)}</span>
-        </div>
-
-        <div className="detail-row content-row">
-          <label>文件内容:</label>
-          <pre className="content-preview">{truncateContent(file.content)}</pre>
-        </div>
+      <div className="detail-actions">
+        <button className="detail-btn-primary" onClick={handleShowInFolder}>
+          在文件夹中显示
+        </button>
+        <button className="detail-btn-secondary" onClick={handleOpenFile}>
+          打开文件
+        </button>
       </div>
     </div>
   )
