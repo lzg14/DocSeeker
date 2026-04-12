@@ -15,7 +15,7 @@ const translations: Record<Language, Record<string, string>> = {
     // Navigation
     'nav.search': '搜索文档',
     'nav.scan': '扫描文件',
-    'nav.config': '设置',
+    'nav.config': '扫描设置',
     'nav.language': '语言设置',
     'nav.guide': '使用说明',
     'nav.about': '开发者联系',
@@ -60,7 +60,7 @@ const translations: Record<Language, Record<string, string>> = {
     'scan.tips.3': '可在「设置」页面管理已扫描的目录',
     'scan.tips.4': '可在「搜索」页面搜索已扫描的文件',
     // Config page
-    'config.title': '设置',
+    'config.title': '扫描设置',
     'config.loading': '加载中...',
     'config.schedule': '定时增量扫描',
     'config.scheduleEnable': '启用定时扫描',
@@ -135,7 +135,7 @@ const translations: Record<Language, Record<string, string>> = {
     // Navigation
     'nav.search': 'Search',
     'nav.scan': 'Scan Files',
-    'nav.config': 'Settings',
+    'nav.config': 'Scan Settings',
     'nav.language': 'Language & Theme',
     'nav.guide': 'Guide',
     'nav.about': 'About',
@@ -180,7 +180,7 @@ const translations: Record<Language, Record<string, string>> = {
     'scan.tips.3': 'Manage scanned folders in the Settings page',
     'scan.tips.4': 'Search scanned files on the Search page',
     // Config page
-    'config.title': 'Settings',
+    'config.title': 'Scan Settings',
     'config.loading': 'Loading...',
     'config.schedule': 'Scheduled Incremental Scan',
     'config.scheduleEnable': 'Enable scheduled scan',
