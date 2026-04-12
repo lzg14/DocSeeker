@@ -1,0 +1,111 @@
+<h2>窗口框架风格</h2>
+<p class="subtitle">窗口控件和标题栏的设计方式</p>
+
+<div class="cards">
+  <div class="card" data-choice="native" onclick="toggleSelect(this)">
+    <div class="card-image">
+      <!-- 原生窗口 -->
+      <div style="background:#fff;padding:0;display:flex;height:100%;font-family:ui-sans-serif;flex-direction:column">
+        <!-- Windows 原生标题栏 -->
+        <div style="background:#f0f0f0;border-bottom:1px solid #ddd;padding:0;display:flex;align-items:center;height:32px">
+          <div style="flex:1;padding:0 12px">
+            <span style="font-size:12px;color:#333">DocSeeker</span>
+          </div>
+          <div style="display:flex">
+            <div style="width:46px;height:32px;display:flex;align-items:center;justify-content:center;color:#555;font-size:10px">─</div>
+            <div style="width:46px;height:32px;display:flex;align-items:center;justify-content:center;color:#555;font-size:10px">□</div>
+            <div style="width:46px;height:32px;display:flex;align-items:center;justify-content:center;color:#555;font-size:10px">✕</div>
+          </div>
+        </div>
+        <!-- 内容区 -->
+        <div style="flex:1;display:flex">
+          <div style="width:220px;border-right:1px solid #e8e8ec;padding:12px;background:#f7f7f8">
+            <div style="font-size:10px;color:#888;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:6px">导航</div>
+            <div style="font-size:13px;color:#111;background:#fff;padding:6px 10px;border-radius:6px;box-shadow:0 1px 3px rgba(0,0,0,0.08);margin-bottom:4px">🔎 搜索文档</div>
+            <div style="font-size:13px;color:#666;padding:6px 10px;margin-bottom:12px">📁 扫描管理</div>
+            <div style="font-size:13px;color:#666;padding:6px 10px">⚙️ 配置</div>
+          </div>
+          <div style="flex:1;padding:16px;background:#fff">
+            <div style="border:1px solid #e0e0e0;border-radius:8px;padding:10px 14px;display:flex;align-items:center;gap:8px;margin-bottom:16px">
+              <span style="color:#888">🔍</span>
+              <input style="flex:1;border:none;font-size:13px" value="搜索文档..." />
+            </div>
+            <div style="border:1px solid #e8e8ec;border-radius:8px;padding:10px">
+              <div style="font-size:12px;color:#888;margin-bottom:8px">找到 3 个文件</div>
+              <div style="font-size:13px;color:#111;padding:6px">📄 项目报告.docx</div>
+              <div style="font-size:13px;color:#111;padding:6px;background:#f0f7ff;border-radius:4px">📄 项目报告.docx</div>
+            </div>
+          </div>
+        </div>
+        <div style="background:#f7f7f8;border-top:1px solid #e8e8ec;padding:6px 16px">
+          <span style="font-size:11px;color:#888">已索引 1,234 个文件</span>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>保持原生窗口（推荐）</h3>
+      <p>使用 Windows 标准标题栏，最小/最大化/关闭按钮</p>
+      <ul style="font-size:11px;color:#27ae60;margin-top:8px">
+        <li>实现最简单，改动最小</li>
+        <li>系统原生体验，窗口操作可靠</li>
+        <li>与系统主题自动一致</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="card" data-choice="frameless" onclick="toggleSelect(this)">
+    <div class="card-image">
+      <!-- 无边框自定义窗口 -->
+      <div style="background:#fff;padding:0;display:flex;height:100%;font-family:ui-sans-serif;flex-direction:column">
+        <!-- 自定义标题栏 -->
+        <div style="background:#fafafa;border-bottom:1px solid #e8e8ec;padding:0;display:flex;align-items:center;height:40px;-webkit-app-region:drag">
+          <div style="width:220px;border-right:1px solid #e8e8ec;padding:0 16px;display:flex;align-items:center;-webkit-app-region:no-drag">
+            <span style="font-size:14px;font-weight:700;color:#111">DocSeeker</span>
+          </div>
+          <div style="flex:1;display:flex;align-items:center;padding:0 16px;-webkit-app-region:no-drag">
+            <span style="font-size:13px;color:#666;background:#f0f0f0;padding:4px 10px;border-radius:4px">搜索</span>
+          </div>
+          <div style="display:flex;-webkit-app-region:no-drag">
+            <div style="width:40px;height:40px;display:flex;align-items:center;justify-content:center;color:#888;font-size:14px;border-left:1px solid #e8e8ec">─</div>
+            <div style="width:40px;height:40px;display:flex;align-items:center;justify-content:center;color:#888;font-size:14px;border-left:1px solid #e8e8ec">□</div>
+            <div style="width:40px;height:40px;display:flex;align-items:center;justify-content:center;color:#888;font-size:14px;border-left:1px solid #e8e8ec;background:#e74c3c;color:#fff">✕</div>
+          </div>
+        </div>
+        <!-- 内容区 -->
+        <div style="flex:1;display:flex">
+          <div style="width:220px;border-right:1px solid #e8e8ec;padding:12px;background:#f7f7f8">
+            <div style="font-size:10px;color:#888;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:6px">导航</div>
+            <div style="font-size:13px;color:#111;background:#fff;padding:6px 10px;border-radius:6px;box-shadow:0 1px 3px rgba(0,0,0,0.08);margin-bottom:4px">🔎 搜索文档</div>
+            <div style="font-size:13px;color:#666;padding:6px 10px;margin-bottom:12px">📁 扫描管理</div>
+            <div style="font-size:13px;color:#666;padding:6px 10px">⚙️ 配置</div>
+          </div>
+          <div style="flex:1;padding:16px;background:#fff">
+            <div style="border:1px solid #e0e0e0;border-radius:8px;padding:10px 14px;display:flex;align-items:center;gap:8px;margin-bottom:16px">
+              <span style="color:#888">🔍</span>
+              <input style="flex:1;border:none;font-size:13px" value="搜索文档..." />
+            </div>
+            <div style="border:1px solid #e8e8ec;border-radius:8px;padding:10px">
+              <div style="font-size:12px;color:#888;margin-bottom:8px">找到 3 个文件</div>
+              <div style="font-size:13px;color:#111;padding:6px">📄 项目报告.docx</div>
+              <div style="font-size:13px;color:#111;padding:6px;background:#f0f7ff;border-radius:4px">📄 项目报告.docx</div>
+            </div>
+          </div>
+        </div>
+        <div style="background:#f7f7f8;border-top:1px solid #e8e8ec;padding:6px 16px">
+          <span style="font-size:11px;color:#888">已索引 1,234 个文件</span>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>自定义无边框窗口</h3>
+      <p>隐藏原生标题栏，自定义窗口控件，完全掌控视觉</p>
+      <ul style="font-size:11px;color:#e67e22;margin-top:8px">
+        <li>视觉最统一，与设计完全融合</li>
+        <li>可以实现毛玻璃等特效</li>
+        <li>需要处理窗口拖动、调整大小等细节</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<p style="margin-top:16px;font-size:12px;color:#888;text-align:center">点击选择窗口框架风格</p>

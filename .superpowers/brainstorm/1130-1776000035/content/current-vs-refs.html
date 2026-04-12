@@ -1,0 +1,202 @@
+<h2>DocSeeker 当前界面 vs 参考设计</h2>
+<p class="subtitle">点击选择你喜欢的风格方向，稍后我们详细讨论各部分的改进</p>
+
+<div class="cards">
+  <div class="card" data-choice="current" onclick="toggleSelect(this)">
+    <div class="card-image">
+      <!-- DocSeeker 当前布局 -->
+      <div style="background:#2c3e50;padding:8px;color:#fff;font-size:11px;font-family:sans-serif">▌ DocSeeker - 个人文档搜索工具</div>
+      <div style="background:#3498db;padding:4px 0;display:flex;gap:2px;justify-content:center">
+        <span style="background:#2980b9;padding:2px 8px;color:#fff;font-size:10px;border-radius:2px">配置</span>
+        <span style="background:#2980b9;padding:2px 8px;color:#fff;font-size:10px;border-radius:2px">扫描</span>
+        <span style="background:#3498db;padding:2px 8px;color:#fff;font-size:10px;border-radius:2px;font-weight:bold">搜索</span>
+      </div>
+      <div style="padding:12px;background:#f5f5f5">
+        <div style="background:#fff;border:1px solid #ddd;border-radius:4px;padding:8px;display:flex;gap:8px;align-items:center;margin-bottom:8px">
+          <input style="flex:1;border:none;font-size:12px" value="搜索关键词..." />
+          <button style="background:#3498db;color:#fff;border:none;padding:4px 12px;border-radius:3px;font-size:11px">搜索</button>
+        </div>
+        <div style="display:flex;gap:8px">
+          <!-- 左侧文件列表 -->
+          <div style="flex:1;background:#fff;border:1px solid #ddd;border-radius:4px;overflow:hidden">
+            <div style="background:#f8f8f8;padding:6px 8px;border-bottom:1px solid #ddd;font-size:10px;color:#666;font-family:sans-serif">📄 文件名&nbsp;&nbsp;&nbsp;类型&nbsp;&nbsp;大小&nbsp;&nbsp;修改时间</div>
+            <div style="padding:6px 8px;font-size:11px;font-family:sans-serif;border-bottom:1px solid #eee">📄 项目报告.docx&nbsp;&nbsp;docx&nbsp;&nbsp;2.3MB&nbsp;&nbsp;2024-01-15</div>
+            <div style="padding:6px 8px;font-size:11px;font-family:sans-serif;background:#e3f2fd;border-bottom:1px solid #eee">📄 项目报告.docx&nbsp;&nbsp;docx&nbsp;&nbsp;2.3MB&nbsp;&nbsp;2024-01-15</div>
+            <div style="padding:6px 8px;font-size:11px;font-family:sans-serif;border-bottom:1px solid #eee">📊 数据分析.xlsx&nbsp;&nbsp;xlsx&nbsp;&nbsp;856KB&nbsp;&nbsp;2024-01-10</div>
+          </div>
+          <!-- 右侧详情 -->
+          <div style="width:160px;background:#fff;border:1px solid #ddd;border-radius:4px;padding:8px;font-family:sans-serif">
+            <div style="font-size:11px;font-weight:bold;margin-bottom:6px">文件详情</div>
+            <div style="font-size:10px;color:#555;margin-bottom:4px">📄 项目报告.docx</div>
+            <div style="font-size:9px;color:#888;margin-bottom:8px">D:\Docs\项目报告.docx</div>
+            <div style="font-size:9px;color:#666;margin-bottom:3px">大小: 2.34 MB</div>
+            <div style="font-size:9px;color:#666;margin-bottom:3px">类型: docx</div>
+            <div style="font-size:9px;color:#666;margin-bottom:6px">修改: 2024-01-15</div>
+            <div style="font-size:9px;color:#555;margin-bottom:4px">内容预览:</div>
+            <div style="font-size:9px;color:#777;background:#f9f9f9;padding:4px;border-radius:2px;line-height:1.4">这是项目报告的内容摘要，包含了项目的整体概述和关键...</div>
+            <button style="margin-top:8px;width:100%;background:#3498db;color:#fff;border:none;padding:4px;font-size:10px;border-radius:3px">在文件夹中显示</button>
+          </div>
+        </div>
+      </div>
+      <div style="background:#ecf0f1;padding:4px 12px;font-size:10px;color:#7f8c8d;font-family:sans-serif;text-align:center">搜索结果: 3 个文件</div>
+      <div style="background:#2c3e50;padding:6px 12px;font-size:10px;color:#95a5a6;font-family:sans-serif;text-align:center">DocSeeker - 个人长期积累文档的搜索工具</div>
+    </div>
+    <div class="card-body">
+      <h3>当前 DocSeeker 布局</h3>
+      <p>深蓝顶栏 + 蓝色标签 + 左侧列表 + 窄右详情栏</p>
+      <ul style="font-size:11px;color:#c0392b;margin-top:8px">
+        <li>详情面板太窄，内容预览受限</li>
+        <li>标题栏和页脚较朴素</li>
+        <li>搜索结果和预览割裂</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="card" data-choice="notion-like" onclick="toggleSelect(this)">
+    <div class="card-image">
+      <!-- Notion 风格 -->
+      <div style="background:#191919;padding:0;display:flex;height:100%;font-family:ui-sans-serif">
+        <!-- 左侧边栏 -->
+        <div style="width:200px;background:#202020;padding:12px;border-right:1px solid #333">
+          <div style="color:#fff;font-size:13px;font-weight:bold;margin-bottom:16px">🔍 DocSeeker</div>
+          <div style="color:#9b9b9b;font-size:11px;margin-bottom:4px">搜索</div>
+          <div style="color:#fff;font-size:11px;background:#2d2d2d;padding:6px 8px;border-radius:4px;margin-bottom:12px">🔎 全部文件</div>
+          <div style="color:#9b9b9b;font-size:11px;margin-bottom:4px">快速访问</div>
+          <div style="color:#9b9b9b;font-size:11px;padding:4px 8px">📁 项目文档</div>
+          <div style="color:#9b9b9b;font-size:11px;padding:4px 8px">📁 工作报告</div>
+          <div style="color:#9b9b9b;font-size:11px;padding:4px 8px">📊 数据文件</div>
+        </div>
+        <!-- 主内容 -->
+        <div style="flex:1;background:#121212;padding:16px">
+          <div style="background:#2a2a2a;border:1px solid #3a3a3a;border-radius:6px;padding:10px 14px;display:flex;align-items:center;gap:8px;margin-bottom:16px">
+            <span style="color:#9b9b9b;font-size:12px">🔍</span>
+            <input style="flex:1;background:transparent;border:none;color:#fff;font-size:12px" value="搜索文档内容..." />
+          </div>
+          <!-- 搜索结果列表 -->
+          <div style="margin-bottom:12px">
+            <div style="color:#e0e0e0;font-size:13px;font-weight:500;margin-bottom:4px">📄 项目报告.docx</div>
+            <div style="color:#9b9b9b;font-size:11px;margin-bottom:4px">D:\Docs\项目报告.docx · docx · 2.3MB</div>
+            <div style="color:#9b9b9b;font-size:11px;background:#2a2a2a;padding:6px;border-radius:4px;line-height:1.5">这是<mark style="background:#3d6b3d;color:#a5d6a7;padding:1px 3px;border-radius:2px">项目</mark>报告的完整内容摘要，包含了<mark style="background:#3d6b3d;color:#a5d6a7;padding:1px 3px;border-radius:2px">项目</mark>的整体概述、关键成果和下一阶段计划...</div>
+          </div>
+          <div style="margin-bottom:12px">
+            <div style="color:#9b9b9b;font-size:12px;margin-bottom:4px">📊 数据分析.xlsx</div>
+            <div style="color:#6a6a6a;font-size:11px">D:\Docs\数据分析.xlsx · xlsx · 856KB</div>
+          </div>
+        </div>
+        <!-- 右侧预览 -->
+        <div style="width:280px;background:#1a1a1a;padding:16px;border-left:1px solid #333">
+          <div style="color:#e0e0e0;font-size:12px;font-weight:600;margin-bottom:8px">📄 项目报告.docx</div>
+          <div style="color:#9b9b9b;font-size:11px;margin-bottom:12px">D:\Docs\项目\项目报告.docx</div>
+          <div style="background:#2a2a2a;border-radius:4px;padding:12px;margin-bottom:12px">
+            <div style="color:#9b9b9b;font-size:10px;margin-bottom:6px">文件信息</div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+              <div><div style="color:#6a6a6a;font-size:9px">大小</div><div style="color:#e0e0e0;font-size:11px">2.34 MB</div></div>
+              <div><div style="color:#6a6a6a;font-size:9px">修改</div><div style="color:#e0e0e0;font-size:11px">2024-01-15</div></div>
+              <div><div style="color:#6a6a6a;font-size:9px">类型</div><div style="color:#e0e0e0;font-size:11px">docx</div></div>
+              <div><div style="color:#6a6a6a;font-size:9px">MD5</div><div style="color:#e0e0e0;font-size:11px">a3f2...c8d1</div></div>
+            </div>
+          </div>
+          <div style="color:#9b9b9b;font-size:10px;margin-bottom:4px">内容预览</div>
+          <div style="color:#b0b0b0;font-size:11px;line-height:1.6;background:#2a2a2a;padding:10px;border-radius:4px">这是项目报告的完整内容摘要，包含了项目的整体概述、关键成果、里程碑完成情况和下一阶段的工作计划...</div>
+          <button style="width:100%;margin-top:12px;background:#3d6b3d;color:#a5d6a7;border:none;padding:8px;border-radius:4px;font-size:11px">在文件夹中显示</button>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>Notion / Obsidian 风格</h3>
+      <p>深色侧边栏 + 紧凑搜索栏 + 宽敞预览区 + 大字内容预览</p>
+      <ul style="font-size:11px;color:#27ae60;margin-top:8px">
+        <li>三栏布局，视觉更清晰</li>
+        <li>详情区更大，阅读体验好</li>
+        <li>现代深色主题，适合长时间使用</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="card" data-choice="linear-like" onclick="toggleSelect(this)">
+    <div class="card-image">
+      <!-- Linear 风格 -->
+      <div style="background:#fff;padding:0;display:flex;height:100%;font-family:ui-sans-serif">
+        <!-- 左侧导航 -->
+        <div style="width:220px;background:#f7f7f8;border-right:1px solid #e8e8ec;padding:16px">
+          <div style="font-size:14px;font-weight:700;color:#111;margin-bottom:20px">DocSeeker</div>
+          <div style="margin-bottom:16px">
+            <div style="font-size:10px;color:#888;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:6px">搜索</div>
+            <div style="font-size:13px;color:#111;background:#fff;padding:6px 10px;border-radius:6px;box-shadow:0 1px 3px rgba(0,0,0,0.08);display:flex;align-items:center;gap:6px">
+              <span>🔎</span><span>搜索文档</span>
+            </div>
+          </div>
+          <div style="margin-bottom:16px">
+            <div style="font-size:10px;color:#888;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:6px">管理</div>
+            <div style="font-size:13px;color:#666;padding:4px 10px">📁 扫描文件夹</div>
+            <div style="font-size:13px;color:#666;padding:4px 10px">⚙️ 配置</div>
+          </div>
+        </div>
+        <!-- 主内容区 -->
+        <div style="flex:1;display:flex;flex-direction:column">
+          <!-- 搜索框区 -->
+          <div style="padding:16px 20px;border-bottom:1px solid #e8e8ec">
+            <div style="display:flex;gap:8px">
+              <div style="flex:1;background:#f7f7f8;border:1px solid #e0e0e0;border-radius:8px;padding:8px 12px;display:flex;align-items:center;gap:8px">
+                <span style="color:#888">🔍</span>
+                <input style="flex:1;background:transparent;border:none;font-size:13px;color:#111" value="搜索关键词..." />
+              </div>
+              <button style="background:#18181b;color:#fff;border:none;padding:8px 16px;border-radius:8px;font-size:13px;font-weight:500">搜索</button>
+            </div>
+          </div>
+          <!-- 文件列表 -->
+          <div style="flex:1;padding:12px 20px">
+            <div style="color:#888;font-size:11px;margin-bottom:8px">找到 3 个文件</div>
+            <div style="border:1px solid #e8e8ec;border-radius:8px;overflow:hidden">
+              <div style="display:grid;grid-template-columns:1fr 80px 80px 100px;background:#f7f7f8;padding:6px 12px;font-size:10px;color:#888">
+                <div>文件名</div><div>类型</div><div>大小</div><div>修改时间</div>
+              </div>
+              <div style="display:grid;grid-template-columns:1fr 80px 80px 100px;padding:10px 12px;border-bottom:1px solid #e8e8ec;align-items:center">
+                <div style="font-size:13px;color:#111;font-weight:500">📄 项目报告.docx</div>
+                <div style="font-size:11px;color:#666">docx</div>
+                <div style="font-size:11px;color:#666">2.3 MB</div>
+                <div style="font-size:11px;color:#666">2024-01-15</div>
+              </div>
+              <div style="display:grid;grid-template-columns:1fr 80px 80px 100px;padding:10px 12px;border-bottom:1px solid #e8e8ec;background:#f0f7ff;align-items:center">
+                <div style="font-size:13px;color:#111;font-weight:500">📄 项目报告.docx</div>
+                <div style="font-size:11px;color:#666">docx</div>
+                <div style="font-size:11px;color:#666">2.3 MB</div>
+                <div style="font-size:11px;color:#666">2024-01-15</div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <!-- 右侧面板 -->
+        <div style="width:300px;border-left:1px solid #e8e8ec;padding:16px;background:#fafafa">
+          <div style="color:#111;font-size:13px;font-weight:600;margin-bottom:4px">项目报告.docx</div>
+          <div style="color:#888;font-size:11px;margin-bottom:16px">D:\Docs\项目报告.docx</div>
+          <div style="background:#fff;border:1px solid #e8e8ec;border-radius:8px;padding:12px;margin-bottom:12px">
+            <div style="font-size:10px;color:#888;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:8px">文件信息</div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+              <div><div style="font-size:10px;color:#888">大小</div><div style="font-size:12px;color:#111">2.34 MB</div></div>
+              <div><div style="font-size:10px;color:#888">类型</div><div style="font-size:12px;color:#111">docx</div></div>
+              <div><div style="font-size:10px;color:#888">修改时间</div><div style="font-size:12px;color:#111">2024-01-15</div></div>
+              <div><div style="font-size:10px;color:#888">MD5</div><div style="font-size:12px;color:#111">a3f2...8d1</div></div>
+            </div>
+          </div>
+          <div style="background:#fff;border:1px solid #e8e8ec;border-radius:8px;padding:12px;margin-bottom:12px">
+            <div style="font-size:10px;color:#888;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:6px">内容预览</div>
+            <div style="font-size:12px;color:#333;line-height:1.6">这是项目报告的完整内容摘要，包含了项目的整体概述、关键成果、里程碑完成情况和下一阶段的工作计划安排。</div>
+          </div>
+          <button style="width:100%;background:#18181b;color:#fff;border:none;padding:8px;border-radius:6px;font-size:13px;font-weight:500">在文件夹中显示</button>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>Linear / Clean 风格</h3>
+      <p>左侧导航 + 大搜索栏 + 整齐网格列表 + 宽敞预览区</p>
+      <ul style="font-size:11px;color:#27ae60;margin-top:8px">
+        <li>布局清晰，视觉层次分明</li>
+        <li>预览区空间充足</li>
+        <li>现代简约，适合专业用户</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<p style="margin-top:16px;font-size:12px;color:#888;text-align:center">点击你喜欢的风格卡片</p>
