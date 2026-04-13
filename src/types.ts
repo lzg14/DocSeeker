@@ -28,7 +28,7 @@ export interface ScanProgress {
   current: number
   total: number
   currentFile: string
-  phase: 'scanning' | 'indexing' | 'hashing' | 'complete'
+  phase: 'scanning' | 'processing' | 'complete'
 }
 
-export type PageTab = 'scan' | 'schedule' | 'search' | 'language' | 'guide'
+export type PageTab = 'scan' | 'search' | 'language' | 'guide'

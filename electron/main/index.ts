@@ -1,4 +1,4 @@
-import { app, shell, BrowserWindow, ipcMain, dialog } from 'electron'
+import { app, shell, BrowserWindow, ipcMain, dialog, Tray, Menu, nativeImage } from 'electron'
 import { join } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import log from 'electron-log/main'
@@ -9,6 +9,7 @@ import { startFileWatcher, stopFileWatcher } from './fileWatcher'
 
 // Initialize logging
 log.initialize()
+log.transports.file.maxSize = 5 * 1024 * 1024 // 5MB per file
 log.info('Application starting...')
 
 // Global exception handler
@@ -22,6 +23,46 @@ process.on('unhandledRejection', (reason) => {
 })
 
 let mainWindow: BrowserWindow | null = null
+let tray: Tray | null = null
+let isClosingFromIPC = false
+
+function createTray(): void {
+  const iconPath = join(__dirname, '../../build/icon.png')
+  const icon = nativeImage.createFromPath(iconPath)
+  tray = new Tray(icon.resize({ width: 16, height: 16 }))
+
+  const contextMenu = Menu.buildFromTemplate([
+    {
+      label: '显示窗口',
+      click: () => {
+        mainWindow?.show()
+        mainWindow?.focus()
+      }
+    },
+    { type: 'separator' },
+    {
+      label: '退出',
+      click: () => {
+        app.quit()
+      }
+    }
+  ])
+
+  tray.setToolTip('DocSeeker')
+  tray.setContextMenu(contextMenu)
+
+  tray.on('click', () => {
+    if (mainWindow) {
+      if (mainWindow.isVisible()) {
+        mainWindow.focus()
+      } else {
+        mainWindow.show()
+      }
+    }
+  })
+
+  log.info('System tray created')
+}
 
 function createWindow(): void {
   mainWindow = new BrowserWindow({
@@ -53,6 +94,19 @@ function createWindow(): void {
     mainWindow?.webContents.send('window-maximized-changed', false)
   })
 
+  // 最小化到托盘
+  mainWindow.on('minimize', () => {
+    mainWindow?.hide()
+  })
+
+  // 非 IPC 触发的关闭（托盘 X、系统关闭）则隐藏到托盘
+  mainWindow.on('close', (event) => {
+    if (!(app as any).isQuitting && !isClosingFromIPC) {
+      event.preventDefault()
+      mainWindow?.webContents.send('show-close-confirm')
+    }
+  })
+
   mainWindow.webContents.setWindowOpenHandler((details) => {
     shell.openExternal(details.url)
     return { action: 'deny' }
@@ -74,9 +128,9 @@ app.whenReady().then(async () => {
 
   // Initialize database
   try {
+    const t0 = Date.now()
     await initDatabase()
-    await startFileWatcher()
-    log.info('Database initialized successfully')
+    log.info(`Database initialized in ${Date.now() - t0}ms`)
   } catch (error) {
     log.error('Failed to initialize database:', error)
     dialog.showErrorBox('数据库错误', '无法初始化数据库，应用将退出')
@@ -89,8 +143,14 @@ app.whenReady().then(async () => {
   log.info('IPC handlers registered')
 
   // Start the scheduled scan scheduler
+  const ts0 = Date.now()
   startScheduler()
-  log.info('Scheduled scan scheduler started')
+  log.info(`Scheduler started in ${Date.now() - ts0}ms`)
+
+  // File watcher disabled for performance debugging
+  // setTimeout(() => {
+  //   startFileWatcher().catch((err: Error) => log.error('File watcher init failed:', err))
+  // }, 3000)
 
   // Default open or close DevTools by F12 in development
   app.on('browser-window-created', (_, window) => {
@@ -98,6 +158,7 @@ app.whenReady().then(async () => {
   })
 
   createWindow()
+  createTray()
 
   app.on('activate', function () {
     if (BrowserWindow.getAllWindows().length === 0) createWindow()
@@ -114,6 +175,7 @@ app.on('window-all-closed', () => {
 
 app.on('before-quit', () => {
   log.info('Application quitting...')
+  ;(app as any).isQuitting = true
   stopFileWatcher()
   stopScheduler()
   closeDatabase()

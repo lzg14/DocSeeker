@@ -3,6 +3,7 @@ import FileList from '../components/FileList'
 import FileDetail from '../components/FileDetail'
 import { FileRecord } from '../types'
 import { useLanguage } from '../context/LanguageContext'
+import { formatSize } from '../utils/format'
 
 function SearchPage(): JSX.Element {
   const [files, setFiles] = useState<FileRecord[]>([])
@@ -36,14 +37,6 @@ function SearchPage(): JSX.Element {
     }
   }
 
-  const formatSize = (bytes: number): string => {
-    if (bytes === 0) return '0 B'
-    const k = 1024
-    const sizes = ['B', 'KB', 'MB', 'GB']
-    const i = Math.floor(Math.log(bytes) / Math.log(k))
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i]
-  }
-
   return (
     <div className="search-page">
       <div className="search-header">
@@ -56,7 +49,7 @@ function SearchPage(): JSX.Element {
             onKeyDown={handleKeyDown}
           />
           <button
-            className="search-btn"
+            className="btn btn-primary"
             onClick={handleSearch}
             disabled={isSearching}
           >

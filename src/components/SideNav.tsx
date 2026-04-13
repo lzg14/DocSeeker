@@ -6,12 +6,11 @@ interface SideNavProps {
   onTabChange: (tab: PageTab) => void
 }
 
-const navItems: { id: PageTab; labelKey: string; icon: string; group: string }[] = [
-  { id: 'search', labelKey: 'nav.search', icon: '🔎', group: '导航' },
-  { id: 'scan', labelKey: 'nav.scan', icon: '📁', group: '导航' },
-  { id: 'language', labelKey: 'nav.language', icon: '🌐', group: '设置' },
-  { id: 'schedule', labelKey: 'nav.schedule', icon: '⏰', group: '设置' },
-  { id: 'guide', labelKey: 'nav.guide', icon: '❓', group: '帮助' },
+const navItems: { id: PageTab; labelKey: string; icon: string; groupKey: string }[] = [
+  { id: 'search', labelKey: 'nav.search', icon: '🔎', groupKey: 'nav.group.nav' },
+  { id: 'scan', labelKey: 'nav.scan', icon: '📁', groupKey: 'nav.group.nav' },
+  { id: 'language', labelKey: 'nav.language', icon: '🌐', groupKey: 'nav.group.settings' },
+  { id: 'guide', labelKey: 'nav.guide', icon: '❓', groupKey: 'nav.group.help' },
 ]
 
 function SideNav({ activeTab, onTabChange }: SideNavProps): JSX.Element {
@@ -26,7 +25,7 @@ function SideNav({ activeTab, onTabChange }: SideNavProps): JSX.Element {
         return (
           <div key={item.id}>
             {showGroupLabel && (
-              <div className="nav-group-label">{item.group}</div>
+              <div className="nav-group-label">{t(item.groupKey)}</div>
             )}
             <button
               className={`nav-item ${activeTab === item.id ? 'active' : ''}`}
