@@ -1,8 +1,9 @@
 import log from 'electron-log/main'
-import { getFileByPath, insertFile, deleteFileByPath, updateFile, getAllScannedFolders } from './database'
+import { getFileByPath, insertFile, deleteFileByPath, updateFile, getAllScannedFolders, getDatabase } from './database'
 import crypto from 'crypto'
 import path from 'path'
 import fs from 'fs'
+import fsPromises from 'fs/promises'
 import { extractContent } from './scanner'
 
 const SUPPORTED_EXTENSIONS = new Set([
@@ -27,9 +28,9 @@ type FSWatcher = {
 
 let watcher: FSWatcher | null = null
 
-function getFileHash(filePath: string): string | null {
+async function getFileHashAsync(filePath: string): Promise<string | null> {
   try {
-    const buffer = fs.readFileSync(filePath)
+    const buffer = await fsPromises.readFile(filePath)
     return crypto.createHash('md5').update(buffer).digest('hex')
   } catch {
     return null
@@ -38,12 +39,14 @@ function getFileHash(filePath: string): string | null {
 
 async function processFile(filePath: string): Promise<void> {
   try {
-    const stats = fs.statSync(filePath)
+    if (!getDatabase()) return
+
+    const stats = await fsPromises.stat(filePath)
     const ext = path.extname(filePath).toLowerCase()
     if (!SUPPORTED_EXTENSIONS.has(ext)) return
 
     const content = await extractContent(filePath)
-    const hash = getFileHash(filePath)
+    const hash = await getFileHashAsync(filePath)
     const fileType = FILE_TYPE_MAP[ext] || 'unknown'
 
     const existing = getFileByPath(filePath)
@@ -87,18 +90,18 @@ export async function startFileWatcher(): Promise<void> {
     persistent: true,
     ignoreInitial: true,
     ignored: /(^|[\/\\])\../,
-    awaitWriteFinish: {
-      stabilityThreshold: 2000,
-      pollInterval: 100
-    }
+    usePolling: false,
+    awaitWriteFinish: false
   }) as unknown as FSWatcher
 
-  watcher
-    .on('add', (filePath: string) => processFile(filePath))
-    .on('change', (filePath: string) => processFile(filePath))
+  ;(watcher as any)
+    .on('add', (filePath: string) => { processFile(filePath).catch(() => {}) })
+    .on('change', (filePath: string) => { processFile(filePath).catch(() => {}) })
     .on('unlink', (filePath: string) => {
-      deleteFileByPath(filePath)
-      log.info(`File watcher: removed ${filePath} from index`)
+      if (getDatabase()) {
+        deleteFileByPath(filePath)
+        log.info(`File watcher: removed ${filePath} from index`)
+      }
     })
     .on('error', (error: Error) => log.error('File watcher error:', error))
 

@@ -2,15 +2,12 @@ import { useState, useEffect, useCallback } from 'react'
 import { ScannedFolder } from '../types'
 import { useAppContext } from '../context/AppContext'
 import { useLanguage } from '../context/LanguageContext'
+import ConfirmDialog from '../components/ConfirmDialog'
+import { formatSize } from '../utils/format'
 
 function ScanPage(): JSX.Element {
   const {
     isScanning,
-    isPaused,
-    scanProgress,
-    pauseScan,
-    resumeScan,
-    cancelScan,
     triggerRefresh
   } = useAppContext()
   const { t } = useLanguage()
@@ -18,7 +15,7 @@ function ScanPage(): JSX.Element {
   const [folders, setFolders] = useState<ScannedFolder[]>([])
   const [expandedId, setExpandedId] = useState<number | null>(null)
   const [loading, setLoading] = useState(true)
-  const [lastResult, setLastResult] = useState<{ filesProcessed: number; errors: number } | null>(null)
+  const [confirmDelete, setConfirmDelete] = useState<ScannedFolder | null>(null)
 
   const loadFolders = useCallback(async () => {
     try {
@@ -35,12 +32,6 @@ function ScanPage(): JSX.Element {
     loadFolders()
   }, [loadFolders])
 
-  useEffect(() => {
-    if (scanProgress.phase === 'complete' && scanProgress.total > 0) {
-      setLastResult({ filesProcessed: scanProgress.total, errors: 0 })
-    }
-  }, [scanProgress.phase, scanProgress.total])
-
   const formatDate = (dateStr?: string): string => {
     if (!dateStr) return t('config.never')
     const date = new Date(dateStr)
@@ -53,50 +44,9 @@ function ScanPage(): JSX.Element {
     })
   }
 
-  const formatSize = (bytes?: number): string => {
-    if (!bytes) return '0 B'
-    const k = 1024
-    const sizes = ['B', 'KB', 'MB', 'GB']
-    const i = Math.floor(Math.log(bytes) / Math.log(k))
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i]
-  }
-
-  const handleSelectDirectory = useCallback(async (): Promise<void> => {
-    setLastResult(null)
-    const dirPath = await window.electron.selectDirectory()
-    if (dirPath) {
-      try {
-        await window.electron.addScannedFolder(dirPath)
-        const result = await window.electron.scanDirectory(dirPath)
-        console.log('Scan result:', result)
-        await window.electron.updateFolderAfterScan(dirPath, result)
-        await loadFolders()
-        triggerRefresh()
-      } catch (error) {
-        console.error('Scan failed:', error)
-      }
-    }
-  }, [loadFolders, triggerRefresh])
-
-  const handlePauseResume = async (): Promise<void> => {
-    if (isPaused) {
-      await resumeScan()
-    } else {
-      await pauseScan()
-    }
-  }
-
-  const handleCancel = async (): Promise<void> => {
-    if (!confirm(t('scan.cancelConfirm'))) {
-      return
-    }
-    await cancelScan()
-  }
-
   const handleIncrementalScan = async (folder: ScannedFolder) => {
     try {
       await window.electron.incrementalScan(folder.path)
-      await loadFolders()
     } catch (error) {
       console.error('Failed to run incremental scan:', error)
     }
@@ -105,7 +55,6 @@ function ScanPage(): JSX.Element {
   const handleFullRescan = async (folder: ScannedFolder) => {
     try {
       await window.electron.fullRescan(folder.path)
-      await loadFolders()
     } catch (error) {
       console.error('Failed to run full rescan:', error)
     }
@@ -124,29 +73,27 @@ function ScanPage(): JSX.Element {
   }
 
   const handleDelete = async (folder: ScannedFolder) => {
-    const msg = t('config.deleteConfirm').replace('{name}', folder.name)
-    if (!confirm(msg)) {
-      return
-    }
+    setConfirmDelete(folder)
+  }
+
+  const handleConfirmDelete = async () => {
+    if (!confirmDelete) return
     try {
-      await window.electron.deleteScannedFolder(folder.id!)
+      await window.electron.deleteScannedFolder(confirmDelete.id!)
       await loadFolders()
     } catch (error) {
       console.error('Failed to delete folder:', error)
     }
+    setConfirmDelete(null)
   }
 
-  const handleScanAll = async () => {
-    if (!confirm(t('config.scanAllConfirm'))) {
-      return
-    }
+  const handleStartScan = async (): Promise<void> => {
+    if (folders.length === 0) return
     for (const folder of folders) {
       await handleIncrementalScan(folder)
     }
-  }
-
-  const getPhaseText = (phase: string): string => {
-    return t(`scan.phase.${phase}` as any) || t('scan.phase.processing')
+    await loadFolders()
+    triggerRefresh()
   }
 
   if (loading) {
@@ -160,157 +107,98 @@ function ScanPage(): JSX.Element {
 
   return (
     <div className="settings-page">
-      <h2 className="page-title">{t('scan.title')}</h2>
-
-      <div className="scan-controls-section">
-        <button
-          className="search-btn"
-          onClick={handleSelectDirectory}
-          disabled={isScanning}
-        >
-          {isScanning ? t('scan.scanning') : t('scan.selectDir')}
-        </button>
-      </div>
-
-      {isScanning && (
-        <div className="scan-progress-section">
-          <div className="progress-status">
-            <span className="phase">{getPhaseText(scanProgress.phase)}</span>
-            <span className="file-count">
-              {scanProgress.total > 0
-                ? `${scanProgress.current} / ${scanProgress.total}`
-                : t('scan.preparing')}
-            </span>
-          </div>
-
-          <div className="current-file">
-            <span className="label">{t('scan.currentFile')}</span>
-            <span className="path" title={scanProgress.currentFile}>
-              {scanProgress.currentFile || t('scan.preparing')}
-            </span>
-          </div>
-
-          <div className="progress-track">
-            <div
-              className="progress-fill"
-              style={{
-                width: scanProgress.total > 0
-                  ? `${Math.min((scanProgress.current / scanProgress.total) * 100, 100)}%`
-                  : '0%'
-              }}
-            />
-          </div>
-
-          {scanProgress.phase !== 'complete' && (
-            <div className="scan-action-buttons">
-              <button
-                className="detail-btn-secondary"
-                onClick={handlePauseResume}
-              >
-                {isPaused ? t('scan.resume') : t('scan.pause')}
-              </button>
-              <button
-                className="detail-btn-secondary"
-                onClick={handleCancel}
-              >
-                {t('scan.cancel')}
-              </button>
-            </div>
-          )}
-        </div>
-      )}
-
-      {!isScanning && lastResult && (
-        <div className="scan-tips">
-          <div className="scan-complete-info">
-            <p>{t('scan.complete').replace('{count}', lastResult.filesProcessed.toString())}</p>
-            <p>{t('scan.completeHint')}</p>
-          </div>
-        </div>
-      )}
-
-      <div className="config-header">
-        <h3>{t('config.scanDirs')}</h3>
+      <div className="scan-header">
+        <h2 className="page-title">{t('scan.title')}</h2>
         <div className="config-header-actions">
-          <span className="folder-count">{t('config.dirCount').replace('{count}', folders.length.toString())}</span>
           <button
-            className="detail-btn-secondary"
-            onClick={handleScanAll}
-            disabled={isScanning || folders.length === 0}
-          >
-            {t('config.scanAll')}
-          </button>
-          <button
-            className="search-btn"
+            className="btn btn-primary"
             onClick={handleAddFolder}
             disabled={isScanning}
           >
             {t('config.addDir')}
           </button>
+          <button
+            className="btn btn-primary"
+            onClick={handleStartScan}
+            disabled={isScanning || folders.length === 0}
+          >
+            {t('scan.startScan')}
+          </button>
         </div>
       </div>
 
-      {folders.length === 0 ? (
-        <div className="empty-state">
-          <p>{t('config.noFolders')}</p>
-          <p>{t('config.addHint')}</p>
-        </div>
-      ) : (
-        <div className="folder-list">
-          {folders.map((folder) => (
-            <div
-              key={folder.id}
-              className={`folder-item ${expandedId === folder.id ? 'expanded' : ''}`}
-            >
+      <div className="scan-content">
+        {folders.length === 0 ? (
+          <div className="empty-state">
+            <p>{t('config.noFolders')}</p>
+            <p>{t('config.addHint')}</p>
+          </div>
+        ) : (
+          <div className="folder-list">
+            {folders.map((folder) => (
               <div
-                className="folder-header"
-                onClick={() => setExpandedId(expandedId === folder.id ? null : folder.id!)}
+                key={folder.id}
+                className={`folder-item ${expandedId === folder.id ? 'expanded' : ''}`}
               >
-                <div className="folder-info">
-                  <span className="folder-name">{folder.name}</span>
-                  <span className="folder-path" title={folder.path}>{folder.path}</span>
+                <div
+                  className="folder-header"
+                  onClick={() => setExpandedId(expandedId === folder.id ? null : folder.id!)}
+                >
+                  <div className="folder-info">
+                    <span className="folder-name">{folder.name}</span>
+                    <span className="folder-path" title={folder.path}>{folder.path}</span>
+                  </div>
+                  <div className="folder-meta">
+                    <span className="file-count">{folder.file_count || 0} {t('config.files')}</span>
+                    <span className="last-scan">{formatDate(folder.last_scan_at)}</span>
+                  </div>
                 </div>
-                <div className="folder-meta">
-                  <span className="file-count">{folder.file_count || 0} {t('config.files')}</span>
-                  <span className="last-scan">{formatDate(folder.last_scan_at)}</span>
-                </div>
+
+                {expandedId === folder.id && (
+                  <div className="folder-details">
+                    <div className="detail-row">
+                      <span>{t('config.totalSize')}</span>
+                      <span>{formatSize(folder.total_size)}</span>
+                    </div>
+
+                    <div className="action-buttons">
+                      <button
+                        className="btn btn-secondary"
+                        onClick={() => handleIncrementalScan(folder)}
+                        disabled={isScanning}
+                      >
+                        {t('config.incrementalScan')}
+                      </button>
+                      <button
+                        className="btn btn-secondary"
+                        onClick={() => handleFullRescan(folder)}
+                        disabled={isScanning}
+                      >
+                        {t('config.fullScan')}
+                      </button>
+                      <button
+                        className="btn btn-danger"
+                        onClick={() => setConfirmDelete(folder)}
+                        disabled={isScanning}
+                      >
+                        {t('config.delete')}
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
+            ))}
+          </div>
+        )}
+      </div>
 
-              {expandedId === folder.id && (
-                <div className="folder-details">
-                  <div className="detail-row">
-                    <span>{t('config.totalSize')}</span>
-                    <span>{formatSize(folder.total_size)}</span>
-                  </div>
-
-                  <div className="action-buttons">
-                    <button
-                      className="detail-btn-secondary"
-                      onClick={() => handleIncrementalScan(folder)}
-                      disabled={isScanning}
-                    >
-                      {t('config.incrementalScan')}
-                    </button>
-                    <button
-                      className="detail-btn-secondary"
-                      onClick={() => handleFullRescan(folder)}
-                      disabled={isScanning}
-                    >
-                      {t('config.fullScan')}
-                    </button>
-                    <button
-                      className="detail-btn-secondary"
-                      onClick={() => handleDelete(folder)}
-                      disabled={isScanning}
-                    >
-                      {t('config.delete')}
-                    </button>
-                  </div>
-                </div>
-              )}
-            </div>
-          ))}
-        </div>
+      {confirmDelete && (
+        <ConfirmDialog
+          title={t('config.delete')}
+          message={t('config.deleteConfirm').replace('{name}', confirmDelete.name)}
+          onConfirm={handleConfirmDelete}
+          onCancel={() => setConfirmDelete(null)}
+        />
       )}
     </div>
   )

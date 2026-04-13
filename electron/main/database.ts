@@ -1,7 +1,6 @@
 import Database, { Database as BetterSqlite3Database } from 'better-sqlite3'
 import { app } from 'electron'
 import path from 'path'
-import fs from 'fs'
 import log from 'electron-log/main'
 
 let db: BetterSqlite3Database | null = null
@@ -17,12 +16,6 @@ export function getDatabase(): BetterSqlite3Database {
 export async function initDatabase(): Promise<void> {
   dbPath = path.join(app.getPath('userData'), 'file-manager.db')
   log.info('Database path:', dbPath)
-
-  // Always start fresh - delete existing database (no migration needed)
-  if (fs.existsSync(dbPath)) {
-    fs.unlinkSync(dbPath)
-    log.info('Old database deleted, creating fresh database')
-  }
 
   db = new Database(dbPath)
   db.pragma('journal_mode = WAL')
@@ -301,9 +294,10 @@ export function clearAllFiles(): void {
 }
 
 export function getFileCount(): number {
+  if (!db) return 0
   const stmt = getDatabase().prepare('SELECT COUNT(*) as count FROM files')
   const row = stmt.get() as { count: number }
-  
+
   return row.count || 0
 }
 
@@ -386,9 +380,10 @@ export function getAllScannedFolders(): ScannedFolder[] {
 }
 
 export function getScheduledFolders(): ScannedFolder[] {
+  if (!db) return []
   const stmt = getDatabase().prepare('SELECT * FROM scanned_folders WHERE schedule_enabled = 1 ORDER BY last_scan_at ASC')
   const rows = stmt.all() as ScannedFolder[]
-  
+
   return rows
 }
 
@@ -399,23 +394,25 @@ export function deleteScannedFolder(id: number): void {
 }
 
 export function removeFilesByFolderPath(folderPath: string): void {
+  if (!db) return
   const stmt = getDatabase().prepare("DELETE FROM files WHERE path LIKE ?")
   stmt.run([folderPath + '%'])
-  
 }
 
 export function getFileCountByFolder(folderPath: string): number {
+  if (!db) return 0
   const stmt = getDatabase().prepare("SELECT COUNT(*) as count FROM files WHERE path LIKE ?")
   stmt.bind([folderPath + '%'])
   const row = stmt.get() as { count: number }
-  
+
   return row.count || 0
 }
 
 export function getTotalSizeByFolder(folderPath: string): number {
+  if (!db) return 0
   const stmt = getDatabase().prepare("SELECT SUM(size) as total FROM files WHERE path LIKE ?")
   stmt.bind([folderPath + '%'])
   const row = stmt.get() as { total: number | null }
-  
+
   return row.total || 0
 }

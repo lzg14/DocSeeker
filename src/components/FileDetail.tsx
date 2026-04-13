@@ -58,10 +58,10 @@ function FileDetail({ file, formatSize }: FileDetailProps): JSX.Element {
       </div>
 
       <div className="detail-actions">
-        <button className="detail-btn-primary" onClick={handleShowInFolder}>
+        <button className="btn btn-primary" onClick={handleShowInFolder}>
           {t('detail.showInFolder')}
         </button>
-        <button className="detail-btn-secondary" onClick={handleOpenFile}>
+        <button className="btn btn-secondary" onClick={handleOpenFile}>
           {t('detail.openFile')}
         </button>
       </div>

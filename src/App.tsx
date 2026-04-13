@@ -6,7 +6,6 @@ import TitleBar from './components/TitleBar'
 import SideNav from './components/SideNav'
 import StatusBar from './components/StatusBar'
 import ScanPage from './pages/ScanPage'
-import SchedulePage from './pages/SchedulePage'
 import SearchPage from './pages/SearchPage'
 import LanguagePage from './pages/LanguagePage'
 import GuidePage from './pages/GuidePage'
@@ -18,8 +17,6 @@ function App(): JSX.Element {
     switch (activeTab) {
       case 'scan':
         return <ScanPage />
-      case 'schedule':
-        return <SchedulePage />
       case 'search':
         return <SearchPage />
       case 'language':
@@ -39,7 +36,9 @@ function App(): JSX.Element {
           <div className="main-layout">
             <SideNav activeTab={activeTab} onTabChange={setActiveTab} />
             <main className="main-content">
-              {renderPage()}
+              {activeTab === 'search'
+                ? <SearchPage />
+                : renderPage()}
             </main>
           </div>
           <StatusBar />

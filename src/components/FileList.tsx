@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { FileRecord } from '../types'
+import { useLanguage } from '../context/LanguageContext'
 
 interface FileListProps {
   files: FileRecord[]
@@ -13,6 +14,7 @@ type SortField = 'name' | 'size' | 'updated_at'
 type SortOrder = 'asc' | 'desc'
 
 function FileList({ files, selectedFile, onSelectFile, formatSize, hasSearched }: FileListProps): JSX.Element {
+  const { t } = useLanguage()
   const [sortField, setSortField] = useState<SortField>('updated_at')
   const [sortOrder, setSortOrder] = useState<SortOrder>('desc')
 
@@ -69,20 +71,20 @@ function FileList({ files, selectedFile, onSelectFile, formatSize, hasSearched }
       {!hasSearched ? (
         <div className="file-list-empty">
           <div style={{ fontSize: 32, marginBottom: 8 }}>🔍</div>
-          <div>请在上方输入关键词进行搜索</div>
+          <div>{t('search.noQuery')}</div>
         </div>
       ) : files.length === 0 ? (
         <div className="file-list-empty">
           <div style={{ fontSize: 32, marginBottom: 8 }}>📭</div>
-          <div>未找到匹配的文件</div>
+          <div>{t('search.noResult')}</div>
         </div>
       ) : (
         <>
           <div className="file-table-header">
-            <div>文件名</div>
-            <div>类型</div>
-            <div>大小</div>
-            <div>修改时间</div>
+            <div>{t('filelist.name')}</div>
+            <div>{t('filelist.type')}</div>
+            <div>{t('filelist.size')}</div>
+            <div>{t('filelist.modified')}</div>
           </div>
           {sortedFiles.map((file) => (
             <div
