@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useRef, useCallback } from 'react'
 import { FileRecord } from '../types'
 import { useLanguage } from '../context/LanguageContext'
 
@@ -9,15 +9,26 @@ interface FileListProps {
   formatSize: (bytes: number) => string
   hasSearched: boolean
   snippets?: Record<number, string>
+  thumbnails?: Record<number, string>
 }
 
 type SortField = 'name' | 'size' | 'updated_at'
 type SortOrder = 'asc' | 'desc'
 
-function FileList({ files, selectedFile, onSelectFile, formatSize, hasSearched, snippets = {} }: FileListProps): JSX.Element {
+const THUMBNAIL_TYPES = new Set(['pdf', 'docx', 'xlsx', 'pptx', 'jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp', 'ico'])
+
+function supportsThumbnail(file: FileRecord): boolean {
+  const ext = (file.name.split('.').pop() || '').toLowerCase()
+  return THUMBNAIL_TYPES.has(ext) || THUMBNAIL_TYPES.has(file.file_type || '')
+}
+
+function FileList({ files, selectedFile, onSelectFile, formatSize, hasSearched, snippets = {}, thumbnails = {} }: FileListProps): JSX.Element {
   const { t } = useLanguage()
   const [sortField, setSortField] = useState<SortField>('updated_at')
   const [sortOrder, setSortOrder] = useState<SortOrder>('desc')
+  const [hoveredId, setHoveredId] = useState<number | null>(null)
+  const thumbnailCache = useRef<Record<number, string>>({})
+  const hoverTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const handleSort = (field: SortField): void => {
     if (sortField === field) {
@@ -77,6 +88,30 @@ function FileList({ files, selectedFile, onSelectFile, formatSize, hasSearched, 
     return date.toLocaleString('zh-CN')
   }
 
+  const handleMouseEnter = useCallback(async (file: FileRecord) => {
+    if (!supportsThumbnail(file) || file.id === undefined) return
+    if (thumbnailCache.current[file.id!] || thumbnails[file.id!]) return
+    hoverTimer.current = setTimeout(async () => {
+      try {
+        const data = await window.electron.getThumbnail(file.path)
+        if (data && file.id !== undefined) {
+          thumbnailCache.current[file.id!] = data
+          setHoveredId(file.id!)
+        }
+      } catch {
+        // ignore
+      }
+    }, 300)
+  }, [thumbnails])
+
+  const handleMouseLeave = useCallback(() => {
+    if (hoverTimer.current) {
+      clearTimeout(hoverTimer.current)
+      hoverTimer.current = null
+    }
+    setHoveredId(null)
+  }, [])
+
   return (
     <div className="file-list-wrapper">
       {!hasSearched ? (
@@ -106,11 +141,33 @@ function FileList({ files, selectedFile, onSelectFile, formatSize, hasSearched, 
               <div className="file-name-cell">
                 <span>{getFileIcon(file.file_type)}</span>
                 <div className="file-name-info">
-                  <span className="file-name-text" title={file.path}>{file.name}</span>
+                  <span
+                    className="file-name-text"
+                    title={file.path}
+                    onMouseEnter={() => handleMouseEnter(file)}
+                    onMouseLeave={handleMouseLeave}
+                    style={{ cursor: supportsThumbnail(file) ? 'pointer' : 'default' }}
+                  >
+                    {file.name}
+                    {supportsThumbnail(file) && (
+                      <span className="thumbnail-trigger" title="Preview">
+                        &#128247;
+                      </span>
+                    )}
+                  </span>
                   {snippets[file.id!] && (
                     <span
                       className="file-snippet"
                       dangerouslySetInnerHTML={{ __html: snippets[file.id!] }}
+                    />
+                  )}
+                  {(hoveredId === file.id && (thumbnailCache.current[file.id!] || thumbnails[file.id!])) && (
+                    <img
+                      className="thumbnail-preview"
+                      src={thumbnailCache.current[file.id!] || thumbnails[file.id!]}
+                      alt="thumbnail"
+                      onMouseEnter={() => handleMouseEnter(file)}
+                      onMouseLeave={handleMouseLeave}
                     />
                   )}
                 </div>
