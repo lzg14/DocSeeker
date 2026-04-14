@@ -107,18 +107,57 @@ function SearchPage(): JSX.Element {
     setShowHistory(false)
     setShowSaved(false)
     try {
-      const hasFilters = opts &&
-        (opts.fileTypes?.length || opts.sizeMin || opts.sizeMax || opts.dateFrom || opts.dateTo)
+      // Detect /pattern/ regex syntax
+      const regexMatch = query.match(/^\/(.+?)\//)
+      let result: FileRecord[]
+      let snippetQuery = query
 
-      const result = hasFilters
-        ? await window.electron.searchFilesAdvanced(query, opts)
-        : await window.electron.searchFiles(query)
+      if (regexMatch) {
+        // Extract regex pattern and bare keywords
+        const regexPattern = regexMatch[1]
+        const bareQuery = query.replace(/^\/.+?\/[\s]*/, '').trim()
+
+        // Validate the regex pattern
+        try {
+          new RegExp(regexPattern)
+        } catch {
+          setFiles([])
+          setHasSearched(true)
+          setSnippets({})
+          setIsSearching(false)
+          loadHistory()
+          return
+        }
+
+        // Use bare query for FTS search (filename), then filter with JS regex
+        const hasFilters = opts &&
+          (opts.fileTypes?.length || opts.sizeMin || opts.sizeMax || opts.dateFrom || opts.dateTo)
+
+        const ftsResults = hasFilters
+          ? await window.electron.searchFilesAdvanced(bareQuery, opts)
+          : bareQuery
+            ? await window.electron.searchFiles(bareQuery)
+            : hasFilters ? await window.electron.searchFilesAdvanced('', opts) : []
+
+        // Filter results by regex against path and content
+        const re = new RegExp(regexPattern, 'i')
+        result = ftsResults.filter(f => re.test(f.path || '') || re.test(f.content || ''))
+        snippetQuery = bareQuery || query
+      } else {
+        const hasFilters = opts &&
+          (opts.fileTypes?.length || opts.sizeMin || opts.sizeMax || opts.dateFrom || opts.dateTo)
+
+        result = hasFilters
+          ? await window.electron.searchFilesAdvanced(query, opts)
+          : await window.electron.searchFiles(query)
+      }
+
       setFiles(result)
       setHasSearched(true)
       // Fetch highlighted snippets for the results
-      if (result.length > 0 && query.trim()) {
+      if (result.length > 0 && snippetQuery.trim()) {
         const fileIds = result.map(f => f.id!).filter(Boolean)
-        const s = await window.electron.getSearchSnippets(query, fileIds)
+        const s = await window.electron.getSearchSnippets(snippetQuery, fileIds)
         setSnippets(s)
       } else {
         setSnippets({})
@@ -346,6 +385,13 @@ function SearchPage(): JSX.Element {
               <div className="syntax-item">
                 <code>term1 NOT term2</code>
                 <span>{t('search.syntaxNot')}</span>
+              </div>
+              <div className="syntax-item">
+                <code>/regex/</code>
+                <span>{t('search.regexMode')}</span>
+              </div>
+              <div className="syntax-item regex-desc">
+                <span>{t('search.regexDesc')}</span>
               </div>
             </div>
           </div>
