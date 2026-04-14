@@ -1,9 +1,22 @@
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect, useRef } from 'react'
 import FileList from '../components/FileList'
 import FileDetail from '../components/FileDetail'
 import { FileRecord } from '../types'
 import { useLanguage } from '../context/LanguageContext'
 import { formatSize } from '../utils/format'
+
+interface SearchHistoryEntry {
+  id?: number
+  query: string
+  searched_at?: string
+}
+
+interface SavedSearch {
+  id?: number
+  name: string
+  query: string
+  created_at?: string
+}
 
 function SearchPage(): JSX.Element {
   const [files, setFiles] = useState<FileRecord[]>([])
@@ -11,25 +24,72 @@ function SearchPage(): JSX.Element {
   const [searchQuery, setSearchQuery] = useState('')
   const [hasSearched, setHasSearched] = useState(false)
   const [isSearching, setIsSearching] = useState(false)
+  const [history, setHistory] = useState<SearchHistoryEntry[]>([])
+  const [savedSearches, setSavedSearches] = useState<SavedSearch[]>([])
+  const [showHistory, setShowHistory] = useState(false)
+  const [showSaved, setShowSaved] = useState(false)
+  const [saveName, setSaveName] = useState('')
+  const [showSaveDialog, setShowSaveDialog] = useState(false)
   const { t } = useLanguage()
 
-  const handleSearch = useCallback(async () => {
-    if (!searchQuery.trim()) {
+  const inputRef = useRef<HTMLInputElement>(null)
+  const dropdownRef = useRef<HTMLDivElement>(null)
+
+  // Load history and saved searches on mount
+  useEffect(() => {
+    loadHistory()
+    loadSavedSearches()
+  }, [])
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+        setShowHistory(false)
+        setShowSaved(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [])
+
+  const loadHistory = async () => {
+    try {
+      const h = await window.electron.getSearchHistory()
+      setHistory(h)
+    } catch {}
+  }
+
+  const loadSavedSearches = async () => {
+    try {
+      const s = await window.electron.getSavedSearches()
+      setSavedSearches(s)
+    } catch {}
+  }
+
+  const performSearch = useCallback(async (query: string) => {
+    if (!query.trim()) {
       setFiles([])
       setHasSearched(false)
       return
     }
     setIsSearching(true)
+    setShowHistory(false)
+    setShowSaved(false)
     try {
-      const result = await window.electron.searchFiles(searchQuery)
+      const result = await window.electron.searchFiles(query)
       setFiles(result)
       setHasSearched(true)
+      // Reload history after search
+      loadHistory()
     } catch (error) {
       console.error('Failed to search files:', error)
     } finally {
       setIsSearching(false)
     }
-  }, [searchQuery])
+  }, [])
+
+  const handleSearch = () => performSearch(searchQuery)
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>): void => {
     if (e.key === 'Enter') {
@@ -37,24 +97,146 @@ function SearchPage(): JSX.Element {
     }
   }
 
+  const handleHistoryClick = (query: string) => {
+    setSearchQuery(query)
+    performSearch(query)
+  }
+
+  const handleClearHistory = async () => {
+    await window.electron.clearSearchHistory()
+    setHistory([])
+  }
+
+  const handleSaveSearch = async () => {
+    if (!saveName.trim() || !searchQuery.trim()) return
+    await window.electron.addSavedSearch(saveName.trim(), searchQuery.trim())
+    setSaveName('')
+    setShowSaveDialog(false)
+    loadSavedSearches()
+  }
+
+  const handleDeleteSaved = async (id: number) => {
+    await window.electron.deleteSavedSearch(id)
+    loadSavedSearches()
+  }
+
   return (
     <div className="search-page">
       <div className="search-header">
-        <div className="search-box-wrapper">
+        <div className="search-box-wrapper" ref={dropdownRef}>
           <input
+            ref={inputRef}
             type="text"
             placeholder={t('search.placeholder')}
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             onKeyDown={handleKeyDown}
+            onFocus={() => { setShowHistory(true); setShowSaved(false) }}
           />
           <button
-            className="btn btn-primary"
+            className="search-btn"
             onClick={handleSearch}
             disabled={isSearching}
           >
             {isSearching ? t('search.searching') : t('search.btn')}
           </button>
+
+          {/* History & Saved dropdown */}
+          {(showHistory || showSaved) && (
+            <div className="search-dropdown">
+              <div className="search-dropdown-tabs">
+                <button
+                  className={`dropdown-tab ${showHistory ? 'active' : ''}`}
+                  onClick={() => { setShowHistory(true); setShowSaved(false) }}
+                >
+                  {t('search.historyTab')}
+                </button>
+                <button
+                  className={`dropdown-tab ${showSaved ? 'active' : ''}`}
+                  onClick={() => { setShowSaved(true); setShowHistory(false) }}
+                >
+                  {t('search.savedTab')}
+                </button>
+              </div>
+
+              {showHistory && (
+                <div className="search-dropdown-content">
+                  {history.length === 0 ? (
+                    <div className="search-dropdown-empty">{t('search.historyEmpty')}</div>
+                  ) : (
+                    <>
+                      {history.map((entry) => (
+                        <div
+                          key={entry.id}
+                          className="search-history-item"
+                          onClick={() => handleHistoryClick(entry.query)}
+                        >
+                          <span className="history-query">{entry.query}</span>
+                          <span className="history-time">
+                            {entry.searched_at ? new Date(entry.searched_at).toLocaleDateString('zh-CN') : ''}
+                          </span>
+                        </div>
+                      ))}
+                      <div className="search-dropdown-footer">
+                        <button className="dropdown-action" onClick={handleClearHistory}>
+                          {t('search.clearHistory')}
+                        </button>
+                      </div>
+                    </>
+                  )}
+                </div>
+              )}
+
+              {showSaved && (
+                <div className="search-dropdown-content">
+                  {savedSearches.length === 0 ? (
+                    <div className="search-dropdown-empty">{t('search.savedEmpty')}</div>
+                  ) : (
+                    savedSearches.map((s) => (
+                      <div key={s.id} className="search-saved-item">
+                        <div
+                          className="saved-info"
+                          onClick={() => { setSearchQuery(s.query); performSearch(s.query) }}
+                        >
+                          <span className="saved-name">{s.name}</span>
+                          <span className="saved-query">{s.query}</span>
+                        </div>
+                        <button
+                          className="saved-delete"
+                          onClick={(e) => { e.stopPropagation(); handleDeleteSaved(s.id!) }}
+                          title={t('search.deleteSaved')}
+                        >
+                          ×
+                        </button>
+                      </div>
+                    ))
+                  )}
+                  {searchQuery.trim() && (
+                    <div className="search-dropdown-footer">
+                      {!showSaveDialog ? (
+                        <button className="dropdown-action primary" onClick={() => setShowSaveDialog(true)}>
+                          {t('search.saveCurrent')}
+                        </button>
+                      ) : (
+                        <div className="save-dialog">
+                          <input
+                            type="text"
+                            placeholder={t('search.saveNamePlaceholder')}
+                            value={saveName}
+                            onChange={(e) => setSaveName(e.target.value)}
+                            onKeyDown={(e) => e.key === 'Enter' && handleSaveSearch()}
+                            autoFocus
+                          />
+                          <button className="save-confirm" onClick={handleSaveSearch}>✓</button>
+                          <button className="save-cancel" onClick={() => { setShowSaveDialog(false); setSaveName('') }}>×</button>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
         </div>
       </div>
 

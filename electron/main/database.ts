@@ -68,6 +68,26 @@ export async function initDatabase(): Promise<void> {
     )
   `)
 
+  // Create search_history table
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS search_history (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      query TEXT NOT NULL,
+      searched_at TEXT DEFAULT (datetime('now'))
+    )
+  `)
+  db.exec(`CREATE INDEX IF NOT EXISTS idx_history_query ON search_history(query)`)
+
+  // Create saved_searches table
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS saved_searches (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      name TEXT NOT NULL,
+      query TEXT NOT NULL,
+      created_at TEXT DEFAULT (datetime('now'))
+    )
+  `)
+
   // Trigger: sync FTS on INSERT
   db.exec(`
     CREATE TRIGGER IF NOT EXISTS files_ai AFTER INSERT ON files BEGIN
@@ -199,13 +219,69 @@ export function searchFiles(query: string): FileRecord[] {
     JOIN files f ON fts.rowid = f.id
     WHERE files_fts MATCH ?
     ORDER BY rank
-    LIMIT 200
   `)
 
   stmt.bind([ftsQuery])
   const rows = stmt.all() as FileRecord[]
 
   return rows
+}
+
+// Search history operations
+export interface SearchHistoryEntry {
+  id?: number
+  query: string
+  searched_at?: string
+}
+
+export function addSearchHistory(query: string): void {
+  if (!query.trim()) return
+  // Remove duplicates first
+  const del = getDatabase().prepare('DELETE FROM search_history WHERE query = ?')
+  del.run([query.trim()])
+  // Insert new entry
+  const stmt = getDatabase().prepare('INSERT INTO search_history (query) VALUES (?)')
+  stmt.run([query.trim()])
+  // Keep only last 50 entries
+  getDatabase().exec(`
+    DELETE FROM search_history WHERE id NOT IN (
+      SELECT id FROM search_history ORDER BY searched_at DESC LIMIT 50
+    )
+  `)
+}
+
+export function getSearchHistory(limit = 20): SearchHistoryEntry[] {
+  const stmt = getDatabase().prepare('SELECT * FROM search_history ORDER BY searched_at DESC LIMIT ?')
+  stmt.bind([limit])
+  return stmt.all() as SearchHistoryEntry[]
+}
+
+export function clearSearchHistory(): void {
+  getDatabase().exec('DELETE FROM search_history')
+}
+
+// Saved searches operations
+export interface SavedSearch {
+  id?: number
+  name: string
+  query: string
+  created_at?: string
+}
+
+export function addSavedSearch(name: string, query: string): number {
+  const stmt = getDatabase().prepare('INSERT INTO saved_searches (name, query) VALUES (?, ?)')
+  const result = stmt.run([name.trim(), query.trim()])
+  return result.lastInsertRowid as number
+}
+
+export function getSavedSearches(): SavedSearch[] {
+  const stmt = getDatabase().prepare('SELECT * FROM saved_searches ORDER BY created_at DESC')
+  return stmt.all() as SavedSearch[]
+}
+
+export function deleteSavedSearch(id: number): void {
+  const stmt = getDatabase().prepare('DELETE FROM saved_searches WHERE id = ?')
+  stmt.run([id])
 }
 
 export function getSearchSnippets(query: string, fileIds: number[]): Map<number, string> {

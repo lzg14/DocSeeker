@@ -9,7 +9,10 @@ const SUPPORTED_EXTENSIONS = new Set([
   '.doc', '.docx',
   '.xls', '.xlsx',
   '.ppt', '.pptx',
-  '.pdf'
+  '.pdf',
+  '.rtf',
+  '.chm',
+  '.odt', '.ods', '.odp'
 ])
 
 interface FileInfo {
@@ -97,6 +100,74 @@ async function extractTextFromPptx(filePath: string): Promise<string> {
   }
 }
 
+// Extract plain text from RTF files using regex
+async function extractTextFromRtf(filePath: string): Promise<string> {
+  try {
+    const content = await fs.readFile(filePath, 'utf-8')
+    return content
+      .replace(/\\[a-z]+\d*\s?/gi, '')
+      .replace(/\\['][0-9a-f]{2}/gi, '')
+      .replace(/\\[{}]/g, '')
+      .replace(/\\\n/g, '\n')
+      .replace(/\{\\[^}]*\\par}/g, '\n')
+      .replace(/\\[a-z]+\s/gi, ' ')
+      .replace(/\{[^}]*\}/g, (match: string) => match.replace(/\{|}/g, ''))
+      .replace(/\\[^a-z{}\s][0-9]*/g, '')
+      .replace(/\n{3,}/g, '\n\n')
+      .trim()
+  } catch (error) {
+    return ''
+  }
+}
+
+// Extract plain text from ODF files (ODT, ODS, ODP)
+async function extractTextFromOdf(filePath: string): Promise<string> {
+  try {
+    const JSZip = require('jszip')
+    const data = await fs.readFile(filePath)
+    const zip = await JSZip.loadAsync(data)
+    const contentXml = await zip.file('content.xml')?.async('string')
+    if (!contentXml) return ''
+    const textMatches = contentXml.match(/<text:[pwhs][^>]*>([^<]*)<\/text:[pwhs]>/g) || []
+    return textMatches.map((m: string) => m.replace(/<[^>]+>/g, '')).filter((t: string) => t.trim().length > 0).join('\n')
+  } catch (error) {
+    return ''
+  }
+}
+
+// Extract plain text from CHM files using jszip
+async function extractTextFromChm(filePath: string): Promise<string> {
+  try {
+    const JSZip = require('jszip')
+    const data = await fs.readFile(filePath)
+    const zip = await JSZip.loadAsync(data)
+    const texts: string[] = []
+
+    for (const [name, file] of Object.entries(zip.files)) {
+      if (file.dir) continue
+      if (!name.endsWith('.html') && !name.endsWith('.htm')) continue
+      const htmlContent = await file.async('string')
+      if (!htmlContent) continue
+      const text = htmlContent
+        .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '')
+        .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
+        .replace(/<[^>]+>/g, ' ')
+        .replace(/&nbsp;/gi, ' ')
+        .replace(/&lt;/gi, '<')
+        .replace(/&gt;/gi, '>')
+        .replace(/&amp;/gi, '&')
+        .replace(/&quot;/gi, '"')
+        .replace(/\s{2,}/g, ' ')
+        .trim()
+      if (text.length > 10) texts.push(text)
+    }
+
+    return texts.join('\n\n')
+  } catch (error) {
+    return ''
+  }
+}
+
 async function extractText(filePath: string, ext: string): Promise<string> {
   const lowerExt = ext.toLowerCase()
 
@@ -111,6 +182,14 @@ async function extractText(filePath: string, ext: string): Promise<string> {
       return extractTextFromPptx(filePath)
     case '.pdf':
       return extractTextFromPdf(filePath)
+    case '.rtf':
+      return extractTextFromRtf(filePath)
+    case '.odt':
+    case '.ods':
+    case '.odp':
+      return extractTextFromOdf(filePath)
+    case '.chm':
+      return extractTextFromChm(filePath)
     case '.txt':
     case '.md':
     case '.json':
@@ -207,7 +286,10 @@ function getFileType(ext: string): string {
     '.doc': 'docx', '.docx': 'docx',
     '.xls': 'xlsx', '.xlsx': 'xlsx',
     '.ppt': 'pptx', '.pptx': 'pptx',
-    '.pdf': 'pdf'
+    '.pdf': 'pdf',
+    '.rtf': 'rtf',
+    '.chm': 'chm',
+    '.odt': 'odf', '.ods': 'odf', '.odp': 'odf'
   }
   return map[ext] || 'unknown'
 }

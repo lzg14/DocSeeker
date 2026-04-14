@@ -19,7 +19,15 @@ import {
   getScannedFolderById,
   getAllScannedFolders,
   deleteScannedFolder,
-  ScannedFolder
+  ScannedFolder,
+  addSearchHistory,
+  getSearchHistory,
+  clearSearchHistory,
+  addSavedSearch,
+  getSavedSearches,
+  deleteSavedSearch,
+  SavedSearch,
+  SearchHistoryEntry
 } from './database'
 
 let handlersRegistered = false
@@ -42,7 +50,32 @@ export function registerIpcHandlers(): void {
 
   // Search files
   ipcMain.handle('search-files', async (_, query: string): Promise<FileRecord[]> => {
+    if (query.trim()) {
+      addSearchHistory(query)
+    }
     return searchFiles(query)
+  })
+
+  // Search history
+  ipcMain.handle('get-search-history', async (): Promise<SearchHistoryEntry[]> => {
+    return getSearchHistory(20)
+  })
+
+  ipcMain.handle('clear-search-history', async (): Promise<void> => {
+    clearSearchHistory()
+  })
+
+  // Saved searches
+  ipcMain.handle('get-saved-searches', async (): Promise<SavedSearch[]> => {
+    return getSavedSearches()
+  })
+
+  ipcMain.handle('add-saved-search', async (_, name: string, query: string): Promise<number> => {
+    return addSavedSearch(name, query)
+  })
+
+  ipcMain.handle('delete-saved-search', async (_, id: number): Promise<void> => {
+    deleteSavedSearch(id)
   })
 
   // Delete a file (move to trash)

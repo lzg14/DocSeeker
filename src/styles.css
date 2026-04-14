@@ -1024,3 +1024,240 @@ button, input, select {
   background: #3a3a3a;
   border-radius: 3px;
 }
+
+/* === 搜索下拉菜单 === */
+.search-dropdown {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  min-width: 400px;
+  background: var(--bg-primary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: 0 4px 16px rgba(0,0,0,0.12);
+  z-index: 100;
+  overflow: hidden;
+}
+
+.search-box-wrapper {
+  position: relative;
+}
+
+.search-dropdown-tabs {
+  display: flex;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg-secondary);
+}
+
+.dropdown-tab {
+  flex: 1;
+  padding: 8px 12px;
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid transparent;
+  font-size: 12px;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.dropdown-tab:hover {
+  color: var(--text-primary);
+  background: var(--bg-primary);
+}
+
+.dropdown-tab.active {
+  color: var(--text-primary);
+  border-bottom-color: var(--accent);
+  background: var(--bg-primary);
+  font-weight: 500;
+}
+
+.search-dropdown-content {
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.search-dropdown-empty {
+  padding: 20px;
+  text-align: center;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.search-history-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 14px;
+  cursor: pointer;
+  transition: background-color 0.1s;
+  border-bottom: 1px solid var(--border);
+}
+
+.search-history-item:last-of-type {
+  border-bottom: none;
+}
+
+.search-history-item:hover {
+  background: var(--bg-secondary);
+}
+
+.history-query {
+  font-size: 13px;
+  color: var(--text-primary);
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.history-time {
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-left: 12px;
+  flex-shrink: 0;
+}
+
+.search-saved-item {
+  display: flex;
+  align-items: center;
+  padding: 8px 14px;
+  cursor: pointer;
+  transition: background-color 0.1s;
+  border-bottom: 1px solid var(--border);
+}
+
+.search-saved-item:last-of-type {
+  border-bottom: none;
+}
+
+.search-saved-item:hover {
+  background: var(--bg-secondary);
+}
+
+.saved-info {
+  flex: 1;
+  overflow: hidden;
+}
+
+.saved-name {
+  display: block;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.saved-query {
+  display: block;
+  font-size: 11px;
+  color: var(--text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.saved-delete {
+  width: 24px;
+  height: 24px;
+  background: transparent;
+  border: none;
+  border-radius: 4px;
+  color: var(--text-muted);
+  font-size: 14px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-left: 8px;
+  flex-shrink: 0;
+  transition: all 0.1s;
+}
+
+.saved-delete:hover {
+  background: #fee;
+  color: #e74c3c;
+}
+
+.search-dropdown-footer {
+  padding: 8px 14px;
+  border-top: 1px solid var(--border);
+  background: var(--bg-secondary);
+}
+
+.dropdown-action {
+  font-size: 12px;
+  color: var(--text-muted);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 4px 0;
+  transition: color 0.1s;
+}
+
+.dropdown-action:hover {
+  color: var(--text-primary);
+}
+
+.dropdown-action.primary {
+  color: var(--accent);
+  font-weight: 500;
+}
+
+.dropdown-action.primary:hover {
+  color: var(--accent-hover);
+}
+
+.save-dialog {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.save-dialog input {
+  flex: 1;
+  height: 28px;
+  padding: 0 8px;
+  border: 1px solid var(--border-light);
+  border-radius: 4px;
+  font-size: 12px;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  outline: none;
+}
+
+.save-dialog input:focus {
+  border-color: var(--accent);
+}
+
+.save-confirm {
+  width: 28px;
+  height: 28px;
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  border-radius: 4px;
+  font-size: 13px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.save-cancel {
+  width: 28px;
+  height: 28px;
+  background: transparent;
+  color: var(--text-muted);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  font-size: 13px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}

@@ -55,6 +55,12 @@ function FileList({ files, selectedFile, onSelectFile, formatSize, hasSearched }
         return '📕'
       case 'text':
         return '📝'
+      case 'rtf':
+        return '📃'
+      case 'chm':
+        return '📚'
+      case 'odf':
+        return '📒'
       default:
         return '📁'
     }
