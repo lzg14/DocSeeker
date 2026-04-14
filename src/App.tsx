@@ -6,6 +6,7 @@ import TitleBar from './components/TitleBar'
 import SideNav from './components/SideNav'
 import StatusBar from './components/StatusBar'
 import SearchPage from './pages/SearchPage'
+import FloatingSearch from './pages/FloatingSearch'
 
 // Lazy load pages that aren't shown immediately
 const ScanPage = lazy(() => import('./pages/ScanPage'))
@@ -42,6 +43,15 @@ function PageFallback(): JSX.Element {
 }
 
 function App(): JSX.Element {
+  // Render floating search window when navigated via hash
+  if (window.location.hash === '#/floating') {
+    return (
+      <LanguageProvider>
+        <FloatingSearch />
+      </LanguageProvider>
+    )
+  }
+
   const [activeTab, setActiveTab] = useState<PageTab>('search')
 
   const renderPage = (): JSX.Element => {
