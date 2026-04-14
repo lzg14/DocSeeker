@@ -7,12 +7,20 @@ function GuidePage(): JSX.Element {
     <div className="settings-page">
       <h2 className="page-title">{t('guide.title')}</h2>
 
-      {/* Overview */}
+      {/* Overview + Features */}
       <div className="settings-section">
         <div className="settings-section-title">{t('guide.overview')}</div>
         <div className="settings-card">
           <div className="guide-content">
             <p>{t('guide.overviewDesc')}</p>
+            <ul>
+              <li>{t('guide.feature1')}</li>
+              <li>{t('guide.feature2')}</li>
+              <li>{t('guide.feature3')}</li>
+              <li>{t('guide.feature4')}</li>
+              <li>{t('guide.feature5')}</li>
+              <li>{t('guide.feature6')}</li>
+            </ul>
           </div>
         </div>
       </div>
@@ -65,50 +73,6 @@ function GuidePage(): JSX.Element {
                 <span>Email (.eml/.mbox)</span>
               </div>
             </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Key features */}
-      <div className="settings-section">
-        <div className="settings-section-title">{t('guide.features')}</div>
-        <div className="settings-card">
-          <div className="guide-content">
-            <ul>
-              <li>{t('guide.feature1')}</li>
-              <li>{t('guide.feature2')}</li>
-              <li>{t('guide.feature3')}</li>
-              <li>{t('guide.feature4')}</li>
-              <li>{t('guide.feature5')}</li>
-              <li>{t('guide.feature6')}</li>
-              <li>{t('guide.feature7')}</li>
-              <li>{t('guide.feature8')}</li>
-            </ul>
-          </div>
-        </div>
-      </div>
-
-      {/* Search syntax */}
-      <div className="settings-section">
-        <div className="settings-section-title">{t('guide.searchSyntax')}</div>
-        <div className="settings-card">
-          <div className="guide-content">
-            <p>{t('guide.searchSyntaxDesc')}</p>
-            <table className="guide-syntax-table">
-              <thead>
-                <tr>
-                  <th>{t('guide.syntaxExample')}</th>
-                  <th>{t('guide.syntaxMeaning')}</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr><td><code>word1 word2</code></td><td>{t('guide.syntaxAnd')}</td></tr>
-                <tr><td><code>"exact phrase"</code></td><td>{t('guide.syntaxPhrase')}</td></tr>
-                <tr><td><code>term*</code></td><td>{t('guide.syntaxPrefix')}</td></tr>
-                <tr><td><code>term1 OR term2</code></td><td>{t('guide.syntaxOr')}</td></tr>
-                <tr><td><code>term1 NOT term2</code></td><td>{t('guide.syntaxNot')}</td></tr>
-              </tbody>
-            </table>
           </div>
         </div>
       </div>

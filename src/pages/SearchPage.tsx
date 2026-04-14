@@ -83,14 +83,18 @@ function SearchPage(): JSX.Element {
     try {
       const h = await window.electron.getSearchHistory()
       setHistory(h)
-    } catch {}
+    } catch (error) {
+      console.error('Failed to load search history:', error)
+    }
   }
 
   const loadSavedSearches = async () => {
     try {
       const s = await window.electron.getSavedSearches()
       setSavedSearches(s)
-    } catch {}
+    } catch (error) {
+      console.error('Failed to load saved searches:', error)
+    }
   }
 
   const performSearch = useCallback(async (query: string, opts?: SearchOptions) => {
@@ -189,7 +193,7 @@ function SearchPage(): JSX.Element {
               onFocus={() => { setShowHistory(true); setShowSaved(false) }}
             />
             <button
-              className="search-btn"
+              className="btn btn-primary search-btn"
               onClick={handleSearch}
               disabled={isSearching}
             >

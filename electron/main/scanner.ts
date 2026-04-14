@@ -492,8 +492,7 @@ function scanDirectory(
 
 // Process a single file
 async function processFile(
-  filePath: string,
-  existingFile?: FileRecord
+  filePath: string
 ): Promise<FileRecord | null> {
   try {
     const stats = fs.statSync(filePath)

@@ -585,14 +585,16 @@ export function deleteScannedFolder(id: number): void {
 
 export function removeFilesByFolderPath(folderPath: string): void {
   if (!db) return
+  const escaped = folderPath.replace(/[%_]/g, '\\$&')
   const stmt = getDatabase().prepare("DELETE FROM files WHERE path LIKE ?")
-  stmt.run([folderPath + '%'])
+  stmt.run([escaped + '%'])
 }
 
 export function getFileCountByFolder(folderPath: string): number {
   if (!db) return 0
+  const escaped = folderPath.replace(/[%_]/g, '\\$&')
   const stmt = getDatabase().prepare("SELECT COUNT(*) as count FROM files WHERE path LIKE ?")
-  stmt.bind([folderPath + '%'])
+  stmt.bind([escaped + '%'])
   const row = stmt.get() as { count: number }
 
   return row.count || 0
@@ -600,8 +602,9 @@ export function getFileCountByFolder(folderPath: string): number {
 
 export function getTotalSizeByFolder(folderPath: string): number {
   if (!db) return 0
+  const escaped = folderPath.replace(/[%_]/g, '\\$&')
   const stmt = getDatabase().prepare("SELECT SUM(size) as total FROM files WHERE path LIKE ?")
-  stmt.bind([folderPath + '%'])
+  stmt.bind([escaped + '%'])
   const row = stmt.get() as { total: number | null }
 
   return row.total || 0

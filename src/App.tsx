@@ -1,4 +1,4 @@
-import { useState, lazy, Suspense } from 'react'
+import { useState, lazy, Suspense, Component, ReactNode } from 'react'
 import { PageTab } from './types'
 import { AppProvider } from './context/AppContext'
 import { LanguageProvider } from './context/LanguageContext'
@@ -12,8 +12,33 @@ const ScanPage = lazy(() => import('./pages/ScanPage'))
 const LanguagePage = lazy(() => import('./pages/LanguagePage'))
 const GuidePage = lazy(() => import('./pages/GuidePage'))
 
+class ErrorBoundary extends Component<{ children: ReactNode }, { hasError: boolean }> {
+  constructor(props: { children: ReactNode }) {
+    super(props)
+    this.state = { hasError: false }
+  }
+  static getDerivedStateFromError() {
+    return { hasError: true }
+  }
+  render(): ReactNode {
+    if (this.state.hasError) {
+      return (
+        <div style={{ padding: '32px', color: '#f00', textAlign: 'center' }}>
+          <h3>页面加载失败</h3>
+          <p>请重启应用</p>
+        </div>
+      )
+    }
+    return this.props.children
+  }
+}
+
 function PageFallback(): JSX.Element {
-  return <div className="page-loading"><div className="loading">Loading...</div></div>
+  return (
+    <div className="page-loading" style={{ minHeight: '400px', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--bg-secondary, #fff)', color: 'var(--text-secondary, #666)' }}>
+      <div className="loading">Loading...</div>
+    </div>
+  )
 }
 
 function App(): JSX.Element {
@@ -41,7 +66,9 @@ function App(): JSX.Element {
           <div className="main-layout">
             <SideNav activeTab={activeTab} onTabChange={setActiveTab} />
             <main className="main-content">
-              {renderPage()}
+              <ErrorBoundary>
+                {renderPage()}
+              </ErrorBoundary>
             </main>
           </div>
           <StatusBar />

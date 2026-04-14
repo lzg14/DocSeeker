@@ -5,14 +5,6 @@ import { useLanguage } from '../context/LanguageContext'
 import ConfirmDialog from '../components/ConfirmDialog'
 import { formatSize } from '../utils/format'
 
-// Common cloud storage local sync paths on Windows
-const KNOWN_CLOUD_PATHS = [
-  { name: 'OneDrive', path: `${process.env.USERPROFILE || ''}\\OneDrive`, icon: '☁️' },
-  { name: 'Dropbox', path: `${process.env.USERPROFILE || ''}\\Dropbox`, icon: '📦' },
-  { name: 'Google Drive', path: `${process.env.USERPROFILE || ''}\\Google Drive`, icon: '🗂️' },
-  { name: 'iCloud Drive', path: `${process.env.USERPROFILE || ''}\\iCloud Drive`, icon: '☁️' },
-]
-
 function ScanPage(): JSX.Element {
   const {
     isScanning,
@@ -24,7 +16,6 @@ function ScanPage(): JSX.Element {
   const [expandedId, setExpandedId] = useState<number | null>(null)
   const [loading, setLoading] = useState(true)
   const [confirmDelete, setConfirmDelete] = useState<ScannedFolder | null>(null)
-  const [showCloudInfo, setShowCloudInfo] = useState(false)
 
   const loadFolders = useCallback(async () => {
     try {
@@ -199,34 +190,6 @@ function ScanPage(): JSX.Element {
             ))}
           </div>
         )}
-
-        {/* Cloud storage section */}
-        <div className="cloud-storage-section">
-          <div className="cloud-header" onClick={() => setShowCloudInfo(!showCloudInfo)}>
-            <span className="cloud-icon">☁️</span>
-            <span className="cloud-title">{t('cloud.title')}</span>
-            <span className="cloud-hint">{t('cloud.hint')}</span>
-            <span className="cloud-toggle">{showCloudInfo ? '▲' : '▼'}</span>
-          </div>
-
-          {showCloudInfo && (
-            <div className="cloud-content">
-              <p className="cloud-desc">{t('cloud.desc')}</p>
-              <div className="cloud-list">
-                {KNOWN_CLOUD_PATHS.map((cloud) => (
-                  <div key={cloud.name} className="cloud-item">
-                    <span className="cloud-name">{cloud.icon} {cloud.name}</span>
-                    <span className="cloud-path">{cloud.path}</span>
-                    {folders.some(f => f.path.startsWith(cloud.path)) && (
-                      <span className="cloud-added">{t('cloud.added')}</span>
-                    )}
-                  </div>
-                ))}
-              </div>
-              <p className="cloud-tip">{t('cloud.tip')}</p>
-            </div>
-          )}
-        </div>
       </div>
 
       {confirmDelete && (
