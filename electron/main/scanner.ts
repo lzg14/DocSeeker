@@ -19,7 +19,9 @@ const SUPPORTED_EXTENSIONS = new Set([
   '.pdf',
   '.rtf',
   '.chm',
-  '.odt', '.ods', '.odp'
+  '.odt', '.ods', '.odp',
+  '.zip',
+  '.mbox', '.eml'
 ])
 
 // File type mapping
@@ -40,8 +42,23 @@ const FILE_TYPE_MAP: Record<string, string> = {
   '.chm': 'chm',
   '.odt': 'odf',
   '.ods': 'odf',
-  '.odp': 'odf'
+  '.odp': 'odf',
+  '.zip': 'zip',
+  '.mbox': 'email',
+  '.eml': 'email'
 }
+
+// Extensions supported inside ZIP archives
+const ARCHIVE_NESTED_EXTENSIONS = new Set([
+  '.txt', '.md', '.json', '.xml', '.csv',
+  '.doc', '.docx',
+  '.xls', '.xlsx',
+  '.ppt', '.pptx',
+  '.pdf',
+  '.rtf',
+  '.odt', '.ods', '.odp',
+  '.eml', '.mbox'
+])
 
 export interface ScanProgress {
   current: number
@@ -218,6 +235,176 @@ async function extractTextFromChm(filePath: string): Promise<string> {
   }
 }
 
+// Extract text from emails (.eml - RFC 822 format)
+async function extractTextFromEml(filePath: string): Promise<string> {
+  try {
+    const content = fs.readFileSync(filePath, 'utf-8')
+    const texts: string[] = []
+
+    // Extract Subject header
+    const subjectMatch = content.match(/^Subject:\s*(.*)$/mi)
+    if (subjectMatch) texts.push(`Subject: ${subjectMatch[1].trim()}`)
+
+    // Extract From/To/Date headers
+    const fromMatch = content.match(/^From:\s*(.*)$/mi)
+    if (fromMatch) texts.push(`From: ${fromMatch[1].trim()}`)
+
+    // Strip email headers (everything before first blank line)
+    const bodyStart = content.indexOf('\r\n\r\n')
+    const bodyStart2 = content.indexOf('\n\n')
+    const bodyStartIdx = bodyStart >= 0 && (bodyStart2 < 0 || bodyStart < bodyStart2)
+      ? bodyStart + 4 : bodyStart2 >= 0 ? bodyStart2 + 2 : 0
+
+    let body = content.slice(bodyStartIdx)
+
+    // Handle multipart MIME: strip boundary markers and keep text/plain
+    body = body
+      .replace(/--[^\r\n]+/g, '---')         // MIME boundaries
+      .replace(/Content-Type:[^\r\n]+/gi, '') // content type headers
+      .replace(/Content-Transfer-Encoding:[^\r\n]+/gi, '')
+      .replace(/---\s*$/gm, '\n')             // trailing boundaries
+      .replace(/=\r?\n/g, '')                // quoted-printable soft line breaks
+      .replace(/=([0-9A-Fa-f]{2})/g, (_, hex) => String.fromCharCode(parseInt(hex, 16)))
+
+    // Strip remaining headers
+    body = body.replace(/^[A-Za-z-]+:[^\r\n]+/gm, '')
+
+    // Strip HTML
+    body = body
+      .replace(/<html[^>]*>[\s\S]*?<\/html>/gi, '')
+      .replace(/<head[^>]*>[\s\S]*?<\/head>/gi, '')
+      .replace(/<[^>]+>/g, ' ')
+      .replace(/&nbsp;/gi, ' ')
+      .replace(/&lt;/gi, '<').replace(/&gt;/gi, '>').replace(/&amp;/gi, '&')
+      .replace(/\s{2,}/g, ' ')
+      .trim()
+
+    if (body) texts.push(body)
+    return texts.join('\n')
+  } catch (error) {
+    log.warn(`Failed to extract text from eml: ${filePath}`, error)
+    return ''
+  }
+}
+
+// Extract text from mbox mailbox files (Unix mail format)
+async function extractTextFromMbox(filePath: string): Promise<string> {
+  try {
+    const content = fs.readFileSync(filePath, 'utf-8')
+    const texts: string[] = []
+
+    // Split messages by "From " separator (at line start)
+    const messages = content.split(/\nFrom /)
+
+    for (const msg of messages) {
+      if (!msg.trim()) continue
+
+      // Extract Subject from this message
+      const subjectMatch = msg.match(/^Subject:\s*(.*)$/mi)
+      if (subjectMatch) texts.push(`Subject: ${subjectMatch[1].trim()}`)
+
+      // Strip headers (find blank line separator)
+      const bodyStart = msg.indexOf('\n\n')
+      let body = bodyStart >= 0 ? msg.slice(bodyStart + 2) : msg
+
+      // Basic text extraction
+      body = body
+        .replace(/<[^>]+>/g, ' ')
+        .replace(/&nbsp;/gi, ' ')
+        .replace(/&lt;/gi, '<').replace(/&gt;/gi, '>').replace(/&amp;/gi, '&')
+        .replace(/^[A-Za-z-]+:[^\r\n]+/gm, '')
+        .replace(/\s{2,}/g, ' ')
+        .trim()
+
+      if (body) texts.push(body)
+    }
+
+    return texts.join('\n---\n')
+  } catch (error) {
+    log.warn(`Failed to extract text from mbox: ${filePath}`, error)
+    return ''
+  }
+}
+
+// Extract text from ZIP archives (recursively scanning embedded documents)
+const MAX_ZIP_DEPTH = 3
+
+async function extractTextFromZip(filePath: string, depth = 0): Promise<string> {
+  if (depth >= MAX_ZIP_DEPTH) return ''
+
+  try {
+    const JSZip = require('jszip')
+    const data = fs.readFileSync(filePath)
+    const zip = await JSZip.loadAsync(data)
+    const texts: string[] = []
+
+    for (const [name, file] of Object.entries(zip.files)) {
+      if (file.dir) continue
+
+      // Skip hidden and system files
+      const baseName = name.split('/').pop() || name
+      if (baseName.startsWith('.') || baseName.startsWith('_')) continue
+
+      const ext = path.extname(baseName).toLowerCase()
+
+      // Recurse into nested ZIPs
+      if (ext === '.zip') {
+        const nestedContent = await file.async('string')
+        const tmpPath = filePath + '.nested.' + baseName
+        fs.writeFileSync(tmpPath, Buffer.from(nestedContent, 'binary'))
+        try {
+          const nestedText = await extractTextFromZip(tmpPath, depth + 1)
+          if (nestedText.trim()) {
+            texts.push(`[${baseName}]\n${nestedText}`)
+          }
+        } finally {
+          try { fs.unlinkSync(tmpPath) } catch {}
+        }
+        continue
+      }
+
+      if (!ARCHIVE_NESTED_EXTENSIONS.has(ext)) continue
+
+      const fileContent = await file.async('string')
+
+      if (ext === '.eml') {
+        // Parse embedded email as plain text (already has headers)
+        const subjectMatch = fileContent.match(/^Subject:\s*(.*)$/mi)
+        let snippet = subjectMatch ? `Subject: ${subjectMatch[1].trim()}\n` : ''
+        const bodyStart = fileContent.search(/\r?\n\r?\n/)
+        if (bodyStart >= 0) {
+          snippet += fileContent.slice(bodyStart).replace(/<[^>]+>/g, ' ').replace(/\s{2,}/g, ' ').trim()
+        }
+        texts.push(`[${baseName}]\n${snippet}`)
+      } else if (ext === '.docx' || ext === '.xlsx' || ext === '.pptx' || ext === '.odt' || ext === '.ods' || ext === '.odp') {
+        // Write temp file and use existing parser
+        const tmpPath = filePath + '.tmp.' + baseName
+        fs.writeFileSync(tmpPath, Buffer.from(fileContent, 'binary'))
+        try {
+          const innerExt = path.extname(baseName)
+          const innerText = await extractText(tmpPath, innerExt)
+          if (innerText.trim()) {
+            texts.push(`[${baseName}]\n${innerText}`)
+          }
+        } finally {
+          try { fs.unlinkSync(tmpPath) } catch {}
+        }
+      } else {
+        // Plain text inside ZIP
+        const innerText = fileContent.replace(/<[^>]+>/g, ' ').replace(/\s{2,}/g, ' ').trim()
+        if (innerText) {
+          texts.push(`[${baseName}]\n${innerText}`)
+        }
+      }
+    }
+
+    return texts.join('\n---\n')
+  } catch (error) {
+    log.warn(`Failed to extract text from zip: ${filePath}`, error)
+    return ''
+  }
+}
+
 async function extractText(filePath: string, ext: string): Promise<string> {
   const lowerExt = ext.toLowerCase()
 
@@ -240,6 +427,12 @@ async function extractText(filePath: string, ext: string): Promise<string> {
       return extractTextFromOdf(filePath)
     case '.chm':
       return extractTextFromChm(filePath)
+    case '.eml':
+      return extractTextFromEml(filePath)
+    case '.mbox':
+      return extractTextFromMbox(filePath)
+    case '.zip':
+      return extractTextFromZip(filePath)
     case '.txt':
     case '.md':
     case '.json':

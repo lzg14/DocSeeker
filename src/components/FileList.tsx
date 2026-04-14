@@ -61,6 +61,10 @@ function FileList({ files, selectedFile, onSelectFile, formatSize, hasSearched }
         return '📚'
       case 'odf':
         return '📒'
+      case 'email':
+        return '📧'
+      case 'zip':
+        return '🗜️'
       default:
         return '📁'
     }

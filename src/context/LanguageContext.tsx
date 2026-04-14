@@ -126,6 +126,12 @@ const translations: Record<Language, Record<string, string>> = {
     'confirm.ok': '确定',
     'confirm.exitTitle': '退出',
     'confirm.exitMsg': '确定要退出 DocSeeker 吗？',
+    // Cloud storage
+    'cloud.title': '云存储',
+    'cloud.hint': '扫描 OneDrive / Dropbox 等云盘本地同步文件夹',
+    'cloud.desc': 'DocSeeker 支持扫描本地云盘同步文件夹（如 OneDrive、Dropbox），将云端文件纳入全文索引。云盘文件夹与普通文件夹扫描方式相同，无需额外配置。',
+    'cloud.added': '已添加',
+    'cloud.tip': '提示：您可以在下方「添加目录」中添加任意本地云盘同步文件夹，DocSeeker 会自动索引其中的文档内容。',
   },
   'en': {
     // Navigation
@@ -242,6 +248,12 @@ const translations: Record<Language, Record<string, string>> = {
     'confirm.ok': 'OK',
     'confirm.exitTitle': 'Exit',
     'confirm.exitMsg': 'Are you sure you want to exit DocSeeker?',
+    // Cloud storage
+    'cloud.title': 'Cloud Storage',
+    'cloud.hint': 'Scan OneDrive / Dropbox local sync folders',
+    'cloud.desc': 'DocSeeker supports scanning local cloud sync folders (OneDrive, Dropbox, etc.) to index cloud documents. Cloud folders are scanned the same way as regular folders.',
+    'cloud.added': 'Added',
+    'cloud.tip': 'Tip: Use "Add Directory" below to add any local cloud sync folder — DocSeeker will automatically index its document content.',
   }
 }
 

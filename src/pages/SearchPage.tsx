@@ -35,6 +35,8 @@ const FILE_TYPE_OPTIONS = [
   { value: 'rtf', label: 'RTF' },
   { value: 'chm', label: 'CHM' },
   { value: 'odf', label: 'ODF' },
+  { value: 'email', label: '邮件' },
+  { value: 'zip', label: 'ZIP' },
 ]
 
 function SearchPage(): JSX.Element {
