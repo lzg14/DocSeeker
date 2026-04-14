@@ -1,6 +1,6 @@
 # DocSeeker 开发路线图
 
-> 更新时间: 2026-04-14
+> 更新时间: 2026-04-15
 
 ---
 
@@ -30,7 +30,7 @@ DocSeeker 是一款基于 Electron + React + TypeScript 的本地文档全文搜
 | 功能 | 当前状态 | 目标 | 竞品参考 |
 |------|----------|------|----------|
 | 新增文件格式 | 仅 9 种格式 | 新增 RTF、CHM、ODF (ODT/ODS/ODP) | AnyTXT 60+ |
-| 实时文件监控 | 已禁用（chokidar CPU 高） | 重新启用，优化性能或改用 NTFS USN | Everything / AnyTXT |
+| 实时文件监控 | **已移除**（chokidar 在大目录架构层面无法优化） | 重新启用需改用 NTFS USN Journal API | Everything / AnyTXT |
 | 文件过滤器 | 无 | 支持按类型/大小/日期范围过滤 | 所有主流竞品 |
 | 正则 / 布尔搜索 | 无 | 支持 AND/OR/NOT 及正则表达式 | Everything / AnyTXT |
 
@@ -66,7 +66,7 @@ DocSeeker 是一款基于 Electron + React + TypeScript 的本地文档全文搜
 - [x] **M1.1** 新增 RTF 文件格式支持
 - [x] **M1.2** 新增 CHM 帮助文档格式支持
 - [x] **M1.3** 新增 ODF 系列格式支持（ODT / ODS / ODP）
-- [x] **M1.4** 重新启用实时文件监控（优化 chokidar 或迁移至 NTFS USN）
+- [x] **M1.4** 重新启用实时文件监控（优化 chokidar 或迁移至 NTFS USN） — _已移除（架构问题，大目录下 chokidar 无法优化，需改用 NTFS USN Journal）_
 - [x] **M1.5** 搜索历史功能（记录与快速复用）
 - [x] **M1.6** 保存的搜索（收藏夹与命名搜索）
 - [x] **M1.7** 移除 / 大幅提高结果上限（200 条限制）
@@ -110,7 +110,7 @@ DocSeeker 是一款基于 Electron + React + TypeScript 的本地文档全文搜
 - [x] **M3.1** ZIP / RAR 压缩包内全文搜索
 - [x] **M3.2** 邮件格式支持（mbox / EML）
 - [x] **M3.3** 便携版打包（索引 + 数据可打包带走）
-- [ ] **M3.4** 云存储集成（OneDrive / Dropbox，本地缓存索引） — _已添加配置入口，实际集成待后续_
+- [x] **M3.4** 云存储集成（OneDrive / Dropbox，本地缓存索引） — _已移除（云盘文件夹与普通文件夹扫描方式无差异，无需单独集成）_
 
 **技术要点:**
 - ZIP 内搜索：复用 jszip 解压 + 递归解析内部文档
