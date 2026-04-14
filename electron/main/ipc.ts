@@ -4,6 +4,8 @@ import { Worker } from 'worker_threads'
 import { join } from 'path'
 import {
   searchFiles,
+  searchFilesAdvanced,
+  SearchOptions,
   getFileCount,
   insertFile,
   getFileByPath,
@@ -54,6 +56,14 @@ export function registerIpcHandlers(): void {
       addSearchHistory(query)
     }
     return searchFiles(query)
+  })
+
+  // Advanced search with filters
+  ipcMain.handle('search-files-advanced', async (_, query: string, options?: SearchOptions): Promise<FileRecord[]> => {
+    if (query.trim()) {
+      addSearchHistory(query)
+    }
+    return searchFilesAdvanced(query, options)
   })
 
   // Search history

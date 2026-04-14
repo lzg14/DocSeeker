@@ -1230,6 +1230,273 @@ button, input, select {
   outline: none;
 }
 
+/* === 搜索工具栏 === */
+.search-box-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.search-toolbar {
+  display: flex;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.toolbar-btn {
+  height: 40px;
+  padding: 0 12px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  font-size: 12px;
+  color: var(--text-secondary);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  transition: all 0.15s;
+}
+
+.toolbar-btn:hover {
+  background: var(--bg-primary);
+  border-color: var(--border-light);
+  color: var(--text-primary);
+}
+
+.toolbar-btn.active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+
+.toolbar-btn.has-filters {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.toolbar-btn.has-filters.active {
+  color: #fff;
+}
+
+.filter-badge {
+  background: var(--accent);
+  color: #fff;
+  border-radius: 10px;
+  font-size: 10px;
+  padding: 0 5px;
+  min-width: 16px;
+  text-align: center;
+  height: 16px;
+  line-height: 16px;
+}
+
+.toolbar-btn.active .filter-badge {
+  background: #fff;
+  color: var(--accent);
+}
+
+/* === 过滤器面板 === */
+.filter-panel {
+  margin-top: 8px;
+  padding: 14px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+
+.filter-section {
+  margin-bottom: 12px;
+}
+
+.filter-section:last-child {
+  margin-bottom: 0;
+}
+
+.filter-label {
+  font-size: 11px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 8px;
+}
+
+.filter-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.filter-chip {
+  padding: 4px 10px;
+  background: var(--bg-primary);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  font-size: 12px;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.filter-chip:hover {
+  border-color: var(--accent);
+  color: var(--text-primary);
+}
+
+.filter-chip.active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+
+.filter-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.filter-row .filter-label {
+  margin-bottom: 0;
+  min-width: 60px;
+}
+
+.filter-row-inputs {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: 1;
+}
+
+.filter-number {
+  width: 100px;
+  height: 30px;
+  padding: 0 8px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  font-size: 12px;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  outline: none;
+}
+
+.filter-number:focus {
+  border-color: var(--accent);
+}
+
+.filter-date {
+  height: 30px;
+  padding: 0 8px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  font-size: 12px;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  outline: none;
+  cursor: pointer;
+}
+
+.filter-date:focus {
+  border-color: var(--accent);
+}
+
+.filter-range-sep {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.filter-unit {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.filter-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+}
+
+.filter-clear {
+  height: 30px;
+  padding: 0 14px;
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  font-size: 12px;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.filter-clear:hover {
+  color: var(--text-primary);
+  border-color: var(--border-light);
+}
+
+.filter-apply {
+  height: 30px;
+  padding: 0 14px;
+  background: var(--accent);
+  border: none;
+  border-radius: 4px;
+  font-size: 12px;
+  color: #fff;
+  cursor: pointer;
+  transition: background-color 0.15s;
+}
+
+.filter-apply:hover {
+  background: var(--accent-hover);
+}
+
+/* === 语法帮助面板 === */
+.syntax-help-panel {
+  margin-top: 8px;
+  padding: 12px 14px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+
+.syntax-help-title {
+  font-size: 11px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 8px;
+}
+
+.syntax-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 6px;
+}
+
+.syntax-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+}
+
+.syntax-item code {
+  font-family: monospace;
+  background: var(--bg-primary);
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  padding: 1px 6px;
+  color: var(--text-primary);
+  font-size: 11px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.syntax-item span {
+  color: var(--text-muted);
+}
+
 .save-dialog input:focus {
   border-color: var(--accent);
 }

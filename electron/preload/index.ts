@@ -60,15 +60,17 @@ export interface SavedSearch {
 
 export interface SearchOptions {
   fileTypes?: string[]
+  sizeMin?: number
+  sizeMax?: number
   dateFrom?: string
   dateTo?: string
-  limit?: number
 }
 
 export interface ElectronAPI {
   selectDirectory: () => Promise<string | null>
   onScanProgress: (callback: (progress: ScanProgress) => void) => () => void
   searchFiles: (query: string) => Promise<FileRecord[]>
+  searchFilesAdvanced: (query: string, options?: SearchOptions) => Promise<FileRecord[]>
   deleteFile: (filePath: string) => Promise<boolean>
   getFileCount: () => Promise<number>
   showInFolder: (filePath: string) => Promise<void>
@@ -106,6 +108,8 @@ const electronAPI: ElectronAPI = {
   },
 
   searchFiles: (query: string) => ipcRenderer.invoke('search-files', query),
+
+  searchFilesAdvanced: (query: string, options?: SearchOptions) => ipcRenderer.invoke('search-files-advanced', query, options),
 
   deleteFile: (filePath: string) => ipcRenderer.invoke('delete-file', filePath),
 
