@@ -55,6 +55,8 @@ function SearchPage(): JSX.Element {
   const [snippets, setSnippets] = useState<Record<number, string>>({})
   const [saveName, setSaveName] = useState('')
   const [filters, setFilters] = useState<SearchOptions>({})
+  const [isDragging, setIsDragging] = useState(false)
+  const [isExtracting, setIsExtracting] = useState(false)
   const { t } = useLanguage()
 
   const inputRef = useRef<HTMLInputElement>(null)
@@ -201,6 +203,45 @@ function SearchPage(): JSX.Element {
     loadSavedSearches()
   }
 
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    setIsDragging(true)
+  }
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    setIsDragging(false)
+  }
+
+  const handleDrop = async (e: React.DragEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    setIsDragging(false)
+
+    const files = e.dataTransfer.files
+    if (!files || files.length === 0) return
+
+    const file = files[0]
+    // Use the webkitRelativePath or path if available (Electron provides this)
+    const filePath = (file as any).path
+    if (!filePath) return
+
+    setIsExtracting(true)
+    try {
+      const content = await window.electron.extractFileContent(filePath)
+      setIsExtracting(false)
+      if (content !== null) {
+        setSearchQuery(content)
+        performSearch(content, filters)
+      }
+    } catch (error) {
+      setIsExtracting(false)
+      console.error('Failed to extract file content:', error)
+    }
+  }
+
   const handleFilterChange = (newFilters: SearchOptions) => {
     setFilters(newFilters)
   }
@@ -219,7 +260,20 @@ function SearchPage(): JSX.Element {
 
   return (
     <div className="search-page">
-      <div className="search-header">
+      <div
+        className={`search-header${isDragging ? ' drag-over' : ''}`}
+        onDragOver={handleDragOver}
+        onDragLeave={handleDragLeave}
+        onDrop={handleDrop}
+      >
+        {isExtracting && (
+          <div className="drag-extracting-hint">{t('search.extracting')}</div>
+        )}
+        {isDragging && !isExtracting && (
+          <div className="drag-hint-overlay">
+            <div className="drag-hint-text">{t('search.dropHint')}</div>
+          </div>
+        )}
         <div className="search-box-row">
           <div className="search-box-wrapper" ref={dropdownRef}>
             <input

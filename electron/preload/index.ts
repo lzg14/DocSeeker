@@ -93,6 +93,7 @@ export interface ElectronAPI {
   getSavedSearches: () => Promise<SavedSearch[]>
   addSavedSearch: (name: string, query: string) => Promise<number>
   deleteSavedSearch: (id: number) => Promise<void>
+  extractFileContent: (filePath: string) => Promise<string | null>
 }
 
 const electronAPI: ElectronAPI = {
@@ -164,7 +165,9 @@ const electronAPI: ElectronAPI = {
 
   addSavedSearch: (name: string, query: string) => ipcRenderer.invoke('add-saved-search', name, query),
 
-  deleteSavedSearch: (id: number) => ipcRenderer.invoke('delete-saved-search', id)
+  deleteSavedSearch: (id: number) => ipcRenderer.invoke('delete-saved-search', id),
+
+  extractFileContent: (filePath: string) => ipcRenderer.invoke('extract-file-content', filePath)
 }
 
 contextBridge.exposeInMainWorld('electron', electronAPI)

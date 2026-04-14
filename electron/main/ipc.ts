@@ -1,7 +1,7 @@
 import { app, ipcMain, dialog, shell, BrowserWindow } from 'electron'
 import log from 'electron-log/main'
 import { Worker } from 'worker_threads'
-import { join } from 'path'
+import { join, extname } from 'path'
 import {
   searchFiles,
   searchFilesAdvanced,
@@ -362,6 +362,19 @@ export function registerIpcHandlers(): void {
 
   ipcMain.handle('window-is-maximized', () => {
     return BrowserWindow.getFocusedWindow()?.isMaximized() ?? false
+  })
+
+  // Extract text content from a dropped file
+  ipcMain.handle('extract-file-content', async (_, filePath: string): Promise<string | null> => {
+    try {
+      const { extractContent } = await import('./scanner')
+      const ext = extname(filePath).toLowerCase()
+      const content = await extractContent(filePath, ext)
+      return content || null
+    } catch (error) {
+      log.warn('Failed to extract file content:', error)
+      return null
+    }
   })
 
   log.info('All IPC handlers registered')
