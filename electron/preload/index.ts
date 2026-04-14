@@ -89,6 +89,7 @@ export interface ElectronAPI {
   // Search history & saved searches
   getSearchHistory: () => Promise<SearchHistoryEntry[]>
   clearSearchHistory: () => Promise<void>
+  getSearchSnippets: (query: string, fileIds: number[]) => Promise<Record<number, string>>
   getSavedSearches: () => Promise<SavedSearch[]>
   addSavedSearch: (name: string, query: string) => Promise<number>
   deleteSavedSearch: (id: number) => Promise<void>
@@ -156,6 +157,8 @@ const electronAPI: ElectronAPI = {
   getSearchHistory: () => ipcRenderer.invoke('get-search-history'),
 
   clearSearchHistory: () => ipcRenderer.invoke('clear-search-history'),
+
+  getSearchSnippets: (query: string, fileIds: number[]) => ipcRenderer.invoke('get-search-snippets', query, fileIds),
 
   getSavedSearches: () => ipcRenderer.invoke('get-saved-searches'),
 

@@ -1,14 +1,20 @@
-import { useState } from 'react'
+import { useState, lazy, Suspense } from 'react'
 import { PageTab } from './types'
 import { AppProvider } from './context/AppContext'
 import { LanguageProvider } from './context/LanguageContext'
 import TitleBar from './components/TitleBar'
 import SideNav from './components/SideNav'
 import StatusBar from './components/StatusBar'
-import ScanPage from './pages/ScanPage'
 import SearchPage from './pages/SearchPage'
-import LanguagePage from './pages/LanguagePage'
-import GuidePage from './pages/GuidePage'
+
+// Lazy load pages that aren't shown immediately
+const ScanPage = lazy(() => import('./pages/ScanPage'))
+const LanguagePage = lazy(() => import('./pages/LanguagePage'))
+const GuidePage = lazy(() => import('./pages/GuidePage'))
+
+function PageFallback(): JSX.Element {
+  return <div className="page-loading"><div className="loading">Loading...</div></div>
+}
 
 function App(): JSX.Element {
   const [activeTab, setActiveTab] = useState<PageTab>('search')
@@ -16,13 +22,12 @@ function App(): JSX.Element {
   const renderPage = (): JSX.Element => {
     switch (activeTab) {
       case 'scan':
-        return <ScanPage />
-      case 'search':
-        return <SearchPage />
+        return <Suspense fallback={<PageFallback />}><ScanPage /></Suspense>
       case 'language':
-        return <LanguagePage />
+        return <Suspense fallback={<PageFallback />}><LanguagePage /></Suspense>
       case 'guide':
-        return <GuidePage />
+        return <Suspense fallback={<PageFallback />}><GuidePage /></Suspense>
+      case 'search':
       default:
         return <SearchPage />
     }
@@ -36,9 +41,7 @@ function App(): JSX.Element {
           <div className="main-layout">
             <SideNav activeTab={activeTab} onTabChange={setActiveTab} />
             <main className="main-content">
-              {activeTab === 'search'
-                ? <SearchPage />
-                : renderPage()}
+              {renderPage()}
             </main>
           </div>
           <StatusBar />

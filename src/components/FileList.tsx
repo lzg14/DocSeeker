@@ -8,12 +8,13 @@ interface FileListProps {
   onSelectFile: (file: FileRecord) => void
   formatSize: (bytes: number) => string
   hasSearched: boolean
+  snippets?: Record<number, string>
 }
 
 type SortField = 'name' | 'size' | 'updated_at'
 type SortOrder = 'asc' | 'desc'
 
-function FileList({ files, selectedFile, onSelectFile, formatSize, hasSearched }: FileListProps): JSX.Element {
+function FileList({ files, selectedFile, onSelectFile, formatSize, hasSearched, snippets = {} }: FileListProps): JSX.Element {
   const { t } = useLanguage()
   const [sortField, setSortField] = useState<SortField>('updated_at')
   const [sortOrder, setSortOrder] = useState<SortOrder>('desc')
@@ -104,7 +105,15 @@ function FileList({ files, selectedFile, onSelectFile, formatSize, hasSearched }
             >
               <div className="file-name-cell">
                 <span>{getFileIcon(file.file_type)}</span>
-                <span className="file-name-text" title={file.path}>{file.name}</span>
+                <div className="file-name-info">
+                  <span className="file-name-text" title={file.path}>{file.name}</span>
+                  {snippets[file.id!] && (
+                    <span
+                      className="file-snippet"
+                      dangerouslySetInnerHTML={{ __html: snippets[file.id!] }}
+                    />
+                  )}
+                </div>
               </div>
               <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>{file.file_type || '-'}</div>
               <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>{formatSize(file.size)}</div>

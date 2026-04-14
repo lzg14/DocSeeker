@@ -52,6 +52,7 @@ function SearchPage(): JSX.Element {
   const [showSaveDialog, setShowSaveDialog] = useState(false)
   const [showFilters, setShowFilters] = useState(false)
   const [showSyntaxHelp, setShowSyntaxHelp] = useState(false)
+  const [snippets, setSnippets] = useState<Record<number, string>>({})
   const [saveName, setSaveName] = useState('')
   const [filters, setFilters] = useState<SearchOptions>({})
   const { t } = useLanguage()
@@ -110,6 +111,14 @@ function SearchPage(): JSX.Element {
         : await window.electron.searchFiles(query)
       setFiles(result)
       setHasSearched(true)
+      // Fetch highlighted snippets for the results
+      if (result.length > 0 && query.trim()) {
+        const fileIds = result.map(f => f.id!).filter(Boolean)
+        const s = await window.electron.getSearchSnippets(query, fileIds)
+        setSnippets(s)
+      } else {
+        setSnippets({})
+      }
       loadHistory()
     } catch (error) {
       console.error('Failed to search files:', error)
@@ -423,6 +432,7 @@ function SearchPage(): JSX.Element {
             onSelectFile={setSelectedFile}
             formatSize={formatSize}
             hasSearched={hasSearched}
+            snippets={snippets}
           />
         </div>
         {selectedFile && (

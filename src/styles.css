@@ -386,6 +386,14 @@ body {
   width: 100%;
 }
 
+/* === 路由懒加载占位 === */
+.page-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+}
+
 .page-active {
   display: flex;
   flex-direction: column;
@@ -576,10 +584,39 @@ body {
 
 .file-name-cell {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 8px;
   overflow: hidden;
   min-width: 0;
+  flex: 1;
+}
+
+.file-name-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  overflow: hidden;
+  min-width: 0;
+}
+
+.file-snippet {
+  font-size: 11px;
+  color: var(--text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  line-height: 1.4;
+  max-height: 2.8em;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
+.file-snippet mark {
+  background: rgba(250, 204, 21, 0.4);
+  color: inherit;
+  border-radius: 2px;
+  padding: 0 1px;
 }
 
 .file-name-text {
