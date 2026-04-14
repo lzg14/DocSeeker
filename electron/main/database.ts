@@ -227,6 +227,120 @@ export function searchFiles(query: string): FileRecord[] {
   return rows
 }
 
+export interface SearchOptions {
+  fileTypes?: string[]
+  sizeMin?: number
+  sizeMax?: number
+  dateFrom?: string
+  dateTo?: string
+}
+
+/**
+ * Parse a user query string into an FTS5-compatible query.
+ * Supports:
+ *   word1 word2       → word1 AND word2 (default AND)
+ *   "exact phrase"    → phrase search
+ *   term*             → prefix wildcard
+ *   term1 OR term2    → OR operator
+ *   term1 NOT term2   → NOT operator
+ *   (group)           → grouping with parentheses
+ */
+function parseFtsQuery(query: string): string {
+  // Detect explicit operators: check for bare OR/NOT (not quoted)
+  const hasExplicitOr = /(^|\s)OR(\s|$)/i.test(query)
+  const hasExplicitNot = /(^|\s)NOT(\s|$)/i.test(query)
+
+  // If no explicit operators, split by whitespace and join with AND + prefix
+  if (!hasExplicitOr && !hasExplicitNot) {
+    const words = query.trim().split(/\s+/).filter(w => w.length > 0)
+    return words.map(w => {
+      // Phrase in quotes
+      if (w.startsWith('"') && w.endsWith('"')) {
+        return w // keep as-is for phrase search
+      }
+      // Already has wildcard
+      if (w.endsWith('*')) {
+        return `"${w.slice(0, -1).replace(/"/g, '""')}"`
+      }
+      // Prefix wildcard
+      return `"${w.replace(/"/g, '""')}"`
+    }).join(' AND ')
+  }
+
+  // With explicit operators: escape quotes, handle prefix, preserve structure
+  let result = query.trim()
+
+  // Replace quoted phrases: "exact phrase" → "exact phrase"
+  // (already FTS5-compatible, just ensure inner quotes are escaped)
+  result = result.replace(/"([^"]+)"/g, (_, phrase) => `"${phrase.replace(/"/g, '""')}"`)
+
+  // Add prefix wildcard to bare words (words not already quoted or wildcards)
+  result = result.replace(/(?<![*:a-zA-Z0-9_])([a-zA-Z0-9_\u4e00-\u9fff]+)(?![*:])(?=\s|$|[)])/g, (match) => {
+    // Don't add wildcard to operators
+    const upper = match.toUpperCase()
+    if (upper === 'AND' || upper === 'OR' || upper === 'NOT' || upper === 'NEAR') return match
+    return `"${match}"*`
+  })
+
+  // NOT → FTS5 minus operator
+  result = result.replace(/\bNOT\b/gi, '-')
+
+  return result
+}
+
+export function searchFilesAdvanced(query: string, options?: SearchOptions): FileRecord[] {
+  if (!query.trim()) {
+    return []
+  }
+
+  const ftsQuery = parseFtsQuery(query)
+
+  const whereClauses: string[] = ['files_fts MATCH ?']
+  const params: any[] = [ftsQuery]
+
+  // File type filter
+  if (options?.fileTypes && options.fileTypes.length > 0) {
+    const placeholders = options.fileTypes.map(() => '?').join(', ')
+    whereClauses.push(`f.file_type IN (${placeholders})`)
+    params.push(...options.fileTypes)
+  }
+
+  // Size range filter
+  if (options?.sizeMin !== undefined && options.sizeMin > 0) {
+    whereClauses.push('f.size >= ?')
+    params.push(options.sizeMin)
+  }
+  if (options?.sizeMax !== undefined && options.sizeMax > 0) {
+    whereClauses.push('f.size <= ?')
+    params.push(options.sizeMax)
+  }
+
+  // Date range filter
+  if (options?.dateFrom) {
+    whereClauses.push('f.updated_at >= ?')
+    params.push(options.dateFrom)
+  }
+  if (options?.dateTo) {
+    whereClauses.push('f.updated_at <= ?')
+    params.push(options.dateTo)
+  }
+
+  const whereClause = whereClauses.join(' AND ')
+
+  const stmt = getDatabase().prepare(`
+    SELECT f.*, bm25(files_fts) as rank
+    FROM files_fts fts
+    JOIN files f ON fts.rowid = f.id
+    WHERE ${whereClause}
+    ORDER BY rank
+  `)
+
+  stmt.bind(params)
+  const rows = stmt.all() as FileRecord[]
+
+  return rows
+}
+
 // Search history operations
 export interface SearchHistoryEntry {
   id?: number
