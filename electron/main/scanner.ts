@@ -16,7 +16,10 @@ const SUPPORTED_EXTENSIONS = new Set([
   '.doc', '.docx',
   '.xls', '.xlsx',
   '.ppt', '.pptx',
-  '.pdf'
+  '.pdf',
+  '.rtf',
+  '.chm',
+  '.odt', '.ods', '.odp'
 ])
 
 // File type mapping
@@ -32,7 +35,12 @@ const FILE_TYPE_MAP: Record<string, string> = {
   '.xlsx': 'xlsx',
   '.ppt': 'pptx',
   '.pptx': 'pptx',
-  '.pdf': 'pdf'
+  '.pdf': 'pdf',
+  '.rtf': 'rtf',
+  '.chm': 'chm',
+  '.odt': 'odf',
+  '.ods': 'odf',
+  '.odp': 'odf'
 }
 
 export interface ScanProgress {
@@ -119,6 +127,97 @@ async function extractTextFromPptx(filePath: string): Promise<string> {
   }
 }
 
+// Extract plain text from RTF files using regex
+async function extractTextFromRtf(filePath: string): Promise<string> {
+  try {
+    const content = fs.readFileSync(filePath, 'utf-8')
+    // Strip RTF control words and groups
+    return content
+      .replace(/\\[a-z]+\d*\s?/gi, '') // control words like \fonttbl, \f0, etc.
+      .replace(/\\['][0-9a-f]{2}/gi, '') // special chars like \'e9
+      .replace(/\\[{}]/g, '')            // escaped braces
+      .replace(/\\\n/g, '\n')            // escaped newlines
+      .replace(/\{\\[^}]*\\par}/g, '\n') // paragraph marks
+      .replace(/\\[a-z]+\s/gi, ' ')     // control symbols with space
+      .replace(/\{[^}]*\}/g, (match) => {
+        // Keep content of groups without control words
+        return match.replace(/\{|}/g, '')
+      })
+      .replace(/\\[^a-z{}\s][0-9]*/g, '') // remaining control symbols
+      .replace(/\n{3,}/g, '\n\n')       // normalize multiple newlines
+      .trim()
+  } catch (error) {
+    log.warn(`Failed to extract text from rtf: ${filePath}`, error)
+    return ''
+  }
+}
+
+// Extract plain text from ODF files (ODT, ODS, ODP) using jszip
+async function extractTextFromOdf(filePath: string): Promise<string> {
+  try {
+    const JSZip = require('jszip')
+    const data = fs.readFileSync(filePath)
+    const zip = await JSZip.loadAsync(data)
+
+    // ODF files have content.xml with the main text
+    const contentXml = await zip.file('content.xml')?.async('string')
+    if (!contentXml) return ''
+
+    // Extract text from XML: <text:p>...</text:p>, <text:h>...</text:h>, <text:span>...</text:span>
+    const textMatches = contentXml.match(/<text:[pwhs][^>]*>([^<]*)<\/text:[pwhs]>/g) || []
+    const texts = textMatches.map((m: string) =>
+      m.replace(/<[^>]+>/g, '')
+    ).filter((t: string) => t.trim().length > 0)
+
+    return texts.join('\n')
+  } catch (error) {
+    log.warn(`Failed to extract text from odf: ${filePath}`, error)
+    return ''
+  }
+}
+
+// Extract plain text from CHM files using jszip (CHM is a ZIP-like archive)
+async function extractTextFromChm(filePath: string): Promise<string> {
+  try {
+    const JSZip = require('jszip')
+    const data = fs.readFileSync(filePath)
+    const zip = await JSZip.loadAsync(data)
+    const texts: string[] = []
+
+    // CHM contains HTML files - extract text from all .html/.htm files
+    for (const [name, file] of Object.entries(zip.files)) {
+      if (file.dir) continue
+      if (!name.endsWith('.html') && !name.endsWith('.htm')) continue
+      if (name.includes('/') && !name.endsWith('.html') && !name.endsWith('.htm')) continue
+
+      const htmlContent = await file.async('string')
+      if (!htmlContent) continue
+
+      // Strip HTML tags and extract text
+      const text = htmlContent
+        .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '')
+        .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
+        .replace(/<[^>]+>/g, ' ')
+        .replace(/&nbsp;/gi, ' ')
+        .replace(/&lt;/gi, '<')
+        .replace(/&gt;/gi, '>')
+        .replace(/&amp;/gi, '&')
+        .replace(/&quot;/gi, '"')
+        .replace(/\s{2,}/g, ' ')
+        .trim()
+
+      if (text.length > 10) {
+        texts.push(text)
+      }
+    }
+
+    return texts.join('\n\n')
+  } catch (error) {
+    log.warn(`Failed to extract text from chm: ${filePath}`, error)
+    return ''
+  }
+}
+
 async function extractText(filePath: string, ext: string): Promise<string> {
   const lowerExt = ext.toLowerCase()
 
@@ -133,6 +232,14 @@ async function extractText(filePath: string, ext: string): Promise<string> {
       return extractTextFromPptx(filePath)
     case '.pdf':
       return extractTextFromPdf(filePath)
+    case '.rtf':
+      return extractTextFromRtf(filePath)
+    case '.odt':
+    case '.ods':
+    case '.odp':
+      return extractTextFromOdf(filePath)
+    case '.chm':
+      return extractTextFromChm(filePath)
     case '.txt':
     case '.md':
     case '.json':

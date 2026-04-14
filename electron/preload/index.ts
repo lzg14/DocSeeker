@@ -45,6 +45,19 @@ export interface IncrementalScanResult {
   errors: string[]
 }
 
+export interface SearchHistoryEntry {
+  id?: number
+  query: string
+  searched_at?: string
+}
+
+export interface SavedSearch {
+  id?: number
+  name: string
+  query: string
+  created_at?: string
+}
+
 export interface SearchOptions {
   fileTypes?: string[]
   dateFrom?: string
@@ -71,6 +84,12 @@ export interface ElectronAPI {
   isMaximized: () => Promise<boolean>
   onWindowMaximized: (callback: (isMaximized: boolean) => void) => () => void
   onShowCloseConfirm: (callback: () => void) => () => void
+  // Search history & saved searches
+  getSearchHistory: () => Promise<SearchHistoryEntry[]>
+  clearSearchHistory: () => Promise<void>
+  getSavedSearches: () => Promise<SavedSearch[]>
+  addSavedSearch: (name: string, query: string) => Promise<number>
+  deleteSavedSearch: (id: number) => Promise<void>
 }
 
 const electronAPI: ElectronAPI = {
@@ -128,7 +147,17 @@ const electronAPI: ElectronAPI = {
     return () => {
       ipcRenderer.removeListener('show-close-confirm', handler)
     }
-  }
+  },
+
+  getSearchHistory: () => ipcRenderer.invoke('get-search-history'),
+
+  clearSearchHistory: () => ipcRenderer.invoke('clear-search-history'),
+
+  getSavedSearches: () => ipcRenderer.invoke('get-saved-searches'),
+
+  addSavedSearch: (name: string, query: string) => ipcRenderer.invoke('add-saved-search', name, query),
+
+  deleteSavedSearch: (id: number) => ipcRenderer.invoke('delete-saved-search', id)
 }
 
 contextBridge.exposeInMainWorld('electron', electronAPI)

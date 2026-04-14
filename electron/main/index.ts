@@ -148,9 +148,9 @@ app.whenReady().then(async () => {
   log.info(`Scheduler started in ${Date.now() - ts0}ms`)
 
   // File watcher disabled for performance debugging
-  // setTimeout(() => {
-  //   startFileWatcher().catch((err: Error) => log.error('File watcher init failed:', err))
-  // }, 3000)
+  setTimeout(() => {
+    startFileWatcher().catch((err: Error) => log.error('File watcher init failed:', err))
+  }, 3000)
 
   // Default open or close DevTools by F12 in development
   app.on('browser-window-created', (_, window) => {
