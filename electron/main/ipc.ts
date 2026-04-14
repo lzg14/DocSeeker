@@ -5,6 +5,7 @@ import { join } from 'path'
 import {
   searchFiles,
   searchFilesAdvanced,
+  getSearchSnippets,
   SearchOptions,
   getFileCount,
   insertFile,
@@ -73,6 +74,14 @@ export function registerIpcHandlers(): void {
 
   ipcMain.handle('clear-search-history', async (): Promise<void> => {
     clearSearchHistory()
+  })
+
+  // Get search snippets for highlighting
+  ipcMain.handle('get-search-snippets', async (_, query: string, fileIds: number[]): Promise<Record<number, string>> => {
+    const snippets = getSearchSnippets(query, fileIds)
+    const result: Record<number, string> = {}
+    snippets.forEach((value, key) => { result[key] = value })
+    return result
   })
 
   // Saved searches
