@@ -58,6 +58,8 @@ const translations: Record<Language, Record<string, string>> = {
     'search.sizeMax': '最大',
     'search.clearFilters': '清除',
     'search.applyFilters': '应用',
+    'search.dropHint': '松开开始搜索',
+    'search.extracting': '正在提取内容...',
     // File detail
     'detail.info': '文件信息',
     'detail.size': '大小',
@@ -167,6 +169,8 @@ const translations: Record<Language, Record<string, string>> = {
     'search.sizeMax': 'Max',
     'search.clearFilters': 'Clear',
     'search.applyFilters': 'Apply',
+    'search.dropHint': 'Drop file to search its content',
+    'search.extracting': 'Extracting content...',
     // File list table headers
     'filelist.name': 'File Name',
     'filelist.type': 'Type',
