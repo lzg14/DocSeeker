@@ -95,7 +95,9 @@ export interface ElectronAPI {
   deleteSavedSearch: (id: number) => Promise<void>
   extractFileContent: (filePath: string) => Promise<string | null>
   // Duplicate files detection
-  findDuplicates: () => Promise<Array<{ hash: string; files: FileRecord[] }>>
+  findDuplicates: () => Promise<Array<{ hash: string; files: FileRecord[] }>>,
+  // Floating window
+  hideFloatingWindow: () => Promise<void>
 }
 
 const electronAPI: ElectronAPI = {
@@ -171,7 +173,9 @@ const electronAPI: ElectronAPI = {
 
   extractFileContent: (filePath: string) => ipcRenderer.invoke('extract-file-content', filePath),
 
-  findDuplicates: () => ipcRenderer.invoke('find-duplicates')
+  findDuplicates: () => ipcRenderer.invoke('find-duplicates'),
+
+  hideFloatingWindow: () => ipcRenderer.invoke('window-hide-floating')
 }
 
 contextBridge.exposeInMainWorld('electron', electronAPI)

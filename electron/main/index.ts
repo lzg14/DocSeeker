@@ -1,4 +1,4 @@
-import { app, shell, BrowserWindow, ipcMain, dialog, Tray, Menu, nativeImage } from 'electron'
+import { app, shell, BrowserWindow, ipcMain, dialog, Tray, Menu, nativeImage, globalShortcut } from 'electron'
 import { join } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import log from 'electron-log/main'
@@ -24,6 +24,40 @@ process.on('unhandledRejection', (reason) => {
 let mainWindow: BrowserWindow | null = null
 let tray: Tray | null = null
 let isClosingFromIPC = false
+let floatingWindow: BrowserWindow | null = null
+
+function createFloatingWindow(): void {
+  floatingWindow = new BrowserWindow({
+    width: 600,
+    height: 60,
+    frame: false,
+    transparent: true,
+    alwaysOnTop: true,
+    resizable: false,
+    skipTaskbar: true,
+    show: false,
+    webPreferences: {
+      preload: join(__dirname, '../preload/index.js'),
+      sandbox: false,
+      contextIsolation: true,
+      nodeIntegration: false
+    }
+  })
+
+  floatingWindow.on('blur', () => {
+    floatingWindow?.hide()
+  })
+
+  floatingWindow.on('closed', () => {
+    floatingWindow = null
+  })
+
+  if (is.dev && process.env['ELECTRON_RENDERER_URL']) {
+    floatingWindow.loadURL(process.env['ELECTRON_RENDERER_URL'] + '#/floating')
+  } else {
+    floatingWindow.loadFile(join(__dirname, '../renderer/index.html'), { hash: '/floating' })
+  }
+}
 
 function createTray(): void {
   const iconPath = join(__dirname, '../../build/icon.png')
@@ -145,6 +179,11 @@ app.whenReady().then(async () => {
   registerIpcHandlers()
   log.info('IPC handlers registered')
 
+  // IPC handler for hiding floating window
+  ipcMain.handle('window-hide-floating', async () => {
+    if (floatingWindow) floatingWindow.hide()
+  })
+
   // Start the scheduled scan scheduler
   const ts0 = Date.now()
   startScheduler()
@@ -162,6 +201,14 @@ app.whenReady().then(async () => {
 
   createWindow()
   createTray()
+  createFloatingWindow()
+
+  globalShortcut.register('CommandOrControl+Shift+F', () => {
+    if (floatingWindow) {
+      floatingWindow.show()
+      floatingWindow.focus()
+    }
+  })
 
   app.on('activate', function () {
     if (BrowserWindow.getAllWindows().length === 0) createWindow()
@@ -179,6 +226,7 @@ app.on('window-all-closed', () => {
 app.on('before-quit', () => {
   log.info('Application quitting...')
   ;(app as any).isQuitting = true
+  globalShortcut.unregisterAll()
   stopScheduler()
   closeDatabase()
 })
