@@ -13,6 +13,7 @@ const SUPPORTED_EXTENSIONS = new Set([
   '.rtf',
   '.chm',
   '.odt', '.ods', '.odp',
+  '.epub',
   '.zip',
   '.mbox', '.eml'
 ])
@@ -241,6 +242,63 @@ async function extractTextFromMbox(filePath: string): Promise<string> {
   }
 }
 
+// Extract text from EPUB files (ZIP containing XML: content.opf + XHTML chapters)
+async function extractTextFromEpub(filePath: string): Promise<string> {
+  try {
+    const JSZip = require('jszip')
+    const data = await fs.readFile(filePath)
+    const zip = await JSZip.loadAsync(data)
+    const texts: string[] = []
+
+    // Find content.opf via META-INF/container.xml
+    const containerXml = zip.file('META-INF/container.xml')
+    if (!containerXml) return ''
+    const containerContent = await containerXml.async('string')
+    const rootfileMatch = containerContent.match(/full-path="([^"]+)"/)
+    if (!rootfileMatch) return ''
+    const opfPath = rootfileMatch[1]
+    const opfDir = opfPath.includes('/') ? opfPath.substring(0, opfPath.lastIndexOf('/') + 1) : ''
+
+    // Parse content.opf
+    const opfFile = zip.file(opfPath)
+    if (!opfFile) return ''
+    const opfContent = await opfFile.async('string')
+
+    // Build manifest: id -> href
+    const manifestItems: Record<string, string> = {}
+    for (const m of opfContent.matchAll(/<item[^>]+id="([^"]+)"[^>]+href="([^"]+)"/g)) {
+      manifestItems[m[1]] = m[2]
+    }
+
+    // Read chapters in spine order
+    const spineMatches = [...opfContent.matchAll(/<itemref[^>]+idref="([^"]+)"/g)]
+    for (const sm of spineMatches) {
+      const itemId = sm[1]
+      const href = manifestItems[itemId]
+      if (!href) continue
+      const chapterPath = opfDir + href
+      const chapterFile = zip.file(chapterPath)
+      if (!chapterFile) continue
+      const chapterContent = await chapterFile.async('string')
+      const text = chapterContent
+        .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '')
+        .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
+        .replace(/<[^>]+>/g, ' ')
+        .replace(/&nbsp;/gi, ' ')
+        .replace(/&lt;/gi, '<').replace(/&gt;/gi, '>').replace(/&amp;/gi, '&')
+        .replace(/&quot;/gi, '"')
+        .replace(/\s{2,}/g, ' ')
+        .trim()
+      if (text) texts.push(text)
+    }
+
+    return texts.join('\n\n')
+  } catch (error) {
+    log.warn(`Failed to extract text from epub: ${filePath}`, error)
+    return ''
+  }
+}
+
 const MAX_ZIP_DEPTH = 3
 
 async function extractTextFromZip(filePath: string, depth = 0): Promise<string> {
@@ -330,6 +388,8 @@ async function extractText(filePath: string, ext: string): Promise<string> {
       return extractTextFromEml(filePath)
     case '.mbox':
       return extractTextFromMbox(filePath)
+    case '.epub':
+      return extractTextFromEpub(filePath)
     case '.zip':
       return extractTextFromZip(filePath)
     case '.txt':
@@ -432,6 +492,7 @@ function getFileType(ext: string): string {
     '.rtf': 'rtf',
     '.chm': 'chm',
     '.odt': 'odf', '.ods': 'odf', '.odp': 'odf',
+    '.epub': 'epub',
     '.zip': 'zip',
     '.mbox': 'email', '.eml': 'email'
   }
