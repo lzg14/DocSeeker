@@ -60,6 +60,11 @@ const translations: Record<Language, Record<string, string>> = {
     'search.applyFilters': '应用',
     'search.dropHint': '松开开始搜索',
     'search.extracting': '正在提取内容...',
+    'search.duplicates': '查重',
+    'search.duplicateGroups': '发现 {count} 组重复文件',
+    'search.duplicateGroup': '重复文件 ({count} 个)',
+    'search.noDuplicates': '未发现重复文件',
+    'search.closeDuplicates': '关闭',
     // File detail
     'detail.info': '文件信息',
     'detail.size': '大小',
@@ -171,6 +176,11 @@ const translations: Record<Language, Record<string, string>> = {
     'search.applyFilters': 'Apply',
     'search.dropHint': 'Drop file to search its content',
     'search.extracting': 'Extracting content...',
+    'search.duplicates': 'Find Duplicates',
+    'search.duplicateGroups': '{count} duplicate group(s) found',
+    'search.duplicateGroup': 'Duplicate group ({count} files)',
+    'search.noDuplicates': 'No duplicate files found',
+    'search.closeDuplicates': 'Close',
     // File list table headers
     'filelist.name': 'File Name',
     'filelist.type': 'Type',
