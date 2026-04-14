@@ -5,7 +5,6 @@ import log from 'electron-log/main'
 import { initDatabase, closeDatabase } from './database'
 import { registerIpcHandlers } from './ipc'
 import { startScheduler, stopScheduler } from './scheduler'
-import { startFileWatcher, stopFileWatcher } from './fileWatcher'
 
 // Initialize logging
 log.initialize()
@@ -29,6 +28,10 @@ let isClosingFromIPC = false
 function createTray(): void {
   const iconPath = join(__dirname, '../../build/icon.png')
   const icon = nativeImage.createFromPath(iconPath)
+  if (icon.isEmpty()) {
+    log.warn('Tray icon not found, skipping tray creation')
+    return
+  }
   tray = new Tray(icon.resize({ width: 16, height: 16 }))
 
   const contextMenu = Menu.buildFromTemplate([
@@ -147,10 +150,10 @@ app.whenReady().then(async () => {
   startScheduler()
   log.info(`Scheduler started in ${Date.now() - ts0}ms`)
 
-  // File watcher disabled for performance debugging
-  setTimeout(() => {
-    startFileWatcher().catch((err: Error) => log.error('File watcher init failed:', err))
-  }, 3000)
+  // File watcher disabled for performance (chokidar causes high CPU on large dirs)
+  // setTimeout(() => {
+  //   startFileWatcher().catch((err: Error) => log.error('File watcher init failed:', err))
+  // }, 3000)
 
   // Default open or close DevTools by F12 in development
   app.on('browser-window-created', (_, window) => {
@@ -176,7 +179,6 @@ app.on('window-all-closed', () => {
 app.on('before-quit', () => {
   log.info('Application quitting...')
   ;(app as any).isQuitting = true
-  stopFileWatcher()
   stopScheduler()
   closeDatabase()
 })
