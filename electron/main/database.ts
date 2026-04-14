@@ -437,31 +437,25 @@ export function getSearchSnippets(query: string, fileIds: number[]): Map<number,
   return snippets
 }
 
-export function findDuplicates(): FileRecord[][] {
-  const stmt = getDatabase().prepare(`
-    SELECT f.* FROM files f
-    WHERE f.hash IS NOT NULL
-    AND f.size > 0
-    AND EXISTS (
-      SELECT 1 FROM files f2
-      WHERE f2.hash = f.hash
-      AND f2.id != f.id
-    )
-    ORDER BY f.hash, f.size
-  `)
-  const rows = stmt.all() as FileRecord[]
-  
+export function findDuplicates(): Array<{ hash: string; files: FileRecord[] }> {
+  if (!db) return []
+  const rows = db.prepare(`
+    SELECT path, name, size, hash, file_type, content
+    FROM files
+    WHERE hash IS NOT NULL
+    ORDER BY hash
+  `).all() as FileRecord[]
 
-  const grouped = new Map<string, FileRecord[]>()
-  for (const file of rows) {
-    if (file.hash) {
-      const existing = grouped.get(file.hash) || []
-      existing.push(file)
-      grouped.set(file.hash, existing)
-    }
+  const map = new Map<string, FileRecord[]>()
+  for (const row of rows) {
+    if (!map.has(row.hash!)) map.set(row.hash!, [])
+    map.get(row.hash!)!.push(row)
   }
 
-  return Array.from(grouped.values()).filter(group => group.length > 1)
+  // Only return groups with more than one file
+  return [...map.entries()]
+    .filter(([, files]) => files.length > 1)
+    .map(([hash, files]) => ({ hash, files }))
 }
 
 export function getFilesBySizeGroup(): Map<number, FileRecord[]> {

@@ -30,7 +30,8 @@ import {
   getSavedSearches,
   deleteSavedSearch,
   SavedSearch,
-  SearchHistoryEntry
+  SearchHistoryEntry,
+  findDuplicates
 } from './database'
 
 let handlersRegistered = false
@@ -375,6 +376,11 @@ export function registerIpcHandlers(): void {
       log.warn('Failed to extract file content:', error)
       return null
     }
+  })
+
+  // Find duplicate files by hash
+  ipcMain.handle('find-duplicates', async (): Promise<Array<{ hash: string; files: FileRecord[] }>> => {
+    return findDuplicates()
   })
 
   log.info('All IPC handlers registered')
