@@ -383,5 +383,17 @@ export function registerIpcHandlers(): void {
     return findDuplicates()
   })
 
+  // Get thumbnail for a file (image, PDF, Office docs)
+  ipcMain.handle('get-thumbnail', async (_, filePath: string): Promise<string | null> => {
+    try {
+      const { nativeImage } = require('electron')
+      const thumb = await nativeImage.createThumbnailFromPath(filePath, { width: 120, height: 120 })
+      if (thumb.isEmpty()) return null
+      return thumb.toDataURL()
+    } catch {
+      return null
+    }
+  })
+
   log.info('All IPC handlers registered')
 }

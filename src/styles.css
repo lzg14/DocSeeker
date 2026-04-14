@@ -659,6 +659,45 @@ body {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.thumbnail-trigger {
+  display: inline-flex;
+  align-items: center;
+  opacity: 0.4;
+  font-size: 11px;
+  transition: opacity 0.15s;
+  flex-shrink: 0;
+}
+.file-name-text:hover .thumbnail-trigger {
+  opacity: 0.9;
+}
+
+.file-name-cell {
+  position: relative;
+}
+
+.file-name-info {
+  position: relative;
+}
+
+.thumbnail-preview {
+  position: absolute;
+  z-index: 200;
+  top: calc(100% + 4px);
+  left: 0;
+  width: 160px;
+  height: 160px;
+  object-fit: contain;
+  background: var(--bg-primary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: 0 4px 16px rgba(0,0,0,0.15);
+  padding: 4px;
+  pointer-events: none;
 }
 
 .file-list-empty {

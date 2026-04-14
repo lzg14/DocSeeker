@@ -98,6 +98,8 @@ export interface ElectronAPI {
   findDuplicates: () => Promise<Array<{ hash: string; files: FileRecord[] }>>,
   // Floating window
   hideFloatingWindow: () => Promise<void>
+  // Thumbnail preview
+  getThumbnail: (filePath: string) => Promise<string | null>
 }
 
 const electronAPI: ElectronAPI = {
@@ -175,7 +177,9 @@ const electronAPI: ElectronAPI = {
 
   findDuplicates: () => ipcRenderer.invoke('find-duplicates'),
 
-  hideFloatingWindow: () => ipcRenderer.invoke('window-hide-floating')
+  hideFloatingWindow: () => ipcRenderer.invoke('window-hide-floating'),
+
+  getThumbnail: (filePath: string) => ipcRenderer.invoke('get-thumbnail', filePath)
 }
 
 contextBridge.exposeInMainWorld('electron', electronAPI)
