@@ -42,38 +42,149 @@
   justify-content: flex-end;
 }
 
-/* === CSS 变量系统 === */
+/* === Light（浅色）— 默认主题 === */
+[data-theme="light"],
 :root {
   --bg-primary: #ffffff;
-  --bg-secondary: #f7f7f8;
-  --bg-tertiary: #fafafa;
-  --border: #e8e8ec;
-  --border-light: #e0e0e0;
-  --text-primary: #111111;
-  --text-secondary: #666666;
-  --text-muted: #888888;
-  --accent: #18181b;
-  --accent-hover: #2d2d2d;
-  --selected-bg: #f0f7ff;
-  --radius: 8px;
-  --shadow: 0 1px 3px rgba(0,0,0,0.08);
+  --bg-secondary: #f6f8fa;
+  --bg-tertiary: #eaeef2;
+  --border: #d0d7de;
+  --border-light: #e8ecf0;
+  --text-primary: #1f2328;
+  --text-secondary: #656d76;
+  --text-muted: #8b949e;
+  --accent: #2563eb;
+  --accent-hover: #1d4ed8;
+  --accent-subtle: #dbeafe;
+  --accent-text: #ffffff;
+  --shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.12);
+  --hover-bg: rgba(0, 0, 0, 0.04);
+  --selected-bg: #dbeafe;
+  --radius: 4px;
   --nav-width: 220px;
   --titlebar-height: 40px;
   --statusbar-height: 32px;
 }
 
+/* === Dark（深色）=== */
 [data-theme="dark"] {
-  --bg-primary: #111111;
-  --bg-secondary: #181818;
-  --bg-tertiary: #1a1a1a;
-  --border: #2a2a2a;
-  --border-light: #3a3a3a;
-  --text-primary: #e0e0e0;
-  --text-secondary: #9b9b9b;
-  --text-muted: #6a6a6a;
-  --accent: #3d6b3d;
-  --accent-hover: #4a7c4a;
-  --selected-bg: #1e2a1e;
+  --bg-primary: #0d1117;
+  --bg-secondary: #161b22;
+  --bg-tertiary: #21262d;
+  --border: #30363d;
+  --border-light: #3a424d;
+  --text-primary: #e6edf3;
+  --text-secondary: #8b949e;
+  --text-muted: #656d76;
+  --accent: #388bfd;
+  --accent-hover: #58a6ff;
+  --accent-subtle: #1f3a5f;
+  --accent-text: #ffffff;
+  --shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.4);
+  --hover-bg: rgba(255, 255, 255, 0.06);
+  --selected-bg: #1f3a5f;
+  --radius: 4px;
+  --nav-width: 220px;
+  --titlebar-height: 40px;
+  --statusbar-height: 32px;
+}
+
+/* === Ocean（蓝调）=== */
+[data-theme="ocean"] {
+  --bg-primary: #0a192f;
+  --bg-secondary: #0d2137;
+  --bg-tertiary: #112240;
+  --border: #1d3a5c;
+  --border-light: #2a4f78;
+  --text-primary: #e6f1ff;
+  --text-secondary: #8899aa;
+  --text-muted: #5c7a99;
+  --accent: #32968f;
+  --accent-hover: #3fb8ad;
+  --accent-subtle: #0d3d38;
+  --accent-text: #ffffff;
+  --shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.5);
+  --hover-bg: rgba(255, 255, 255, 0.05);
+  --selected-bg: #0d3d38;
+  --radius: 4px;
+  --nav-width: 220px;
+  --titlebar-height: 40px;
+  --statusbar-height: 32px;
+}
+
+/* === Nord（北欧）=== */
+[data-theme="nord"] {
+  --bg-primary: #2e3440;
+  --bg-secondary: #3b4252;
+  --bg-tertiary: #434c5e;
+  --border: #4c566a;
+  --border-light: #5e6a82;
+  --text-primary: #eceff4;
+  --text-secondary: #d8dee9;
+  --text-muted: #9099a8;
+  --accent: #81a1c1;
+  --accent-hover: #8fafc9;
+  --accent-subtle: #3d4559;
+  --accent-text: #2e3440;
+  --shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.4);
+  --hover-bg: rgba(255, 255, 255, 0.05);
+  --selected-bg: #3d4559;
+  --radius: 4px;
+  --nav-width: 220px;
+  --titlebar-height: 40px;
+  --statusbar-height: 32px;
+}
+
+/* === Warm（暖色）=== */
+[data-theme="warm"] {
+  --bg-primary: #fdf8f3;
+  --bg-secondary: #f5ebe0;
+  --bg-tertiary: #e8ddd0;
+  --border: #d5c8b8;
+  --border-light: #e0d3c3;
+  --text-primary: #3d2e1e;
+  --text-secondary: #7a6352;
+  --text-muted: #a08b78;
+  --accent: #c9a96e;
+  --accent-hover: #b8955a;
+  --accent-subtle: #f0e6d0;
+  --accent-text: #3d2e1e;
+  --shadow: 0 1px 3px rgba(61, 46, 30, 0.1);
+  --shadow-md: 0 4px 12px rgba(61, 46, 30, 0.15);
+  --hover-bg: rgba(61, 46, 30, 0.04);
+  --selected-bg: #f0e6d0;
+  --radius: 4px;
+  --nav-width: 220px;
+  --titlebar-height: 40px;
+  --statusbar-height: 32px;
+}
+
+/* === Solarized（Solarized Light）=== */
+[data-theme="solarized"] {
+  --bg-primary: #fdf6e3;
+  --bg-secondary: #eee8d5;
+  --bg-tertiary: #e4d8be;
+  --border: #d3c9b5;
+  --border-light: #ddd0bc;
+  --text-primary: #073642;
+  --text-secondary: #586e75;
+  --text-muted: #839496;
+  --accent: #268bd2;
+  --accent-hover: #1a6fa8;
+  --accent-subtle: #d0e8f5;
+  --accent-text: #fdf6e3;
+  --shadow: 0 1px 3px rgba(7, 54, 66, 0.1);
+  --shadow-md: 0 4px 12px rgba(7, 54, 66, 0.12);
+  --hover-bg: rgba(7, 54, 66, 0.04);
+  --selected-bg: #d0e8f5;
+  --radius: 4px;
+  --nav-width: 220px;
+  --titlebar-height: 40px;
+  --statusbar-height: 32px;
 }
 
 /* === 全局重置 === */
