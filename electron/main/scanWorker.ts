@@ -15,7 +15,8 @@ const SUPPORTED_EXTENSIONS = new Set([
   '.odt', '.ods', '.odp',
   '.epub',
   '.zip',
-  '.mbox', '.eml'
+  '.mbox', '.eml',
+  '.wps', '.wpp', '.et', '.dps'
 ])
 
 // Extensions supported inside ZIP archives
@@ -390,6 +391,13 @@ async function extractText(filePath: string, ext: string): Promise<string> {
       return extractTextFromMbox(filePath)
     case '.epub':
       return extractTextFromEpub(filePath)
+    case '.wps':
+      return extractTextFromDocx(filePath)
+    case '.wpp':
+    case '.dps':
+      return extractTextFromPptx(filePath)
+    case '.et':
+      return extractTextFromXlsx(filePath)
     case '.zip':
       return extractTextFromZip(filePath)
     case '.txt':
@@ -494,7 +502,8 @@ function getFileType(ext: string): string {
     '.odt': 'odf', '.ods': 'odf', '.odp': 'odf',
     '.epub': 'epub',
     '.zip': 'zip',
-    '.mbox': 'email', '.eml': 'email'
+    '.mbox': 'email', '.eml': 'email',
+    '.wps': 'docx', '.wpp': 'pptx', '.et': 'xlsx', '.dps': 'pptx'
   }
   return map[ext] || 'unknown'
 }
