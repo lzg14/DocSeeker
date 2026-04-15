@@ -467,14 +467,15 @@ body {
   background: transparent;
   border: none;
   cursor: pointer;
-  color: var(--text-muted);
+  color: var(--text-secondary);
   font-size: 12px;
   border-left: 1px solid var(--border);
-  transition: background-color 0.15s;
+  transition: background-color var(--transition-base, 150ms ease), color var(--transition-base, 150ms ease);
 }
 
 .title-bar-btn:hover {
-  background-color: var(--border);
+  background-color: var(--hover-bg);
+  color: var(--text-primary);
 }
 
 .title-bar-btn.close:hover {
