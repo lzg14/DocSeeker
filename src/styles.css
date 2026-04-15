@@ -995,24 +995,62 @@ body {
 
 .donate-qr {
   flex: 1;
-  max-width: 200px;
+  max-width: 120px;
 }
 
-.donate-qr-label {
-  font-size: 12px;
-  color: var(--text-muted);
-  text-align: center;
-  margin-bottom: 8px;
-}
-
-.donate-qr img {
-  width: 200px;
-  height: 200px;
+.donate-qr-small img {
+  width: 80px;
+  height: 80px;
   object-fit: contain;
   border-radius: var(--radius);
   border: 1px solid var(--border);
   display: block;
   margin: 0 auto;
+  cursor: pointer;
+  transition: opacity 0.15s;
+}
+.donate-qr-small img:hover { opacity: 0.8; }
+
+.donate-qr-label {
+  font-size: 11px;
+  color: var(--text-muted);
+  text-align: center;
+  margin-bottom: 6px;
+}
+
+/* QR modal */
+.qr-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+}
+.qr-modal {
+  position: relative;
+  background: var(--bg-primary);
+  border-radius: 12px;
+  padding: 16px;
+  box-shadow: 0 16px 48px rgba(0,0,0,0.3);
+}
+.qr-modal-close {
+  position: absolute;
+  top: -12px;
+  right: -12px;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: none;
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  cursor: pointer;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
 }
 
 /* === 产品介绍页增强 === */

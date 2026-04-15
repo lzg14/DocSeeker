@@ -1,13 +1,15 @@
+import { useState } from 'react'
 import { useLanguage } from '../context/LanguageContext'
 
 function GuidePage(): JSX.Element {
   const { t } = useLanguage()
+  const [showQr, setShowQr] = useState<string | null>(null)
 
   return (
     <div className="settings-page">
       <h2 className="page-title">{t('guide.title')}</h2>
 
-      {/* Overview + Features */}
+      {/* Overview */}
       <div className="settings-section">
         <div className="settings-section-title">{t('guide.overview')}</div>
         <div className="settings-card">
@@ -21,18 +23,8 @@ function GuidePage(): JSX.Element {
               <li>{t('guide.feature5')}</li>
               <li>{t('guide.feature6')}</li>
             </ul>
-          </div>
-        </div>
-      </div>
-
-      {/* Supported formats */}
-      <div className="settings-section">
-        <div className="settings-section-title">{t('guide.formats')}</div>
-        <div className="settings-card">
-          <div className="guide-content">
-            <p>{t('guide.formatsDesc')}</p>
-            <p style={{ fontSize: '12px', color: 'var(--text-secondary)', marginTop: '8px', lineHeight: 1.8 }}>
-              Word (.doc/.docx) · Excel (.xls/.xlsx) · PowerPoint (.ppt/.pptx) · PDF · Text/Markdown/JSON/CSV · RTF · CHM · ODF (ODT/ODS/ODP) · EPUB · ZIP (recursive) · Email (.eml/.mbox) · WPS/WPP/ET
+            <p style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '8px', lineHeight: 1.6 }}>
+              {t('guide.formatsDesc')} Word · Excel · PowerPoint · PDF · Text/MD/JSON/CSV · RTF · CHM · ODF · EPUB · ZIP · Email · WPS
             </p>
           </div>
         </div>
@@ -48,18 +40,38 @@ function GuidePage(): JSX.Element {
               <strong>{t('guide.devName')}:</strong> Zhigang Li &lt;lzg14@qq.com&gt;
             </p>
             <div className="donate-qrcodes">
-              <div className="donate-qr">
+              <div className="donate-qr donate-qr-small">
                 <div className="donate-qr-label">{t('guide.wechat')}</div>
-                <img src="./resources/wechat-pay.png" alt="WeChat Pay" />
+                <img
+                  src="./resources/wechat-pay.png"
+                  alt="WeChat Pay"
+                  onClick={() => setShowQr('./resources/wechat-pay.png')}
+                  style={{ cursor: 'pointer' }}
+                />
               </div>
-              <div className="donate-qr">
+              <div className="donate-qr donate-qr-small">
                 <div className="donate-qr-label">{t('guide.alipay')}</div>
-                <img src="./resources/alipay.png" alt="Alipay" />
+                <img
+                  src="./resources/alipay.png"
+                  alt="Alipay"
+                  onClick={() => setShowQr('./resources/alipay.png')}
+                  style={{ cursor: 'pointer' }}
+                />
               </div>
             </div>
           </div>
         </div>
       </div>
+
+      {/* QR modal */}
+      {showQr && (
+        <div className="qr-modal-overlay" onClick={() => setShowQr(null)}>
+          <div className="qr-modal" onClick={e => e.stopPropagation()}>
+            <img src={showQr} alt="QR Code" style={{ maxWidth: '300px', maxHeight: '300px', borderRadius: '8px' }} />
+            <button className="qr-modal-close" onClick={() => setShowQr(null)}>✕</button>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

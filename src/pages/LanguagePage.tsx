@@ -61,28 +61,28 @@ function LanguagePage(): JSX.Element {
 
   return (
     <div className="settings-page">
-      <h2 className="page-title">{t('lang.title')}</h2>
+      <h2 className="page-title">{t('settings.title')}</h2>
 
       <div className="settings-section">
-        <div className="settings-section-title">{t('lang.theme')}</div>
+        <div className="settings-section-title">{t('settings.theme')}</div>
         <div className="settings-card">
           <div className="settings-row">
             <div className="settings-row-info">
-              <div className="settings-row-label">{t('lang.themeLabel')}</div>
-              <div className="settings-row-desc">{t('lang.themeDesc')}</div>
+              <div className="settings-row-label">{t('settings.themeLabel')}</div>
+              <div className="settings-row-desc">{t('settings.themeDesc')}</div>
             </div>
             <div className="theme-toggle">
               <button
                 className={`theme-btn ${theme === 'light' ? 'active' : ''}`}
                 onClick={() => handleThemeChange('light')}
               >
-                {t('lang.light')}
+                {t('settings.light')}
               </button>
               <button
                 className={`theme-btn ${theme === 'dark' ? 'active' : ''}`}
                 onClick={() => handleThemeChange('dark')}
               >
-                {t('lang.dark')}
+                {t('settings.dark')}
               </button>
             </div>
           </div>
@@ -90,12 +90,12 @@ function LanguagePage(): JSX.Element {
       </div>
 
       <div className="settings-section">
-        <div className="settings-section-title">{t('lang.language')}</div>
+        <div className="settings-section-title">{t('settings.language')}</div>
         <div className="settings-card">
           <div className="settings-row">
             <div className="settings-row-info">
-              <div className="settings-row-label">{t('lang.languageLabel')}</div>
-              <div className="settings-row-desc">{t('lang.languageDesc')}</div>
+              <div className="settings-row-label">{t('settings.languageLabel')}</div>
+              <div className="settings-row-desc">{t('settings.languageDesc')}</div>
             </div>
             <select
               className="settings-select"

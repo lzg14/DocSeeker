@@ -9,7 +9,7 @@ interface SideNavProps {
 const navItems: { id: PageTab; labelKey: string; icon: string; groupKey: string }[] = [
   { id: 'search', labelKey: 'nav.search', icon: '🔎', groupKey: 'nav.group.nav' },
   { id: 'scan', labelKey: 'nav.scan', icon: '📁', groupKey: 'nav.group.nav' },
-  { id: 'language', labelKey: 'nav.language', icon: '🌐', groupKey: 'nav.group.settings' },
+  { id: 'language', labelKey: 'nav.settings', icon: '⚙️', groupKey: 'nav.group.settings' },
   { id: 'guide', labelKey: 'nav.guide', icon: '❓', groupKey: 'nav.group.help' },
 ]
 
