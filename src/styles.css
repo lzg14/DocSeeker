@@ -675,10 +675,10 @@ body {
 }
 
 .nav-item.active {
-  color: var(--text-primary);
-  background: var(--bg-primary);
-  box-shadow: var(--shadow);
+  background: var(--accent-subtle);
+  color: var(--accent);
   font-weight: 500;
+  box-shadow: none;
 }
 
 .nav-icon {
