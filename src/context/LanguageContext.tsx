@@ -183,6 +183,8 @@ const translations: Record<Language, Record<string, string>> = {
     // Status bar
     'status.indexed': '已索引 {count} 个文件',
     'status.loading': '正在加载...',
+    // Theme
+    'theme.switch': '切换主题',
     // Confirm dialog
     'confirm.cancel': '取消',
     'confirm.ok': '确定',
@@ -308,6 +310,8 @@ const translations: Record<Language, Record<string, string>> = {
     // Status bar
     'status.indexed': '{count} files indexed',
     'status.loading': 'Loading...',
+    // Theme
+    'theme.switch': 'Switch theme',
     // Confirm dialog
     'confirm.cancel': 'Cancel',
     'confirm.ok': 'OK',
