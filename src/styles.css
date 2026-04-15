@@ -739,7 +739,7 @@ body {
   border-bottom: 1px solid var(--border);
   align-items: center;
   cursor: pointer;
-  transition: background-color 0.1s;
+  transition: background-color var(--transition-base);
   font-size: 13px;
   color: var(--text-primary);
 }
