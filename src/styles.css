@@ -660,11 +660,6 @@ body {
   background: rgba(0,0,0,0.04);
 }
 
-[data-theme="dark"] .nav-item:hover {
-  color: #ccc;
-  background: rgba(255,255,255,0.04);
-}
-
 .nav-item.active {
   color: var(--text-primary);
   background: var(--bg-primary);
@@ -673,8 +668,20 @@ body {
 }
 
 .nav-icon {
-  font-size: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   flex-shrink: 0;
+  color: var(--text-secondary);
+  transition: color var(--transition-base, 150ms ease);
+}
+
+.nav-item:hover .nav-icon {
+  color: var(--text-primary);
+}
+
+.nav-item.active .nav-icon {
+  color: var(--accent);
 }
 
 .nav-label {
