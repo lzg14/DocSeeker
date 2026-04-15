@@ -74,6 +74,21 @@
   --transition-fast: 100ms ease;
   --transition-base: 150ms ease;
   --transition-slow: 200ms ease;
+  /* === 滚动条样式 === */
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: var(--border);
+    border-radius: 3px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: var(--text-muted);
+  }
 }
 
 /* === Dark（深色）=== */
@@ -100,6 +115,13 @@
   --statusbar-height: 32px;
   --danger: #f85149;
   --danger-hover: #da3633;
+  /* 滚动条 */
+  ::-webkit-scrollbar-thumb {
+    background: var(--border);
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: var(--text-muted);
+  }
 }
 
 /* === Ocean（蓝调）=== */
@@ -126,6 +148,13 @@
   --statusbar-height: 32px;
   --danger: #f85149;
   --danger-hover: #da3633;
+  /* 滚动条 */
+  ::-webkit-scrollbar-thumb {
+    background: var(--border);
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: var(--text-muted);
+  }
 }
 
 /* === Nord（北欧）=== */
@@ -152,6 +181,13 @@
   --statusbar-height: 32px;
   --danger: #bf616a;
   --danger-hover: #cd8189;
+  /* 滚动条 */
+  ::-webkit-scrollbar-thumb {
+    background: var(--border);
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: var(--text-muted);
+  }
 }
 
 /* === Warm（暖色）=== */
@@ -178,6 +214,13 @@
   --statusbar-height: 32px;
   --danger: #c0392b;
   --danger-hover: #a93226;
+  /* 滚动条 */
+  ::-webkit-scrollbar-thumb {
+    background: var(--border);
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: var(--text-muted);
+  }
 }
 
 /* === Solarized（Solarized Light）=== */
@@ -204,6 +247,13 @@
   --statusbar-height: 32px;
   --danger: #dc322f;
   --danger-hover: #cb4b16;
+  /* 滚动条 */
+  ::-webkit-scrollbar-thumb {
+    background: var(--border);
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: var(--text-muted);
+  }
 }
 
 /* === 全局重置 === */
@@ -1343,36 +1393,6 @@ body {
 /* === 全局过渡 === */
 button, input, select {
   transition: all var(--transition-base);
-}
-
-/* === 浅色主题滚动条 === */
-::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
-}
-
-::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-::-webkit-scrollbar-thumb {
-  background: #ddd;
-  border-radius: 3px;
-}
-
-/* === 深色主题滚动条 === */
-[data-theme="dark"] ::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
-}
-
-[data-theme="dark"] ::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-[data-theme="dark"] ::-webkit-scrollbar-thumb {
-  background: #3a3a3a;
-  border-radius: 3px;
 }
 
 /* === 搜索下拉菜单 === */
