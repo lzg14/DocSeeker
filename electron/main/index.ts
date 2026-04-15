@@ -27,10 +27,23 @@ let isClosingFromIPC = false
 let floatingWindow: BrowserWindow | null = null
 let currentHotkey = 'CommandOrControl+Shift+F'
 
+const VALID_MODIFIERS = new Set(['Ctrl', 'Shift', 'Alt', 'Meta'])
+const MODIFIER_REPLACE: Record<string, string> = {
+  CommandOrControl: 'Ctrl',
+  Control: 'Ctrl'
+}
+
 function registerGlobalShortcut(hotkey: string): void {
   globalShortcut.unregisterAll()
-  // Convert CommandOrControl -> Ctrl for Windows globalShortcut API
-  const nativeHotkey = hotkey.replace(/CommandOrControl/gi, 'Ctrl')
+  // Validate: must have at least one non-modifier key
+  const parts = hotkey.split('+')
+  const keyPart = parts[parts.length - 1]
+  if (VALID_MODIFIERS.has(keyPart)) {
+    log.warn(`Invalid hotkey "${hotkey}": last part "${keyPart}" is a modifier, not a key`)
+    return
+  }
+  // Convert CommandOrControl -> Ctrl for Windows
+  const nativeHotkey = parts.map(p => MODIFIER_REPLACE[p] || p).join('+')
   try {
     globalShortcut.register(nativeHotkey, () => {
       if (floatingWindow) {

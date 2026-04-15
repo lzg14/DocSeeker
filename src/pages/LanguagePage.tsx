@@ -6,6 +6,7 @@ function LanguagePage(): JSX.Element {
   const [theme, setTheme] = useState<'light' | 'dark'>('light')
   const [currentHotkey, setCurrentHotkey] = useState('Ctrl+Shift+F')
   const [listening, setListening] = useState(false)
+  const [hotkeyError, setHotkeyError] = useState('')
 
   useEffect(() => {
     const savedTheme = localStorage.getItem('theme') as 'light' | 'dark' | null
@@ -16,26 +17,30 @@ function LanguagePage(): JSX.Element {
   useEffect(() => {
     window.electron.getGlobalHotkey().then(h => setCurrentHotkey(formatHotkey(h)))
   }, [])
-
   const formatHotkey = (hk: string) =>
     hk.replace('CommandOrControl', 'Ctrl').replace(/\+/g, ' + ')
 
   const listenForHotkey = async () => {
     setListening(true)
+    setHotkeyError('')
     const handler = (e: KeyboardEvent) => {
       e.preventDefault()
-      const parts: string[] = []
-      if (e.ctrlKey) parts.push('CommandOrControl')
-      if (e.shiftKey) parts.push('Shift')
-      if (e.altKey) parts.push('Alt')
-      const key = e.key.toUpperCase()
-      if (!['CONTROL', 'SHIFT', 'ALT', 'META'].includes(key)) {
-        parts.push(key)
-      }
-      if (parts.length > 1) {
-        const nativeHotkey = parts.join('+')
-        window.electron.setGlobalHotkey(nativeHotkey)
-        setCurrentHotkey(formatHotkey(nativeHotkey))
+      const modifiers: string[] = []
+      if (e.ctrlKey) modifiers.push('CommandOrControl')
+      if (e.shiftKey) modifiers.push('Shift')
+      if (e.altKey) modifiers.push('Alt')
+      if (e.metaKey) modifiers.push('Meta')
+
+      const key = e.key
+      const MODIFIER_KEYS = new Set(['Control', 'Shift', 'Alt', 'Meta', 'OS'])
+      if (MODIFIER_KEYS.has(key)) return // skip pure modifier keys
+
+      const finalKey = key.length === 1 ? key.toUpperCase() : key
+      if (modifiers.length > 0 && finalKey) {
+        const hotkey = [...modifiers, finalKey].join('+')
+        window.electron.setGlobalHotkey(hotkey)
+        setCurrentHotkey(formatHotkey(hotkey))
+        setHotkeyError('')
         setListening(false)
         window.removeEventListener('keydown', handler)
       }
@@ -119,6 +124,9 @@ function LanguagePage(): JSX.Element {
             >
               {listening ? t('settings.pressKey') : currentHotkey}
             </button>
+            {hotkeyError && (
+              <span style={{ fontSize: '11px', color: '#e74c3c', marginLeft: '8px' }}>{hotkeyError}</span>
+            )}
           </div>
         </div>
       </div>
