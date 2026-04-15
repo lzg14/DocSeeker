@@ -30,8 +30,7 @@ import {
   getSavedSearches,
   deleteSavedSearch,
   SavedSearch,
-  SearchHistoryEntry,
-  findDuplicates
+  SearchHistoryEntry
 } from './database'
 
 let handlersRegistered = false
@@ -370,27 +369,10 @@ export function registerIpcHandlers(): void {
     try {
       const { extractContent } = await import('./scanner')
       const ext = extname(filePath).toLowerCase()
-      const content = await extractContent(filePath, ext)
+      const content = await extractContent(filePath)
       return content || null
     } catch (error) {
       log.warn('Failed to extract file content:', error)
-      return null
-    }
-  })
-
-  // Find duplicate files by hash
-  ipcMain.handle('find-duplicates', async (): Promise<Array<{ hash: string; files: FileRecord[] }>> => {
-    return findDuplicates()
-  })
-
-  // Get thumbnail for a file (image, PDF, Office docs)
-  ipcMain.handle('get-thumbnail', async (_, filePath: string): Promise<string | null> => {
-    try {
-      const { nativeImage } = require('electron')
-      const thumb = await nativeImage.createThumbnailFromPath(filePath, { width: 120, height: 120 })
-      if (thumb.isEmpty()) return null
-      return thumb.toDataURL()
-    } catch {
       return null
     }
   })

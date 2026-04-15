@@ -94,15 +94,11 @@ export interface ElectronAPI {
   addSavedSearch: (name: string, query: string) => Promise<number>
   deleteSavedSearch: (id: number) => Promise<void>
   extractFileContent: (filePath: string) => Promise<string | null>
-  // Duplicate files detection
-  findDuplicates: () => Promise<Array<{ hash: string; files: FileRecord[] }>>,
   // Floating window
   hideFloatingWindow: () => Promise<void>
   // Global hotkey
   getGlobalHotkey: () => Promise<string>
   setGlobalHotkey: (hotkey: string) => Promise<void>
-  // Thumbnail preview
-  getThumbnail: (filePath: string) => Promise<string | null>
 }
 
 const electronAPI: ElectronAPI = {
@@ -178,15 +174,11 @@ const electronAPI: ElectronAPI = {
 
   extractFileContent: (filePath: string) => ipcRenderer.invoke('extract-file-content', filePath),
 
-  findDuplicates: () => ipcRenderer.invoke('find-duplicates'),
-
   hideFloatingWindow: () => ipcRenderer.invoke('window-hide-floating'),
 
   getGlobalHotkey: () => ipcRenderer.invoke('get-global-hotkey'),
 
-  setGlobalHotkey: (hotkey: string) => ipcRenderer.invoke('set-global-hotkey', hotkey),
-
-  getThumbnail: (filePath: string) => ipcRenderer.invoke('get-thumbnail', filePath)
+  setGlobalHotkey: (hotkey: string) => ipcRenderer.invoke('set-global-hotkey', hotkey)
 }
 
 contextBridge.exposeInMainWorld('electron', electronAPI)

@@ -57,9 +57,6 @@ function SearchPage(): JSX.Element {
   const [filters, setFilters] = useState<SearchOptions>({})
   const [isDragging, setIsDragging] = useState(false)
   const [isExtracting, setIsExtracting] = useState(false)
-  const [duplicates, setDuplicates] = useState<Array<{ hash: string; files: FileRecord[] }>>([])
-  const [isFindingDuplicates, setIsFindingDuplicates] = useState(false)
-  const [showNoDuplicates, setShowNoDuplicates] = useState(false)
   const { t } = useLanguage()
 
   const inputRef = useRef<HTMLInputElement>(null)
@@ -249,35 +246,6 @@ function SearchPage(): JSX.Element {
     setFilters(newFilters)
   }
 
-  const handleFindDuplicates = async () => {
-    setIsFindingDuplicates(true)
-    setShowNoDuplicates(false)
-    try {
-      const result = await window.electron.findDuplicates()
-      setDuplicates(result)
-      setShowNoDuplicates(result.length === 0)
-    } catch (err) {
-      console.error('findDuplicates error:', err)
-      setDuplicates([])
-    } finally {
-      setIsFindingDuplicates(false)
-    }
-  }
-
-  const handleCloseDuplicates = () => {
-    setDuplicates([])
-  }
-
-  const handleDeleteDuplicateFile = async (filePath: string) => {
-    const ok = await window.electron.deleteFile(filePath)
-    if (ok) {
-      setDuplicates(prev => prev
-        .map(g => ({ ...g, files: g.files.filter(f => f.path !== filePath) }))
-        .filter(g => g.files.length > 1)
-      )
-    }
-  }
-
   const toggleFileType = (type: string) => {
     const current = filters.fileTypes || []
     const updated = current.includes(type)
@@ -435,7 +403,7 @@ function SearchPage(): JSX.Element {
                 filters.fileTypes?.length,
                 filters.sizeMin || filters.sizeMax ? 1 : 0,
                 filters.dateFrom || filters.dateTo ? 1 : 0,
-              ].reduce((a, b) => a + b, 0)}</span>}
+              ].reduce((a, b) => (a ?? 0) + (b ?? 0), 0)}</span>}
             </button>
             <button
               className={`toolbar-btn ${showSyntaxHelp ? 'active' : ''}`}
@@ -443,14 +411,6 @@ function SearchPage(): JSX.Element {
               title={t('search.syntaxHelp')}
             >
               ?
-            </button>
-            <button
-              className="toolbar-btn"
-              onClick={handleFindDuplicates}
-              disabled={isFindingDuplicates}
-              title={t('search.duplicates')}
-            >
-              {isFindingDuplicates ? '...' : t('search.duplicates')}
             </button>
           </div>
         </div>
@@ -567,68 +527,6 @@ function SearchPage(): JSX.Element {
           </div>
         )}
 
-        {/* No duplicates found */}
-        {showNoDuplicates && !isFindingDuplicates && (
-          <div className="duplicates-panel">
-            <div className="duplicates-header">
-              <span className="duplicates-title">{t('search.noDuplicates')}</span>
-              <button className="toolbar-btn" onClick={() => setShowNoDuplicates(false)}>
-                {t('search.closeDuplicates')}
-              </button>
-            </div>
-          </div>
-        )}
-
-        {/* Duplicates panel */}
-        {duplicates.length > 0 && (
-          <div className="duplicates-panel">
-            <div className="duplicates-header">
-              <span className="duplicates-title">
-                {t('search.duplicateGroups').replace('{count}', duplicates.length.toString())}
-              </span>
-              <button className="toolbar-btn" onClick={handleCloseDuplicates}>
-                {t('search.closeDuplicates')}
-              </button>
-            </div>
-            {duplicates.map((group) => (
-              <div key={group.hash} className="duplicate-group">
-                <div className="duplicate-hash">
-                  {t('search.duplicateGroup').replace('{count}', group.files.length.toString())} — {group.hash}
-                </div>
-                {group.files.map((file) => (
-                  <div key={file.path} className="duplicate-file">
-                    <div className="duplicate-file-info">
-                      <span className="duplicate-file-name">{file.name}</span>
-                      <span className="duplicate-file-path">{file.path}</span>
-                    </div>
-                    <div className="duplicate-file-actions">
-                      <button
-                        className="btn btn-secondary btn-small"
-                        onClick={() => window.electron.showInFolder(file.path)}
-                        title={t('detail.showInFolder')}
-                      >
-                        {t('detail.showInFolder')}
-                      </button>
-                      <button
-                        className="btn btn-secondary btn-small"
-                        onClick={() => window.electron.openFile(file.path)}
-                        title={t('detail.openFile')}
-                      >
-                        {t('detail.openFile')}
-                      </button>
-                      <button
-                        className="btn btn-danger btn-small"
-                        onClick={() => handleDeleteDuplicateFile(file.path)}
-                      >
-                        {t('config.delete')}
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ))}
-          </div>
-        )}
       </div>
 
       <div className="search-content">
