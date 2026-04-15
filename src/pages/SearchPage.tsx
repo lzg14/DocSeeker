@@ -58,6 +58,8 @@ function SearchPage(): JSX.Element {
   const [isDragging, setIsDragging] = useState(false)
   const [isExtracting, setIsExtracting] = useState(false)
   const [duplicates, setDuplicates] = useState<Array<{ hash: string; files: FileRecord[] }>>([])
+  const [isFindingDuplicates, setIsFindingDuplicates] = useState(false)
+  const [showNoDuplicates, setShowNoDuplicates] = useState(false)
   const { t } = useLanguage()
 
   const inputRef = useRef<HTMLInputElement>(null)
@@ -248,8 +250,18 @@ function SearchPage(): JSX.Element {
   }
 
   const handleFindDuplicates = async () => {
-    const result = await window.electron.findDuplicates()
-    setDuplicates(result)
+    setIsFindingDuplicates(true)
+    setShowNoDuplicates(false)
+    try {
+      const result = await window.electron.findDuplicates()
+      setDuplicates(result)
+      setShowNoDuplicates(result.length === 0)
+    } catch (err) {
+      console.error('findDuplicates error:', err)
+      setDuplicates([])
+    } finally {
+      setIsFindingDuplicates(false)
+    }
   }
 
   const handleCloseDuplicates = () => {
@@ -435,9 +447,10 @@ function SearchPage(): JSX.Element {
             <button
               className="toolbar-btn"
               onClick={handleFindDuplicates}
+              disabled={isFindingDuplicates}
               title={t('search.duplicates')}
             >
-              {t('search.duplicates')}
+              {isFindingDuplicates ? '...' : t('search.duplicates')}
             </button>
           </div>
         </div>
@@ -551,6 +564,18 @@ function SearchPage(): JSX.Element {
                 </button>
               </div>
             )}
+          </div>
+        )}
+
+        {/* No duplicates found */}
+        {showNoDuplicates && !isFindingDuplicates && (
+          <div className="duplicates-panel">
+            <div className="duplicates-header">
+              <span className="duplicates-title">{t('search.noDuplicates')}</span>
+              <button className="toolbar-btn" onClick={() => setShowNoDuplicates(false)}>
+                {t('search.closeDuplicates')}
+              </button>
+            </div>
           </div>
         )}
 
