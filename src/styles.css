@@ -1708,6 +1708,12 @@ button, input, select {
   justify-content: center;
 }
 
+.hotkey-btn {
+  font-family: monospace;
+  font-size: 12px;
+  min-width: 120px;
+}
+
 /* === Duplicates Panel === */
 .duplicates-panel {
   border-top: 1px solid var(--border);

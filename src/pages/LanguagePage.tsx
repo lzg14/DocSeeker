@@ -4,12 +4,44 @@ import { useLanguage } from '../context/LanguageContext'
 function LanguagePage(): JSX.Element {
   const { language, setLanguage, t } = useLanguage()
   const [theme, setTheme] = useState<'light' | 'dark'>('light')
+  const [currentHotkey, setCurrentHotkey] = useState('Ctrl+Shift+F')
+  const [listening, setListening] = useState(false)
 
   useEffect(() => {
     const savedTheme = localStorage.getItem('theme') as 'light' | 'dark' | null
     if (savedTheme) setTheme(savedTheme)
     document.documentElement.setAttribute('data-theme', savedTheme || 'light')
   }, [])
+
+  useEffect(() => {
+    window.electron.getGlobalHotkey().then(h => setCurrentHotkey(formatHotkey(h)))
+  }, [])
+
+  const formatHotkey = (hk: string) =>
+    hk.replace('CommandOrControl', 'Ctrl').replace(/\+/g, ' + ')
+
+  const listenForHotkey = async () => {
+    setListening(true)
+    const handler = (e: KeyboardEvent) => {
+      e.preventDefault()
+      const parts: string[] = []
+      if (e.ctrlKey) parts.push('CommandOrControl')
+      if (e.shiftKey) parts.push('Shift')
+      if (e.altKey) parts.push('Alt')
+      const key = e.key.toUpperCase()
+      if (!['CONTROL', 'SHIFT', 'ALT', 'META'].includes(key)) {
+        parts.push(key)
+      }
+      if (parts.length > 1) {
+        const nativeHotkey = parts.join('+')
+        window.electron.setGlobalHotkey(nativeHotkey)
+        setCurrentHotkey(formatHotkey(nativeHotkey))
+        setListening(false)
+        window.removeEventListener('keydown', handler)
+      }
+    }
+    window.addEventListener('keydown', handler)
+  }
 
   const handleThemeChange = (newTheme: 'light' | 'dark') => {
     setTheme(newTheme)
@@ -68,6 +100,25 @@ function LanguagePage(): JSX.Element {
               <option value="zh-CN">简体中文</option>
               <option value="en">English</option>
             </select>
+          </div>
+        </div>
+      </div>
+
+      <div className="settings-section">
+        <div className="settings-section-title">{t('settings.shortcut')}</div>
+        <div className="settings-card">
+          <div className="settings-row">
+            <div className="settings-row-info">
+              <div className="settings-row-label">{t('settings.globalHotkey')}</div>
+              <div className="settings-row-desc">{t('settings.globalHotkeyDesc')}</div>
+            </div>
+            <button
+              className="btn btn-secondary hotkey-btn"
+              onClick={listenForHotkey}
+              disabled={listening}
+            >
+              {listening ? t('settings.pressKey') : currentHotkey}
+            </button>
           </div>
         </div>
       </div>

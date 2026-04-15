@@ -127,6 +127,11 @@ const translations: Record<Language, Record<string, string>> = {
     'guide.devName': '开发者',
     'guide.wechat': '微信支付',
     'guide.alipay': '支付宝',
+    // Settings
+    'settings.shortcut': '快捷键',
+    'settings.globalHotkey': '全局搜索快捷键',
+    'settings.globalHotkeyDesc': '按 Ctrl+Shift+F 随时唤起搜索浮层',
+    'settings.pressKey': '请按键...',
     // Status bar
     'status.indexed': '已索引 {count} 个文件',
     'status.loading': '正在加载...',
@@ -253,6 +258,11 @@ const translations: Record<Language, Record<string, string>> = {
     'guide.devName': 'Developer',
     'guide.wechat': 'WeChat Pay',
     'guide.alipay': 'Alipay',
+    // Settings
+    'settings.shortcut': 'Shortcuts',
+    'settings.globalHotkey': 'Global Search Hotkey',
+    'settings.globalHotkeyDesc': 'Press Ctrl+Shift+F anywhere to open the search popup',
+    'settings.pressKey': 'Press a key...',
     // Status bar
     'status.indexed': '{count} files indexed',
     'status.loading': 'Loading...',

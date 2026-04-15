@@ -98,6 +98,9 @@ export interface ElectronAPI {
   findDuplicates: () => Promise<Array<{ hash: string; files: FileRecord[] }>>,
   // Floating window
   hideFloatingWindow: () => Promise<void>
+  // Global hotkey
+  getGlobalHotkey: () => Promise<string>
+  setGlobalHotkey: (hotkey: string) => Promise<void>
   // Thumbnail preview
   getThumbnail: (filePath: string) => Promise<string | null>
 }
@@ -178,6 +181,10 @@ const electronAPI: ElectronAPI = {
   findDuplicates: () => ipcRenderer.invoke('find-duplicates'),
 
   hideFloatingWindow: () => ipcRenderer.invoke('window-hide-floating'),
+
+  getGlobalHotkey: () => ipcRenderer.invoke('get-global-hotkey'),
+
+  setGlobalHotkey: (hotkey: string) => ipcRenderer.invoke('set-global-hotkey', hotkey),
 
   getThumbnail: (filePath: string) => ipcRenderer.invoke('get-thumbnail', filePath)
 }
