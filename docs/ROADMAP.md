@@ -1,6 +1,6 @@
 # DocSeeker 开发路线图
 
-> 更新时间: 2026-04-15
+> 更新时间: 2026-04-15（功能补充轮）
 
 ---
 
@@ -29,20 +29,22 @@ DocSeeker 是一款基于 Electron + React + TypeScript 的本地文档全文搜
 
 | 功能 | 当前状态 | 目标 | 竞品参考 |
 |------|----------|------|----------|
-| 新增文件格式 | 仅 9 种格式 | 新增 RTF、CHM、ODF (ODT/ODS/ODP) | AnyTXT 60+ |
-| 实时文件监控 | **已移除**（chokidar 在大目录架构层面无法优化） | 重新启用需改用 NTFS USN Journal API | Everything / AnyTXT |
-| 文件过滤器 | 无 | 支持按类型/大小/日期范围过滤 | 所有主流竞品 |
-| 正则 / 布尔搜索 | 无 | 支持 AND/OR/NOT 及正则表达式 | Everything / AnyTXT |
+| 新增文件格式 | ✅ 18 种格式（RTF/CHM/ODF/EPUB/WPS 已完成） | 继续增加 WPD、图片、音视频元数据 | AnyTXT 60+ |
+| 实时文件监控 | ❌ **已移除**（chokidar 在大目录架构层面无法优化） | 重新启用需改用 NTFS USN Journal API | Everything / AnyTXT |
+| 正则搜索 | ✅ 已支持 `/pattern/` 语法 | 持续完善 | Everything / AnyTXT |
+| 文件过滤器 | ✅ 已支持类型/大小/日期三重过滤 | — | 所有主流竞品 |
 
 ### P1 — 体验缺失（尽快补全）
 
 | 功能 | 当前状态 | 目标 | 竞品参考 |
 |------|----------|------|----------|
-| 搜索历史 | 无 | 记录最近搜索记录 | Everything / AnyTXT / Copernic |
-| 保存的搜索 | 无 | 收藏常用搜索条件 | AnyTXT / Copernic |
-| 结果上限 | 200 条 | 移除或大幅提高 | 竞品均无此限制 |
-| 去重功能 | 已有代码，未暴露 UI | 集成到搜索结果页 | 仅 Copernic |
-| 高级搜索语法提示 | 无 | 提供查询语法 UI 引导 | Recoll |
+| 搜索历史 | ✅ 已完成 | — | Everything / AnyTXT / Copernic |
+| 保存的搜索 | ✅ 已完成 | — | AnyTXT / Copernic |
+| 搜索语法提示 | ✅ 语法提示面板已完成 | — | Recoll |
+| 去重 UI | ✅ 已完成 | — | 仅 Copernic |
+| 全局快捷键浮层 | ✅ Ctrl+Shift+F 已完成 | — | Listary |
+| 缩略图预览 | ✅ hover 预览已完成 | — | Copernic / Listary |
+| 拖拽文件搜索 | ✅ 已完成 | — | Listary |
 
 ### P2 — 技术债（逐步优化）
 
@@ -50,7 +52,7 @@ DocSeeker 是一款基于 Electron + React + TypeScript 的本地文档全文搜
 |------|----------|------|----------|
 | Electron 冷启动 | 慢 | 优化启动速度 | Everything 毫秒级 |
 | 跨平台支持 | 仅 Windows | 评估 macOS/Linux 可行性 | DocFetcher / Recoll |
-| 便携版 | 无 | 提供 U 盘便携打包 | Everything / AnyTXT / DocFetcher |
+| 便携版 | ✅ 已完成 | — | Everything / AnyTXT / DocFetcher |
 
 ---
 
@@ -160,7 +162,7 @@ M1.1-M1.7                   M3.1-M3.4
 | 2026-05 (Phase 1 中期) | M1.1-M1.3 新增 3 种格式 | Phase 1 |
 | 2026-06 (Phase 1 结束) | M1.4-M1.7 监控 + 历史 + 搜索上限 | Phase 1 |
 | 2026-08 (Phase 2 结束) | M2.1-M2.6 完整高级搜索能力 | Phase 2 |
-| 2026-11 (Phase 3 结束) | M3.1-M3.4 企业级格式与便携版 | Phase 3 |
+| 2026-11 (Phase 3 结束) | M3.1-M3.3 企业级格式与便携版 | Phase 3 |
 | 2027+ (Phase 4 持续) | M4.1-M4.6 体验优化与跨平台 | Phase 4 |
 
 ---
