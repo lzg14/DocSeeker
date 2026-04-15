@@ -60,29 +60,29 @@ function LanguagePage(): JSX.Element {
               <div className="settings-row-desc">{t('settings.themeDesc')}</div>
             </div>
             <div className="theme-cards">
-              {themes.map((t) => (
+              {themes.map((item) => (
                 <button
-                  key={t.id}
-                  className={`theme-card ${theme === t.id ? 'active' : ''}`}
-                  onClick={() => setTheme(t.id)}
-                  title={t.descKey}
+                  key={item.id}
+                  className={`theme-card ${theme === item.id ? 'active' : ''}`}
+                  onClick={() => setTheme(item.id)}
+                  title={item.descKey}
                 >
                   <div className="theme-card-preview">
                     <div
                       className="theme-preview-bg"
-                      style={{ background: t.preview.bg }}
+                      style={{ background: item.preview.bg }}
                     >
                       <div
                         className="theme-preview-sidebar"
-                        style={{ background: t.preview.bgSecondary }}
+                        style={{ background: item.preview.bgSecondary }}
                       />
                       <div
                         className="theme-preview-accent"
-                        style={{ background: t.preview.accent }}
+                        style={{ background: item.preview.accent }}
                       />
                     </div>
                   </div>
-                  <div className="theme-card-label">{t(t.labelKey)}</div>
+                  <div className="theme-card-label">{t(item.labelKey)}</div>
                 </button>
               ))}
             </div>

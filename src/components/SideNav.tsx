@@ -20,8 +20,8 @@ function SideNav({ activeTab, onTabChange }: SideNavProps): JSX.Element {
   return (
     <nav className="side-nav">
       {navItems.map((item) => {
-        const showGroupLabel = item.group !== lastGroup
-        lastGroup = item.group
+        const showGroupLabel = item.groupKey !== lastGroup
+        lastGroup = item.groupKey
         return (
           <div key={item.id}>
             {showGroupLabel && (
