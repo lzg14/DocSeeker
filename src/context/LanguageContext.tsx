@@ -1,10 +1,64 @@
-import React, { createContext, useContext, useState, ReactNode } from 'react'
+import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react'
 
 type Language = 'zh-CN' | 'en'
+
+export type ThemeId = 'light' | 'dark' | 'ocean' | 'nord' | 'warm' | 'solarized'
+
+export interface ThemeMeta {
+  id: ThemeId
+  labelKey: string
+  descKey: string
+  preview: {
+    bg: string
+    bgSecondary: string
+    accent: string
+  }
+}
+
+export const themes: ThemeMeta[] = [
+  {
+    id: 'light',
+    labelKey: 'theme.light',
+    descKey: 'theme.light.desc',
+    preview: { bg: '#ffffff', bgSecondary: '#f6f8fa', accent: '#2563eb' },
+  },
+  {
+    id: 'dark',
+    labelKey: 'theme.dark',
+    descKey: 'theme.dark.desc',
+    preview: { bg: '#0d1117', bgSecondary: '#161b22', accent: '#388bfd' },
+  },
+  {
+    id: 'ocean',
+    labelKey: 'theme.ocean',
+    descKey: 'theme.ocean.desc',
+    preview: { bg: '#0a192f', bgSecondary: '#0d2137', accent: '#32968f' },
+  },
+  {
+    id: 'nord',
+    labelKey: 'theme.nord',
+    descKey: 'theme.nord.desc',
+    preview: { bg: '#2e3440', bgSecondary: '#3b4252', accent: '#81a1c1' },
+  },
+  {
+    id: 'warm',
+    labelKey: 'theme.warm',
+    descKey: 'theme.warm.desc',
+    preview: { bg: '#fdf8f3', bgSecondary: '#f5ebe0', accent: '#c9a96e' },
+  },
+  {
+    id: 'solarized',
+    labelKey: 'theme.solarized',
+    descKey: 'theme.solarized.desc',
+    preview: { bg: '#fdf6e3', bgSecondary: '#eee8d5', accent: '#268bd2' },
+  },
+]
 
 interface LanguageContextValue {
   language: Language
   setLanguage: (lang: Language) => void
+  theme: ThemeId
+  setTheme: (theme: ThemeId) => void
   t: (key: string) => string
 }
 
@@ -267,17 +321,30 @@ export function LanguageProvider({ children }: { children: ReactNode }): JSX.Ele
     return (localStorage.getItem('language') as Language) || 'zh-CN'
   })
 
+  const [theme, setThemeState] = useState<ThemeId>(() => {
+    return (localStorage.getItem('theme') as ThemeId) || 'light'
+  })
+
   const setLanguage = (lang: Language) => {
     setLanguageState(lang)
     localStorage.setItem('language', lang)
   }
+
+  const setTheme = (newTheme: ThemeId) => {
+    setThemeState(newTheme)
+    localStorage.setItem('theme', newTheme)
+  }
+
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', theme)
+  }, [theme])
 
   const t = (key: string): string => {
     return translations[language][key] || key
   }
 
   return (
-    <LanguageContext.Provider value={{ language, setLanguage, t }}>
+    <LanguageContext.Provider value={{ language, setLanguage, theme, setTheme, t }}>
       {children}
     </LanguageContext.Provider>
   )
