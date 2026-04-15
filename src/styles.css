@@ -68,6 +68,10 @@
   /* === 按钮危险色 === */
   --danger: #e74c3c;
   --danger-hover: #c0392b;
+  /* === 过渡时长 === */
+  --transition-fast: 100ms ease;
+  --transition-base: 150ms ease;
+  --transition-slow: 200ms ease;
 }
 
 /* === Dark（深色）=== */
@@ -230,7 +234,7 @@ body {
   border-radius: var(--radius);
   cursor: pointer;
   font-size: 13px;
-  transition: background-color 0.15s;
+  transition: background-color var(--transition-base);
   white-space: nowrap;
 }
 
@@ -618,7 +622,7 @@ body {
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' fill='%23888' viewBox='0 0 16 16'%3E%3Cpath d='M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001c.03.04.062.078.098.115l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85a1.007 1.007 0 0 0-.115-.1zM12 6.5a5.5 5.5 0 1 1-11 0 5.5 5.5 0 0 1 11 0z'/%3E%3C/svg%3E");
   background-repeat: no-repeat;
   background-position: 12px center;
-  transition: border-color 0.15s, box-shadow 0.15s;
+  transition: border-color var(--transition-base), box-shadow var(--transition-base);
 }
 
 .search-box-wrapper input:focus {
@@ -665,7 +669,7 @@ body {
   color: var(--text-secondary);
   border-radius: var(--radius);
   text-align: left;
-  transition: all 0.15s;
+  transition: background-color var(--transition-base), color var(--transition-base), border-color var(--transition-base);
   margin-bottom: 2px;
 }
 
@@ -801,7 +805,7 @@ body {
   align-items: center;
   opacity: 0.4;
   font-size: 11px;
-  transition: opacity 0.15s;
+  transition: opacity var(--transition-base);
   flex-shrink: 0;
 }
 .file-name-text:hover .thumbnail-trigger {
@@ -1139,7 +1143,7 @@ body {
   display: block;
   margin: 0 auto;
   cursor: pointer;
-  transition: opacity 0.15s;
+  transition: opacity var(--transition-base);
 }
 .donate-qr-small img:hover { opacity: 0.8; }
 
@@ -1291,7 +1295,7 @@ body {
   font-size: 12px;
   color: var(--text-muted);
   cursor: pointer;
-  transition: all 0.15s;
+  transition: all var(--transition-base);
   white-space: nowrap;
 }
 
@@ -1336,7 +1340,7 @@ body {
 
 /* === 全局过渡 === */
 button, input, select {
-  transition: all 0.15s ease;
+  transition: all var(--transition-base);
 }
 
 /* === 浅色主题滚动条 === */
@@ -1403,7 +1407,7 @@ button, input, select {
   font-size: 12px;
   color: var(--text-muted);
   cursor: pointer;
-  transition: all 0.15s;
+  transition: all var(--transition-base);
 }
 
 .dropdown-tab:hover {
@@ -1603,7 +1607,7 @@ button, input, select {
   display: flex;
   align-items: center;
   gap: 4px;
-  transition: all 0.15s;
+  transition: all var(--transition-base);
 }
 
 .toolbar-btn:hover {
@@ -1683,7 +1687,7 @@ button, input, select {
   font-size: 12px;
   color: var(--text-secondary);
   cursor: pointer;
-  transition: all 0.15s;
+  transition: all var(--transition-base);
 }
 
 .filter-chip:hover {
@@ -1775,7 +1779,7 @@ button, input, select {
   font-size: 12px;
   color: var(--text-muted);
   cursor: pointer;
-  transition: all 0.15s;
+  transition: all var(--transition-base);
 }
 
 .filter-clear:hover {
@@ -1792,7 +1796,7 @@ button, input, select {
   font-size: 12px;
   color: #fff;
   cursor: pointer;
-  transition: background-color 0.15s;
+  transition: background-color var(--transition-base);
 }
 
 .filter-apply:hover {
