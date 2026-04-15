@@ -8,6 +8,7 @@ function FloatingSearch(): JSX.Element {
   const [results, setResults] = useState<FileRecord[]>([])
   const [isSearching, setIsSearching] = useState(false)
   const [selected, setSelected] = useState(0)
+  const hasNavigated = useRef(false)
   const inputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
@@ -19,8 +20,9 @@ function FloatingSearch(): JSX.Element {
     setIsSearching(true)
     try {
       const res = await window.electron.searchFiles(q)
-      setResults(res.slice(0, 5))
+      setResults(res.slice(0, 8))
       setSelected(0)
+      hasNavigated.current = false
     } finally {
       setIsSearching(false)
     }
@@ -30,15 +32,18 @@ function FloatingSearch(): JSX.Element {
     if (e.key === 'Escape') {
       window.electron.hideFloatingWindow?.()
     } else if (e.key === 'Enter') {
-      if (results[selected]) {
-        window.electron.openFile(results[selected].path)
+      const target = hasNavigated.current ? results[selected] : results[0]
+      if (target) {
+        window.electron.openFile(target.path)
         window.electron.hideFloatingWindow?.()
       }
     } else if (e.key === 'ArrowDown') {
       e.preventDefault()
+      hasNavigated.current = true
       setSelected(s => Math.min(s + 1, results.length - 1))
     } else if (e.key === 'ArrowUp') {
       e.preventDefault()
+      hasNavigated.current = true
       setSelected(s => Math.max(s - 1, 0))
     }
   }
@@ -65,6 +70,9 @@ function FloatingSearch(): JSX.Element {
           style={{ flex: 1, border: 'none', outline: 'none', fontSize: '14px', background: 'transparent', color: 'var(--text-primary, #333)' }}
         />
         {isSearching && <span style={{ fontSize: '12px', color: 'var(--text-muted, #999)' }}>...</span>}
+        {results.length > 0 && !isSearching && (
+          <span style={{ fontSize: '11px', color: 'var(--text-muted, #999)' }}>{results.length} results</span>
+        )}
         <button onClick={() => window.electron.hideFloatingWindow?.()} style={{ border: 'none', background: 'none', cursor: 'pointer', color: 'var(--text-muted, #999)', fontSize: '12px' }}>Esc</button>
       </div>
       {results.length > 0 && (
@@ -78,6 +86,9 @@ function FloatingSearch(): JSX.Element {
           ))}
         </div>
       )}
+      <div style={{ padding: '4px 16px', fontSize: '10px', color: 'var(--text-muted, #999)', borderTop: '1px solid var(--border, #e0e0e0)' }}>
+        Esc to close
+      </div>
     </div>
   )
 }

@@ -31,48 +31,9 @@ function GuidePage(): JSX.Element {
         <div className="settings-card">
           <div className="guide-content">
             <p>{t('guide.formatsDesc')}</p>
-            <div className="guide-feature-grid">
-              <div className="guide-feature-item">
-                <span className="guide-feature-icon">📄</span>
-                <span>Word (.doc/.docx)</span>
-              </div>
-              <div className="guide-feature-item">
-                <span className="guide-feature-icon">📊</span>
-                <span>Excel (.xls/.xlsx)</span>
-              </div>
-              <div className="guide-feature-item">
-                <span className="guide-feature-icon">📽️</span>
-                <span>PowerPoint (.ppt/.pptx)</span>
-              </div>
-              <div className="guide-feature-item">
-                <span className="guide-feature-icon">📕</span>
-                <span>PDF (.pdf)</span>
-              </div>
-              <div className="guide-feature-item">
-                <span className="guide-feature-icon">📝</span>
-                <span>Text / Markdown / JSON / CSV</span>
-              </div>
-              <div className="guide-feature-item">
-                <span className="guide-feature-icon">📃</span>
-                <span>RTF (.rtf)</span>
-              </div>
-              <div className="guide-feature-item">
-                <span className="guide-feature-icon">📚</span>
-                <span>CHM Help (.chm)</span>
-              </div>
-              <div className="guide-feature-item">
-                <span className="guide-feature-icon">📒</span>
-                <span>ODF / LibreOffice (.odt/.ods/.odp)</span>
-              </div>
-              <div className="guide-feature-item">
-                <span className="guide-feature-icon">🗜️</span>
-                <span>ZIP Archive (recursive search)</span>
-              </div>
-              <div className="guide-feature-item">
-                <span className="guide-feature-icon">📧</span>
-                <span>Email (.eml/.mbox)</span>
-              </div>
-            </div>
+            <p style={{ fontSize: '12px', color: 'var(--text-secondary)', marginTop: '8px', lineHeight: 1.8 }}>
+              Word (.doc/.docx) · Excel (.xls/.xlsx) · PowerPoint (.ppt/.pptx) · PDF · Text/Markdown/JSON/CSV · RTF · CHM · ODF (ODT/ODS/ODP) · EPUB · ZIP (recursive) · Email (.eml/.mbox) · WPS/WPP/ET
+            </p>
           </div>
         </div>
       </div>

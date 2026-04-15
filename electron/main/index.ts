@@ -25,6 +25,18 @@ let mainWindow: BrowserWindow | null = null
 let tray: Tray | null = null
 let isClosingFromIPC = false
 let floatingWindow: BrowserWindow | null = null
+let currentHotkey = 'CommandOrControl+Shift+F'
+
+function registerGlobalShortcut(hotkey: string): void {
+  globalShortcut.unregisterAll()
+  globalShortcut.register(hotkey, () => {
+    if (floatingWindow) {
+      floatingWindow.show()
+      floatingWindow.focus()
+    }
+  })
+  currentHotkey = hotkey
+}
 
 function createFloatingWindow(): void {
   floatingWindow = new BrowserWindow({
@@ -203,11 +215,13 @@ app.whenReady().then(async () => {
   createTray()
   createFloatingWindow()
 
-  globalShortcut.register('CommandOrControl+Shift+F', () => {
-    if (floatingWindow) {
-      floatingWindow.show()
-      floatingWindow.focus()
-    }
+  registerGlobalShortcut('CommandOrControl+Shift+F')
+
+  // Global hotkey IPC handlers
+  ipcMain.handle('get-global-hotkey', () => currentHotkey)
+
+  ipcMain.handle('set-global-hotkey', (_, hotkey: string) => {
+    registerGlobalShortcut(hotkey)
   })
 
   app.on('activate', function () {
