@@ -1,18 +1,12 @@
 import { useState, useEffect } from 'react'
-import { useLanguage } from '../context/LanguageContext'
+import { useLanguage, themes } from '../context/LanguageContext'
 
 function LanguagePage(): JSX.Element {
-  const { language, setLanguage, t } = useLanguage()
-  const [theme, setTheme] = useState<'light' | 'dark'>('light')
+  const { language, setLanguage, theme, setTheme, t } = useLanguage()
   const [currentHotkey, setCurrentHotkey] = useState('Ctrl+Shift+F')
   const [listening, setListening] = useState(false)
   const [hotkeyError, setHotkeyError] = useState('')
 
-  useEffect(() => {
-    const savedTheme = localStorage.getItem('theme') as 'light' | 'dark' | null
-    if (savedTheme) setTheme(savedTheme)
-    document.documentElement.setAttribute('data-theme', savedTheme || 'light')
-  }, [])
 
   useEffect(() => {
     window.electron.getGlobalHotkey().then(h => setCurrentHotkey(formatHotkey(h)))
@@ -48,12 +42,6 @@ function LanguagePage(): JSX.Element {
     window.addEventListener('keydown', handler)
   }
 
-  const handleThemeChange = (newTheme: 'light' | 'dark') => {
-    setTheme(newTheme)
-    localStorage.setItem('theme', newTheme)
-    document.documentElement.setAttribute('data-theme', newTheme)
-  }
-
   const handleLanguageChange = (newLang: string) => {
     setLanguage(newLang as 'zh-CN' | 'en')
     document.documentElement.setAttribute('lang', newLang)
@@ -71,19 +59,32 @@ function LanguagePage(): JSX.Element {
               <div className="settings-row-label">{t('settings.themeLabel')}</div>
               <div className="settings-row-desc">{t('settings.themeDesc')}</div>
             </div>
-            <div className="theme-toggle">
-              <button
-                className={`theme-btn ${theme === 'light' ? 'active' : ''}`}
-                onClick={() => handleThemeChange('light')}
-              >
-                {t('settings.light')}
-              </button>
-              <button
-                className={`theme-btn ${theme === 'dark' ? 'active' : ''}`}
-                onClick={() => handleThemeChange('dark')}
-              >
-                {t('settings.dark')}
-              </button>
+            <div className="theme-cards">
+              {themes.map((t) => (
+                <button
+                  key={t.id}
+                  className={`theme-card ${theme === t.id ? 'active' : ''}`}
+                  onClick={() => setTheme(t.id)}
+                  title={t.descKey}
+                >
+                  <div className="theme-card-preview">
+                    <div
+                      className="theme-preview-bg"
+                      style={{ background: t.preview.bg }}
+                    >
+                      <div
+                        className="theme-preview-sidebar"
+                        style={{ background: t.preview.bgSecondary }}
+                      />
+                      <div
+                        className="theme-preview-accent"
+                        style={{ background: t.preview.accent }}
+                      />
+                    </div>
+                  </div>
+                  <div className="theme-card-label">{t(t.labelKey)}</div>
+                </button>
+              ))}
             </div>
           </div>
         </div>
