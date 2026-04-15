@@ -14,7 +14,7 @@ function GuidePage(): JSX.Element {
         <div className="settings-section-title">{t('guide.overview')}</div>
         <div className="settings-card">
           <div className="guide-content">
-            <p>{t('guide.overviewDesc')}</p>
+            <p style={{ lineHeight: 1.8 }}>{t('guide.overviewDesc')}</p>
             <ul>
               <li>{t('guide.feature1')}</li>
               <li>{t('guide.feature2')}</li>
@@ -23,9 +23,6 @@ function GuidePage(): JSX.Element {
               <li>{t('guide.feature5')}</li>
               <li>{t('guide.feature6')}</li>
             </ul>
-            <p style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '8px', lineHeight: 1.6 }}>
-              {t('guide.formatsDesc')} Word · Excel · PowerPoint · PDF · Text/MD/JSON/CSV · RTF · CHM · ODF · EPUB · ZIP · Email · WPS
-            </p>
           </div>
         </div>
       </div>
