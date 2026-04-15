@@ -29,13 +29,20 @@ let currentHotkey = 'CommandOrControl+Shift+F'
 
 function registerGlobalShortcut(hotkey: string): void {
   globalShortcut.unregisterAll()
-  globalShortcut.register(hotkey, () => {
-    if (floatingWindow) {
-      floatingWindow.show()
-      floatingWindow.focus()
-    }
-  })
-  currentHotkey = hotkey
+  // Convert CommandOrControl -> Ctrl for Windows globalShortcut API
+  const nativeHotkey = hotkey.replace(/CommandOrControl/gi, 'Ctrl')
+  try {
+    globalShortcut.register(nativeHotkey, () => {
+      if (floatingWindow) {
+        floatingWindow.show()
+        floatingWindow.focus()
+      }
+    })
+    currentHotkey = hotkey
+    log.info(`Global shortcut registered: ${nativeHotkey}`)
+  } catch (err) {
+    log.error(`Failed to register global shortcut "${nativeHotkey}":`, err)
+  }
 }
 
 function createFloatingWindow(): void {
