@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { FileRecord } from '../types'
 import { useLanguage } from '../context/LanguageContext'
+import { formatSize } from '../utils/format'
 
 function FloatingSearch(): JSX.Element {
   const { t } = useLanguage()
@@ -8,6 +9,7 @@ function FloatingSearch(): JSX.Element {
   const [results, setResults] = useState<FileRecord[]>([])
   const [isSearching, setIsSearching] = useState(false)
   const [selected, setSelected] = useState(0)
+  const [searched, setSearched] = useState(false)
   const hasNavigated = useRef(false)
   const inputRef = useRef<HTMLInputElement>(null)
 
@@ -16,15 +18,19 @@ function FloatingSearch(): JSX.Element {
   }, [])
 
   const search = async (q: string) => {
-    if (!q.trim()) { setResults([]); return }
+    if (!q.trim()) { setResults([]); setSearched(false); return }
     setIsSearching(true)
     try {
       const res = await window.electron.searchFiles(q)
       setResults(res.slice(0, 8))
       setSelected(0)
       hasNavigated.current = false
+    } catch (err) {
+      console.error('Floating search error:', err)
+      setResults([])
     } finally {
       setIsSearching(false)
+      setSearched(true)
     }
   }
 
@@ -59,7 +65,8 @@ function FloatingSearch(): JSX.Element {
       display: 'flex',
       flexDirection: 'column'
     }}>
-      <div style={{ display: 'flex', alignItems: 'center', padding: '12px 16px', gap: '8px', borderBottom: '1px solid var(--border, #e0e0e0)' }}>
+      {/* Header */}
+      <div style={{ display: 'flex', alignItems: 'center', padding: '12px 16px', gap: '8px', borderBottom: '1px solid var(--border, #e0e0e0)', flexShrink: 0 }}>
         <span style={{ fontSize: '16px' }}>🔍</span>
         <input
           ref={inputRef}
@@ -69,25 +76,38 @@ function FloatingSearch(): JSX.Element {
           placeholder={t('search.placeholder')}
           style={{ flex: 1, border: 'none', outline: 'none', fontSize: '14px', background: 'transparent', color: 'var(--text-primary, #333)' }}
         />
-        {isSearching && <span style={{ fontSize: '12px', color: 'var(--text-muted, #999)' }}>...</span>}
-        {results.length > 0 && !isSearching && (
-          <span style={{ fontSize: '11px', color: 'var(--text-muted, #999)' }}>{results.length} results</span>
+        {isSearching && <span style={{ fontSize: '12px', color: 'var(--text-muted, #999)' }}>{t('search.searching') || '搜索中...'}</span>}
+        {!isSearching && searched && results.length === 0 && (
+          <span style={{ fontSize: '11px', color: 'var(--text-muted, #999)' }}>{t('search.noResult') || '无结果'}</span>
         )}
-        <button onClick={() => window.electron.hideFloatingWindow?.()} style={{ border: 'none', background: 'none', cursor: 'pointer', color: 'var(--text-muted, #999)', fontSize: '12px' }}>Esc</button>
+        {!isSearching && results.length > 0 && (
+          <span style={{ fontSize: '11px', color: 'var(--accent, #0078d4)', fontWeight: 500 }}>{results.length} {t('search.result') || '个文件'}</span>
+        )}
+        <button onClick={() => window.electron.hideFloatingWindow?.()} style={{ border: 'none', background: 'none', cursor: 'pointer', color: 'var(--text-muted, #999)', fontSize: '12px', padding: '2px 6px' }}>Esc</button>
       </div>
+
+      {/* Results */}
       {results.length > 0 && (
-        <div style={{ overflow: 'auto', maxHeight: '200px' }}>
+        <div style={{ overflowY: 'auto', flex: 1 }}>
           {results.map((f, i) => (
             <div key={f.id} onClick={() => { window.electron.openFile(f.path); window.electron.hideFloatingWindow?.() }}
-              style={{ padding: '8px 16px', cursor: 'pointer', background: i === selected ? 'var(--bg-secondary, #f5f5f5)' : 'transparent', display: 'flex', justifyContent: 'space-between' }}>
-              <span style={{ fontSize: '12px', color: 'var(--text-primary, #333)' }}>{f.name}</span>
-              <span style={{ fontSize: '11px', color: 'var(--text-muted, #999)' }}>{f.file_type}</span>
+              style={{ padding: '8px 16px', cursor: 'pointer', background: i === selected ? 'var(--bg-secondary, #f0f0f0)' : 'transparent', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div style={{ overflow: 'hidden' }}>
+                <div style={{ fontSize: '13px', color: 'var(--text-primary, #333)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{f.name}</div>
+                <div style={{ fontSize: '11px', color: 'var(--text-muted, #999)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{f.path}</div>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0, marginLeft: '8px' }}>
+                <span style={{ fontSize: '11px', color: 'var(--text-muted, #999)' }}>{f.file_type}</span>
+                <span style={{ fontSize: '11px', color: 'var(--text-muted, #999)' }}>{formatSize(f.size)}</span>
+              </div>
             </div>
           ))}
         </div>
       )}
-      <div style={{ padding: '4px 16px', fontSize: '10px', color: 'var(--text-muted, #999)', borderTop: '1px solid var(--border, #e0e0e0)' }}>
-        Esc to close
+
+      {/* Footer hint */}
+      <div style={{ padding: '5px 16px', fontSize: '10px', color: 'var(--text-muted, #999)', borderTop: '1px solid var(--border, #e0e0e0)', flexShrink: 0, display: 'flex', justifyContent: 'space-between' }}>
+        <span>↑↓ {t('search.filters') || '选择'} · Enter {t('detail.openFile') || '打开'} · Esc {t('confirm.cancel') || '关闭'}</span>
       </div>
     </div>
   )

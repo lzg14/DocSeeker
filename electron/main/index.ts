@@ -41,11 +41,11 @@ function registerGlobalShortcut(hotkey: string): void {
 function createFloatingWindow(): void {
   floatingWindow = new BrowserWindow({
     width: 600,
-    height: 60,
+    height: 360,
     frame: false,
-    transparent: true,
+    transparent: false,
     alwaysOnTop: true,
-    resizable: false,
+    resizable: true,
     skipTaskbar: true,
     show: false,
     webPreferences: {
