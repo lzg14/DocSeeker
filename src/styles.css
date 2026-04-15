@@ -65,6 +65,9 @@
   --nav-width: 220px;
   --titlebar-height: 40px;
   --statusbar-height: 32px;
+  /* === 按钮危险色 === */
+  --danger: #e74c3c;
+  --danger-hover: #c0392b;
 }
 
 /* === Dark（深色）=== */
@@ -89,6 +92,8 @@
   --nav-width: 220px;
   --titlebar-height: 40px;
   --statusbar-height: 32px;
+  --danger: #f85149;
+  --danger-hover: #da3633;
 }
 
 /* === Ocean（蓝调）=== */
@@ -113,6 +118,8 @@
   --nav-width: 220px;
   --titlebar-height: 40px;
   --statusbar-height: 32px;
+  --danger: #f85149;
+  --danger-hover: #da3633;
 }
 
 /* === Nord（北欧）=== */
@@ -137,6 +144,8 @@
   --nav-width: 220px;
   --titlebar-height: 40px;
   --statusbar-height: 32px;
+  --danger: #bf616a;
+  --danger-hover: #cd8189;
 }
 
 /* === Warm（暖色）=== */
@@ -161,6 +170,8 @@
   --nav-width: 220px;
   --titlebar-height: 40px;
   --statusbar-height: 32px;
+  --danger: #c0392b;
+  --danger-hover: #a93226;
 }
 
 /* === Solarized（Solarized Light）=== */
@@ -185,6 +196,8 @@
   --nav-width: 220px;
   --titlebar-height: 40px;
   --statusbar-height: 32px;
+  --danger: #dc322f;
+  --danger-hover: #cb4b16;
 }
 
 /* === 全局重置 === */
@@ -247,12 +260,12 @@ body {
 }
 
 .btn-danger {
-  background-color: #e74c3c;
+  background-color: var(--danger, #e74c3c);
   color: white;
 }
 
 .btn-danger:hover:not(:disabled) {
-  background-color: #c0392b;
+  background-color: var(--danger-hover, #c0392b);
 }
 
 .btn-small {
