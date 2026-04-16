@@ -34,41 +34,45 @@ function GuidePage(): JSX.Element {
         <div className="settings-card">
           <div className="guide-content">
             <p>{t('guide.donateDesc')}</p>
-            <p style={{ marginTop: '8px' }}>
-              <strong>{t('guide.devName')}:</strong> Zhigang Li &lt;lzg14@qq.com&gt;
-            </p>
-            <p style={{ marginTop: '8px' }}>
-              <strong>{t('guide.version')}:</strong> {packageJson.version}
-            </p>
-            <p style={{ marginTop: '8px' }}>
-              <strong>{t('guide.github')}:</strong>{' '}
-              <a
-                href="https://github.com/lzg14/DocSeeker"
-                target="_blank"
-                rel="noopener noreferrer"
-                style={{ color: 'var(--accent)' }}
-              >
-                github.com/lzg14/DocSeeker
-              </a>
-            </p>
-            <div className="donate-qrcodes">
-              <div className="donate-qr donate-qr-small">
-                <div className="donate-qr-label">{t('guide.wechat')}</div>
-                <img
-                  src="./resources/wechat-pay.png"
-                  alt="WeChat Pay"
-                  onClick={() => setShowQr('./resources/wechat-pay.png')}
-                  style={{ cursor: 'pointer' }}
-                />
+            <div className="donate-layout">
+              <div className="donate-info">
+                <p style={{ marginTop: '8px' }}>
+                  <strong>{t('guide.devName')}:</strong> Zhigang Li &lt;lzg14@qq.com&gt;
+                </p>
+                <p style={{ marginTop: '8px' }}>
+                  <strong>{t('guide.version')}:</strong> {packageJson.version}
+                </p>
+                <p style={{ marginTop: '8px' }}>
+                  <strong>{t('guide.github')}:</strong>{' '}
+                  <a
+                    href="https://github.com/lzg14/DocSeeker"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={{ color: 'var(--accent)' }}
+                  >
+                    github.com/lzg14/DocSeeker
+                  </a>
+                </p>
               </div>
-              <div className="donate-qr donate-qr-small">
-                <div className="donate-qr-label">{t('guide.alipay')}</div>
-                <img
-                  src="./resources/alipay.png"
-                  alt="Alipay"
-                  onClick={() => setShowQr('./resources/alipay.png')}
-                  style={{ cursor: 'pointer' }}
-                />
+              <div className="donate-qrcodes">
+                <div className="donate-qr donate-qr-small">
+                  <div className="donate-qr-label">{t('guide.wechat')}</div>
+                  <img
+                    src="./resources/wechat-pay.png"
+                    alt="WeChat Pay"
+                    onClick={() => setShowQr('./resources/wechat-pay.png')}
+                    style={{ cursor: 'pointer' }}
+                  />
+                </div>
+                <div className="donate-qr donate-qr-small">
+                  <div className="donate-qr-label">{t('guide.alipay')}</div>
+                  <img
+                    src="./resources/alipay.png"
+                    alt="Alipay"
+                    onClick={() => setShowQr('./resources/alipay.png')}
+                    style={{ cursor: 'pointer' }}
+                  />
+                </div>
               </div>
             </div>
           </div>

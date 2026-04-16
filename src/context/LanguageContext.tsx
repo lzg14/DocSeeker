@@ -201,7 +201,7 @@ const translations: Record<Language, Record<string, string>> = {
     'theme.nord.desc': '清新冷淡风',
     'theme.warm': '暖色',
     'theme.warm.desc': '夜间阅读 / 眼睛舒适',
-    'theme.solarized': 'Solarized',
+    'theme.solarized': '太阳升',
     'theme.solarized.desc': '暖灰 / 专业写作者',
     // Confirm dialog
     'confirm.cancel': '取消',
