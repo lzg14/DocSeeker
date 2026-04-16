@@ -54,6 +54,7 @@ function TitleBar(): JSX.Element {
   return (
     <>
       <div className="title-bar">
+        <img src="../build/icon.png" className="title-bar-icon" alt="DocSeeker" />
         <span className="title-bar-title">DocSeeker</span>
         <div className="title-bar-controls">
           <button className="title-bar-btn" onClick={handleMinimize} title="最小化">

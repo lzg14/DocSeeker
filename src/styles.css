@@ -560,7 +560,15 @@ textarea:focus:not(:focus-visible) {
   font-size: 13px;
   font-weight: 600;
   color: var(--text-primary);
-  padding: 0 16px;
+  padding: 0 16px 0 8px;
+}
+
+.title-bar-icon {
+  width: 16px;
+  height: 16px;
+  margin-left: 12px;
+  flex-shrink: 0;
+  image-rendering: -webkit-optimize-contrast;
 }
 
 .title-bar-controls {
@@ -2032,8 +2040,8 @@ button, input, select {
 /* === 主题卡片选择器 === */
 .theme-cards {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 12px;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 8px;
   margin-top: 8px;
 }
 
