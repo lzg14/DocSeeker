@@ -42,6 +42,7 @@ export async function initDatabase(): Promise<void> {
       path TEXT UNIQUE NOT NULL,
       name TEXT NOT NULL,
       last_scan_at TEXT DEFAULT (datetime('now')),
+      last_full_scan_at TEXT DEFAULT NULL,
       file_count INTEGER DEFAULT 0,
       total_size INTEGER DEFAULT 0,
       schedule_enabled INTEGER DEFAULT 0,
@@ -49,6 +50,12 @@ export async function initDatabase(): Promise<void> {
       schedule_time TEXT DEFAULT NULL
     )
   `)
+  // Migration: add last_full_scan_at column if not exists (for existing databases)
+  try {
+    db.exec(`ALTER TABLE scanned_folders ADD COLUMN last_full_scan_at TEXT DEFAULT NULL`)
+  } catch {
+    // Column may already exist, ignore
+  }
 
   // Create indexes
   db.exec(`CREATE INDEX IF NOT EXISTS idx_files_path ON files(path)`)
@@ -471,6 +478,7 @@ export interface ScannedFolder {
   path: string
   name: string
   last_scan_at?: string
+  last_full_scan_at?: string | null
   file_count?: number
   total_size?: number
   schedule_enabled?: number
@@ -517,7 +525,13 @@ export function updateFolderScanComplete(id: number, fileCount: number, totalSiz
     UPDATE scanned_folders SET last_scan_at = datetime('now'), file_count = ?, total_size = ? WHERE id = ?
   `)
   stmt.run([fileCount, totalSize, id])
-  
+}
+
+export function updateFolderFullScanComplete(id: number, fileCount: number, totalSize: number): void {
+  const stmt = getDatabase().prepare(`
+    UPDATE scanned_folders SET last_scan_at = datetime('now'), last_full_scan_at = datetime('now'), file_count = ?, total_size = ? WHERE id = ?
+  `)
+  stmt.run([fileCount, totalSize, id])
 }
 
 export function getScannedFolderByPath(folderPath: string): ScannedFolder | undefined {

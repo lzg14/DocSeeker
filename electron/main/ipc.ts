@@ -18,6 +18,7 @@ import {
   FileRecord,
   addScannedFolder,
   updateFolderScanComplete,
+  updateFolderFullScanComplete,
   getScannedFolderByPath,
   getScannedFolderById,
   getAllScannedFolders,
@@ -299,7 +300,7 @@ export function registerIpcHandlers(): void {
               if (folder && folder.id) {
                 const fileCount = getFileCountByFolder(folderPath)
                 const totalSize = getTotalSizeByFolder(folderPath)
-                updateFolderScanComplete(folder.id, fileCount, totalSize)
+                updateFolderFullScanComplete(folder.id, fileCount, totalSize)
               }
               event.sender.send('scan-progress', {
                 current: filesProcessed,
