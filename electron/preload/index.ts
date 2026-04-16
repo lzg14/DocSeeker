@@ -99,6 +99,10 @@ export interface ElectronAPI {
   // Global hotkey
   getGlobalHotkey: () => Promise<string>
   setGlobalHotkey: (hotkey: string) => Promise<void>
+  // Auto update
+  checkForUpdate: () => Promise<string | null>
+  downloadUpdate: () => Promise<void>
+  onUpdateStatus: (callback: (info: { status: string; version?: string; error?: string }) => void) => () => void
 }
 
 const electronAPI: ElectronAPI = {
@@ -178,7 +182,21 @@ const electronAPI: ElectronAPI = {
 
   getGlobalHotkey: () => ipcRenderer.invoke('get-global-hotkey'),
 
-  setGlobalHotkey: (hotkey: string) => ipcRenderer.invoke('set-global-hotkey', hotkey)
+  setGlobalHotkey: (hotkey: string) => ipcRenderer.invoke('set-global-hotkey', hotkey),
+
+  checkForUpdate: () => ipcRenderer.invoke('update-check'),
+
+  downloadUpdate: () => ipcRenderer.invoke('update-download'),
+
+  onUpdateStatus: (callback) => {
+    const handler = (_: Electron.IpcRendererEvent, info: { status: string; version?: string; error?: string }) => {
+      callback(info)
+    }
+    ipcRenderer.on('update-status', handler)
+    return () => {
+      ipcRenderer.removeListener('update-status', handler)
+    }
+  },
 }
 
 contextBridge.exposeInMainWorld('electron', electronAPI)
