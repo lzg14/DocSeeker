@@ -5,7 +5,7 @@ import log from 'electron-log/main'
 import { initDatabase, closeDatabase } from './database'
 import { registerIpcHandlers } from './ipc'
 import { startScheduler, stopScheduler } from './scheduler'
-import { startUpdater, stopUpdater, handleManualCheck, handleDownloadUpdate } from './updater'
+import { startUpdater, stopUpdater, handleManualCheck, handleDownloadUpdate, handleQuitAndInstall } from './updater'
 
 // Initialize logging
 log.initialize()
@@ -253,6 +253,10 @@ app.whenReady().then(async () => {
 
   ipcMain.handle('update-download', async () => {
     await handleDownloadUpdate()
+  })
+
+  ipcMain.handle('update-install', async () => {
+    handleQuitAndInstall()
   })
 
   app.on('activate', function () {
