@@ -1252,29 +1252,34 @@ textarea:focus:not(:focus-visible) {
 
 .donate-layout {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   gap: 24px;
   margin-top: 12px;
 }
 
 .donate-info {
   flex: 1;
+  line-height: 1.7;
+}
+
+.donate-info p {
+  margin: 4px 0;
 }
 
 .donate-qrcodes {
   display: flex;
   gap: 16px;
   flex-shrink: 0;
+  align-items: center;
 }
 
 .donate-qr {
   flex: 1;
-  max-width: 120px;
 }
 
 .donate-qr-small img {
-  width: 80px;
-  height: 80px;
+  width: 100px;
+  height: 100px;
   object-fit: contain;
   border-radius: var(--radius);
   border: 1px solid var(--border);
