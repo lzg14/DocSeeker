@@ -108,7 +108,16 @@ function ScanPage(): JSX.Element {
   return (
     <div className="settings-page">
       <div className="scan-header">
-        <h2 className="page-title">{t('scan.title')}</h2>
+        <div className="scan-header-left">
+          <h2 className="page-title">{t('scan.title')}</h2>
+          {folders.length > 0 && (
+            <span className="config-header-summary">
+              {folders.length} {t('config.dirCount').replace('{count}', '')}
+              {' · '}
+              {folders.reduce((sum, f) => sum + (f.file_count || 0), 0).toLocaleString()} {t('config.files')}
+            </span>
+          )}
+        </div>
         <div className="config-header-actions">
           <button
             className="btn btn-primary"
