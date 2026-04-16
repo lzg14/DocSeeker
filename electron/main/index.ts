@@ -5,6 +5,7 @@ import log from 'electron-log/main'
 import { initDatabase, closeDatabase } from './database'
 import { registerIpcHandlers } from './ipc'
 import { startScheduler, stopScheduler } from './scheduler'
+import { startUpdater, stopUpdater, handleManualCheck, handleDownloadUpdate } from './updater'
 
 // Initialize logging
 log.initialize()
@@ -232,6 +233,8 @@ app.whenReady().then(async () => {
   })
 
   createWindow()
+  // Auto updater (checks on 5th and 15th each month)
+  startUpdater(mainWindow!)
   createTray()
   createFloatingWindow()
 
@@ -242,6 +245,14 @@ app.whenReady().then(async () => {
 
   ipcMain.handle('set-global-hotkey', (_, hotkey: string) => {
     registerGlobalShortcut(hotkey)
+  })
+
+  ipcMain.handle('update-check', async () => {
+    return handleManualCheck()
+  })
+
+  ipcMain.handle('update-download', async () => {
+    await handleDownloadUpdate()
   })
 
   app.on('activate', function () {
@@ -262,5 +273,6 @@ app.on('before-quit', () => {
   ;(app as any).isQuitting = true
   globalShortcut.unregisterAll()
   stopScheduler()
+  stopUpdater()
   closeDatabase()
 })
