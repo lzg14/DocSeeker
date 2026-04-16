@@ -33,16 +33,16 @@ function GuidePage(): JSX.Element {
         <div className="settings-section-title">{t('guide.donate')}</div>
         <div className="settings-card">
           <div className="guide-content">
-            <p>{t('guide.donateDesc')}</p>
             <div className="donate-layout">
               <div className="donate-info">
-                <p style={{ marginTop: '8px' }}>
+                <p>{t('guide.donateDesc')}</p>
+                <p>
                   <strong>{t('guide.devName')}:</strong> Zhigang Li &lt;lzg14@qq.com&gt;
                 </p>
-                <p style={{ marginTop: '8px' }}>
+                <p>
                   <strong>{t('guide.version')}:</strong> {packageJson.version}
                 </p>
-                <p style={{ marginTop: '8px' }}>
+                <p>
                   <strong>{t('guide.github')}:</strong>{' '}
                   <a
                     href="https://github.com/lzg14/DocSeeker"

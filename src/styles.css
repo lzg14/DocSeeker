@@ -1258,12 +1258,12 @@ textarea:focus:not(:focus-visible) {
 }
 
 .donate-info {
-  flex: 1;
+  flex: none;
   line-height: 1.7;
 }
 
 .donate-info p {
-  margin: 4px 0;
+  margin: 3px 0;
 }
 
 .donate-qrcodes {
