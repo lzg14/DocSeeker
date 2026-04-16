@@ -2,6 +2,7 @@ import { parentPort, workerData } from 'worker_threads'
 import fs from 'fs/promises'
 import path from 'path'
 import crypto from 'crypto'
+import log from 'electron-log/main'
 
 // Supported file extensions
 const SUPPORTED_EXTENSIONS = new Set([
@@ -159,7 +160,7 @@ async function extractTextFromChm(filePath: string): Promise<string> {
     const zip = await JSZip.loadAsync(data)
     const texts: string[] = []
 
-    for (const [name, file] of Object.entries(zip.files)) {
+    for (const [name, file] of Object.entries(zip.files) as [string, { dir: boolean, async: (type: string) => Promise<string> }][]) {
       if (file.dir) continue
       if (!name.endsWith('.html') && !name.endsWith('.htm')) continue
       const htmlContent = await file.async('string')
@@ -310,7 +311,7 @@ async function extractTextFromZip(filePath: string, depth = 0): Promise<string> 
     const zip = await JSZip.loadAsync(data)
     const texts: string[] = []
 
-    for (const [name, file] of Object.entries(zip.files)) {
+    for (const [name, file] of Object.entries(zip.files) as [string, { dir: boolean, async: (type: string) => Promise<string> }][]) {
       if (file.dir) continue
       const baseName = name.split('/').pop() || name
       if (baseName.startsWith('.') || baseName.startsWith('_')) continue

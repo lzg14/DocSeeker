@@ -23,7 +23,7 @@ function notifyRenderer(status: string, info?: { version?: string; error?: strin
 async function checkForUpdates(silent = true): Promise<string | null> {
   try {
     log.info('Checking for updates...')
-    const result: UpdateCheckResult = await autoUpdater.checkForUpdates()
+    const result: UpdateCheckResult | null = await autoUpdater.checkForUpdates()
     if (result?.updateInfo?.version) {
       log.info(`Update available: v${result.updateInfo.version}`)
       return result.updateInfo.version
