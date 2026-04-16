@@ -175,6 +175,7 @@ const translations: Record<Language, Record<string, string>> = {
     'guide.donate': '赞赏作者',
     'guide.donateDesc': '如果觉得好用，欢迎打赏支持一下',
     'guide.devName': '开发者',
+    'guide.github': 'GitHub',
     'guide.wechat': '微信支付',
     'guide.alipay': '支付宝',
     // Settings
@@ -316,6 +317,7 @@ const translations: Record<Language, Record<string, string>> = {
     'guide.donate': 'Donate',
     'guide.donateDesc': 'If you find this tool useful, your support is appreciated',
     'guide.devName': 'Developer',
+    'guide.github': 'GitHub',
     'guide.wechat': 'WeChat Pay',
     'guide.alipay': 'Alipay',
     // Settings

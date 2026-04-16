@@ -35,6 +35,17 @@ function GuidePage(): JSX.Element {
             <p style={{ marginTop: '8px' }}>
               <strong>{t('guide.devName')}:</strong> Zhigang Li &lt;lzg14@qq.com&gt;
             </p>
+            <p style={{ marginTop: '8px' }}>
+              <strong>{t('guide.github')}:</strong>{' '}
+              <a
+                href="https://github.com/lzg14/DocSeeker"
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{ color: 'var(--accent)' }}
+              >
+                github.com/lzg14/DocSeeker
+              </a>
+            </p>
             <div className="donate-qrcodes">
               <div className="donate-qr donate-qr-small">
                 <div className="donate-qr-label">{t('guide.wechat')}</div>
