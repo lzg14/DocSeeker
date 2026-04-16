@@ -58,7 +58,7 @@ export default function UpdateNotification() {
           </button>
         )}
         {isDownloaded && (
-          <button className="btn-primary" onClick={() => window.electron.downloadUpdate()}>
+          <button className="btn-primary" onClick={() => window.electron.quitAndInstall()}>
             立即重启安装
           </button>
         )}

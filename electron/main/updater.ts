@@ -123,3 +123,7 @@ export async function handleDownloadUpdate(): Promise<void> {
     log.error('Failed to download update:', error)
   }
 }
+
+export function handleQuitAndInstall(): void {
+  autoUpdater.quitAndInstall(false, true)
+}

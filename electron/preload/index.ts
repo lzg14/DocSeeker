@@ -102,6 +102,7 @@ export interface ElectronAPI {
   // Auto update
   checkForUpdate: () => Promise<string | null>
   downloadUpdate: () => Promise<void>
+  quitAndInstall: () => Promise<void>
   onUpdateStatus: (callback: (info: { status: string; version?: string; error?: string }) => void) => () => void
 }
 
@@ -187,6 +188,8 @@ const electronAPI: ElectronAPI = {
   checkForUpdate: () => ipcRenderer.invoke('update-check'),
 
   downloadUpdate: () => ipcRenderer.invoke('update-download'),
+
+  quitAndInstall: () => ipcRenderer.invoke('update-install'),
 
   onUpdateStatus: (callback) => {
     const handler = (_: Electron.IpcRendererEvent, info: { status: string; version?: string; error?: string }) => {
