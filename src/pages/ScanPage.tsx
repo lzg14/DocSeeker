@@ -159,7 +159,15 @@ function ScanPage(): JSX.Element {
                   </div>
                   <div className="folder-meta">
                     <span className="file-count">{folder.file_count || 0} {t('config.files')}</span>
-                    <span className="last-scan">{formatDate(folder.last_scan_at)}</span>
+                    {folder.last_full_scan_at ? (
+                      <span className="last-scan full-scan" title={t('config.lastFullScan')}>
+                        {t('config.lastFullScan')} {formatDate(folder.last_full_scan_at)}
+                      </span>
+                    ) : (
+                      <span className="last-scan" title={t('config.lastScan')}>
+                        {t('config.lastScan')} {formatDate(folder.last_scan_at)}
+                      </span>
+                    )}
                   </div>
                 </div>
 

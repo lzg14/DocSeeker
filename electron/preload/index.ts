@@ -31,6 +31,7 @@ export interface ScannedFolder {
   path: string
   name: string
   last_scan_at?: string
+  last_full_scan_at?: string | null
   file_count?: number
   total_size?: number
   schedule_enabled?: number

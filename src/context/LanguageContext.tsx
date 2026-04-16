@@ -149,6 +149,8 @@ const translations: Record<Language, Record<string, string>> = {
     'config.deleteConfirm': '确定要删除 "{name}" 的扫描记录吗？这不会删除实际文件。',
     'config.never': '从未',
     'config.files': '个文件',
+    'config.lastFullScan': '完整扫描',
+    'config.lastScan': '上次扫描',
     // Settings page
     'settings.title': '设置',
     'settings.theme': '主题',
@@ -287,6 +289,8 @@ const translations: Record<Language, Record<string, string>> = {
     'config.deleteConfirm': 'Are you sure you want to delete the scan records for "{name}"? Actual files will not be deleted.',
     'config.never': 'Never',
     'config.files': 'files',
+    'config.lastFullScan': 'Full Scan',
+    'config.lastScan': 'Last Scan',
     // Settings page
     'settings.title': 'Settings',
     'settings.theme': 'Theme',
