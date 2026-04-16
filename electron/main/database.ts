@@ -557,14 +557,6 @@ export function getAllScannedFolders(): ScannedFolder[] {
   return rows
 }
 
-export function getScheduledFolders(): ScannedFolder[] {
-  if (!db) return []
-  const stmt = getDatabase().prepare('SELECT * FROM scanned_folders WHERE schedule_enabled = 1 ORDER BY last_scan_at ASC')
-  const rows = stmt.all() as ScannedFolder[]
-
-  return rows
-}
-
 export function deleteScannedFolder(id: number): void {
   const stmt = getDatabase().prepare('DELETE FROM scanned_folders WHERE id = ?')
   stmt.run([id])

@@ -71,6 +71,7 @@ const translations: Record<Language, Record<string, string>> = {
     'nav.scan': '扫描目录',
     'nav.settings': '界面设置',
     'nav.guide': '关于',
+    'nav.language': '语言与主题',
     // Search page
     'search.placeholder': '输入关键词搜索文件名或内容...',
     'search.btn': '搜索',
@@ -171,6 +172,7 @@ const translations: Record<Language, Record<string, string>> = {
     'guide.feature2': '高级过滤器：按文件类型、大小范围、修改日期精确筛选结果',
     'guide.feature3': '搜索历史 + 保存搜索：快速复用历史查询，命名收藏常用搜索条件',
     'guide.feature4': 'Ctrl+Shift+F 全局快捷键：随时唤起搜索浮层',
+    'guide.feature5': '语言 + 主题：简体中文/English，6 种主题随时切换',
     'guide.feature6': '纯本地运行：数据不上传云端，隐私安全',
     'guide.donate': '赞赏作者',
     'guide.donateDesc': '如果觉得好用，欢迎打赏支持一下',
@@ -313,6 +315,7 @@ const translations: Record<Language, Record<string, string>> = {
     'guide.feature2': 'Advanced filters: Filter by file type, size range, and modification date',
     'guide.feature3': 'Search history & saved searches: Quick access to history, named saved searches',
     'guide.feature4': 'Global hotkey: Press Ctrl+Shift+F anywhere to open the search popup',
+    'guide.feature5': 'Language + Theme: zh-CN/English with 6 themes to choose from',
     'guide.feature6': 'Pure local: No cloud upload, complete privacy',
     'guide.donate': 'Donate',
     'guide.donateDesc': 'If you find this tool useful, your support is appreciated',

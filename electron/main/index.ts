@@ -4,7 +4,6 @@ import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import log from 'electron-log/main'
 import { initDatabase, closeDatabase } from './database'
 import { registerIpcHandlers } from './ipc'
-import { startScheduler, stopScheduler } from './scheduler'
 import { startUpdater, stopUpdater, handleManualCheck, handleDownloadUpdate, handleQuitAndInstall } from './updater'
 
 // Initialize logging
@@ -217,11 +216,6 @@ app.whenReady().then(async () => {
     if (floatingWindow) floatingWindow.hide()
   })
 
-  // Start the scheduled scan scheduler
-  const ts0 = Date.now()
-  startScheduler()
-  log.info(`Scheduler started in ${Date.now() - ts0}ms`)
-
   // File watcher disabled for performance (chokidar causes high CPU on large dirs)
   // setTimeout(() => {
   //   startFileWatcher().catch((err: Error) => log.error('File watcher init failed:', err))
@@ -276,7 +270,6 @@ app.on('before-quit', () => {
   log.info('Application quitting...')
   ;(app as any).isQuitting = true
   globalShortcut.unregisterAll()
-  stopScheduler()
   stopUpdater()
   closeDatabase()
 })

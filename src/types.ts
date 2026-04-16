@@ -20,9 +20,6 @@ export interface ScannedFolder {
   last_full_scan_at?: string | null
   file_count?: number
   total_size?: number
-  schedule_enabled?: number
-  schedule_day?: string | null
-  schedule_time?: string | null
 }
 
 export interface ScanProgress {

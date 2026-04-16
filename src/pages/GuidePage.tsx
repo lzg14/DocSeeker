@@ -20,6 +20,7 @@ function GuidePage(): JSX.Element {
               <li>{t('guide.feature2')}</li>
               <li>{t('guide.feature3')}</li>
               <li>{t('guide.feature4')}</li>
+              <li>{t('guide.feature5')}</li>
               <li>{t('guide.feature6')}</li>
             </ul>
           </div>
