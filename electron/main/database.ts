@@ -75,6 +75,13 @@ export async function initDatabase(): Promise<void> {
     )
   `)
 
+  // Rebuild FTS index only if it's empty (avoid expensive rebuild on every startup)
+  const ftsCount = (db.prepare('SELECT COUNT(*) as count FROM files_fts').get() as { count: number }).count
+  const tableCount = (db.prepare('SELECT COUNT(*) as count FROM files').get() as { count: number }).count
+  if (tableCount > 0 && ftsCount === 0) {
+    db.exec("INSERT INTO files_fts(files_fts) VALUES('rebuild')")
+  }
+
   // Create search_history table
   db.exec(`
     CREATE TABLE IF NOT EXISTS search_history (
@@ -120,9 +127,6 @@ export async function initDatabase(): Promise<void> {
       VALUES (new.id, new.name, new.content, new.file_type);
     END
   `)
-
-  // Rebuild FTS index to ensure existing data is indexed
-  db.exec("INSERT INTO files_fts(files_fts) VALUES('rebuild')")
 
   log.info('Database tables created/verified')
 }
