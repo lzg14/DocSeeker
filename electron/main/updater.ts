@@ -4,6 +4,8 @@ import log from 'electron-log/main'
 
 // Check dates: 5th and 15th of each month
 const CHECK_DAYS = [5, 15]
+const STARTUP_CHECK_DELAY_MS = 5 * 1000
+const CHECK_INTERVAL_MS = 60 * 60 * 1000 // 1 hour
 
 let checkInterval: NodeJS.Timeout | null = null
 let mainWindowRef: BrowserWindow | null = null
@@ -73,7 +75,8 @@ export function startUpdater(win: BrowserWindow): void {
   autoUpdater.on('update-downloaded', (info) => {
     log.info(`autoUpdater: update-downloaded v${info.version}`)
     notifyRenderer('downloaded', { version: info.version })
-    dialog.showMessageBox(mainWindowRef!, {
+    if (!mainWindowRef || mainWindowRef.isDestroyed()) return
+    dialog.showMessageBox(mainWindowRef, {
       type: 'info',
       title: '发现新版本',
       message: `DocSeeker v${info.version} 已下载完成，是否现在重启安装？`,
@@ -92,11 +95,11 @@ export function startUpdater(win: BrowserWindow): void {
 
   // Initial check on startup (if today is a check day)
   if (shouldCheckToday()) {
-    setTimeout(() => checkForUpdates(false), 5000)
+    setTimeout(() => checkForUpdates(false), STARTUP_CHECK_DELAY_MS)
   }
 
   // Check every hour; the date gate is inside scheduledCheck()
-  checkInterval = setInterval(scheduledCheck, 60 * 60 * 1000)
+  checkInterval = setInterval(scheduledCheck, CHECK_INTERVAL_MS)
   log.info('Update checker started (checks on the 5th and 15th of each month)')
 }
 
@@ -105,6 +108,7 @@ export function stopUpdater(): void {
     clearInterval(checkInterval)
     checkInterval = null
   }
+  mainWindowRef = null
   log.info('Update checker stopped')
 }
 
