@@ -50,6 +50,11 @@
     },
     "portable": {
       "artifactName": "${productName}-${version}-portable.${ext}"
+    },
+    "publish": {
+      "provider": "github",
+      "owner": "lzg14",
+      "repo": "DocSeeker"
     }
   },
   "dependencies": {
