@@ -4,7 +4,7 @@ import { useLanguage } from '../context/LanguageContext'
 import { formatSize } from '../utils/format'
 
 function FloatingSearch(): JSX.Element {
-  const { t } = useLanguage()
+  const { t, theme } = useLanguage()
   const [query, setQuery] = useState('')
   const [results, setResults] = useState<FileRecord[]>([])
   const [isSearching, setIsSearching] = useState(false)
@@ -16,6 +16,13 @@ function FloatingSearch(): JSX.Element {
   useEffect(() => {
     inputRef.current?.focus()
   }, [])
+
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', theme)
+    return () => {
+      document.documentElement.removeAttribute('data-theme')
+    }
+  }, [theme])
 
   const search = async (q: string) => {
     if (!q.trim()) { setResults([]); setSearched(false); return }
