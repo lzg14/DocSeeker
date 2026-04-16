@@ -365,19 +365,47 @@ textarea:focus:not(:focus-visible) {
 
 
 /* Empty State */
-.empty-state,
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 60px 20px;
+  color: var(--text-muted);
+  gap: 12px;
+  text-align: center;
+}
+
+.empty-state svg {
+  color: var(--border);
+  flex-shrink: 0;
+  opacity: 0.6;
+}
+
+.empty-state p {
+  font-size: 14px;
+  margin: 0;
+  color: var(--text-secondary);
+}
+
+.empty-state .empty-state-hint {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
 .loading {
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   padding: 60px 20px;
-  color: #888;
+  color: var(--text-muted);
+  gap: 12px;
 }
 
-.empty-state p,
 .loading p {
-  margin-bottom: 8px;
+  margin: 0;
+  color: var(--text-secondary);
 }
 
 
@@ -2195,4 +2223,19 @@ button, input, select {
     opacity: 1;
     transform: scale(1) translateY(0);
   }
+}
+
+/* === Spinner === */
+.spinner {
+  width: 20px;
+  height: 20px;
+  border: 2px solid var(--border);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin 600ms linear infinite;
+  flex-shrink: 0;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
 }
