@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useLanguage } from '../context/LanguageContext'
+import packageJson from '../../package.json'
 
 function GuidePage(): JSX.Element {
   const { t } = useLanguage()
@@ -35,6 +36,9 @@ function GuidePage(): JSX.Element {
             <p>{t('guide.donateDesc')}</p>
             <p style={{ marginTop: '8px' }}>
               <strong>{t('guide.devName')}:</strong> Zhigang Li &lt;lzg14@qq.com&gt;
+            </p>
+            <p style={{ marginTop: '8px' }}>
+              <strong>{t('guide.version')}:</strong> {packageJson.version}
             </p>
             <p style={{ marginTop: '8px' }}>
               <strong>{t('guide.github')}:</strong>{' '}
