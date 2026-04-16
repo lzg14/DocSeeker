@@ -13,6 +13,9 @@ out/
 *.log
 bash.exe.stackdump
 
+# Crash dumps
+*.dmp
+
 # Config files (local only)
 .env
 .env.local
@@ -21,6 +24,10 @@ bash.exe.stackdump
 # OS files
 .DS_Store
 Thumbs.db
+
+# Local data
+*.db
+*.sqlite
 
 # TypeScript
 *.tsbuildinfo
