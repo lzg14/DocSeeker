@@ -3,8 +3,12 @@
   "version": "1.0.0",
   "description": "Personal document search tool with full-text search and scheduled scanning",
   "main": "./out/main/index.js",
-  "author": "DocSeeker",
+  "author": "lzg14",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/lzg14/DocSeeker"
+  },
   "scripts": {
     "dev": "electron-vite dev",
     "build": "electron-vite build",
