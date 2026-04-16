@@ -206,7 +206,7 @@ async function extractTextFromChm(filePath: string): Promise<string> {
     const texts: string[] = []
 
     // CHM contains HTML files - extract text from all .html/.htm files
-    for (const [name, file] of Object.entries(zip.files)) {
+    for (const [name, file] of Object.entries(zip.files) as [string, { dir: boolean, async: (type: string) => Promise<string> }][]) {
       if (file.dir) continue
       if (!name.endsWith('.html') && !name.endsWith('.htm')) continue
       if (name.includes('/') && !name.endsWith('.html') && !name.endsWith('.htm')) continue
@@ -334,7 +334,7 @@ async function extractTextFromMbox(filePath: string): Promise<string> {
 async function extractTextFromEpub(filePath: string): Promise<string> {
   try {
     const JSZip = require('jszip')
-    const data = await fs.readFile(filePath)
+    const data = fs.readFileSync(filePath)
     const zip = await JSZip.loadAsync(data)
     const texts: string[] = []
 
@@ -398,7 +398,7 @@ async function extractTextFromZip(filePath: string, depth = 0): Promise<string> 
     const zip = await JSZip.loadAsync(data)
     const texts: string[] = []
 
-    for (const [name, file] of Object.entries(zip.files)) {
+    for (const [name, file] of Object.entries(zip.files) as [string, { dir: boolean, async: (type: string) => Promise<string> }][]) {
       if (file.dir) continue
 
       // Skip hidden and system files
