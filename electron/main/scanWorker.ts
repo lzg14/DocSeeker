@@ -4,6 +4,42 @@ import path from 'path'
 import crypto from 'crypto'
 import log from 'electron-log/main'
 
+// ============ 常量定义 ============
+// 文件大小限制
+const MAX_FILE_SIZE = 100 * 1024 * 1024  // 100MB - 超过则跳过内容提取
+const MAX_ZIP_INTERNAL_SIZE = 50 * 1024 * 1024  // 50MB - ZIP 内单个文件超过则跳过
+// 超时设置
+const TIMEOUT_MS = 15000  // 统一 15 秒超时
+// ZIP 文件头魔数
+const ZIP_MAGIC = Buffer.from([0x50, 0x4b, 0x03, 0x04])  // "PK\x03\x04"
+
+// ============ 工具函数 ============
+
+// 检测文件是否为有效 ZIP（通过头部魔数）
+function isValidZip(buffer: Buffer): boolean {
+  return buffer.length >= 4 && buffer.slice(0, 4).equals(ZIP_MAGIC)
+}
+
+// 统一超时保护
+function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
+  return Promise.race([
+    promise,
+    new Promise<T>((_, reject) =>
+      setTimeout(() => reject(new Error(`Timeout after ${ms}ms`)), ms)
+    )
+  ])
+}
+
+// 安全的格式化时间
+function formatSize(bytes: number): string {
+  if (bytes < 1024) return `${bytes}B`
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)}KB`
+  if (bytes < 1024 * 1024 * 1024) return `${(bytes / 1024 / 1024).toFixed(1)}MB`
+  return `${(bytes / 1024 / 1024 / 1024).toFixed(1)}GB`
+}
+
+// ============ 扩展名集合 ============
+
 // Supported file extensions
 const SUPPORTED_EXTENSIONS = new Set([
   '.txt', '.md', '.json', '.xml', '.csv',
@@ -54,49 +90,114 @@ interface ScanWorkerData {
 }
 
 // Text extraction functions
-async function extractTextFromDocx(filePath: string): Promise<string> {
+async function extractTextFromDocx(filePath: string, fileSize?: number): Promise<string> {
+  // 大小检查
+  if (fileSize !== undefined && fileSize > MAX_FILE_SIZE) {
+    log.warn(`[DOCX] Skip large file (${formatSize(fileSize)}): ${filePath}`)
+    return ''
+  }
+  const startTime = Date.now()
   try {
     const mammoth = require('mammoth')
-    const result = await mammoth.extractRawText({ path: filePath })
+    const extractPromise = mammoth.extractRawText({ path: filePath })
+    const result = await withTimeout(extractPromise, TIMEOUT_MS)
+    log.info(`[EXTRACT] DOCX done: ${Date.now() - startTime}ms`)
     return result.value || ''
   } catch (error) {
+    log.warn(`[WARN] DOCX failed: ${error.message}`)
     return ''
   }
 }
 
-async function extractTextFromXlsx(filePath: string): Promise<string> {
+async function extractTextFromXlsx(filePath: string, fileSize?: number): Promise<string> {
+  // 大小检查
+  if (fileSize !== undefined && fileSize > MAX_FILE_SIZE) {
+    log.warn(`[XLSX] Skip large file (${formatSize(fileSize)}): ${filePath}`)
+    return ''
+  }
+  // ZIP 头部检测
+  try {
+    const header = await fs.readFile(filePath, { length: 4 })
+    if (!isValidZip(header)) {
+      log.warn(`[XLSX] Skip invalid ZIP header: ${filePath}`)
+      return ''
+    }
+  } catch (e) {
+    log.warn(`[WARN] XLSX header check failed: ${filePath}`)
+    return ''
+  }
+
+  const startTime = Date.now()
   try {
     const XLSX = require('xlsx')
-    const workbook = XLSX.readFile(filePath)
+
+    // Create a promise that wraps the synchronous readFile
+    const readPromise = new Promise<any>((resolve, reject) => {
+      try {
+        const workbook = XLSX.readFile(filePath)
+        resolve(workbook)
+      } catch (err) {
+        reject(err)
+      }
+    })
+
+    const workbook = await withTimeout(readPromise, TIMEOUT_MS)
+    log.info(`[EXTRACT] XLSX done: ${Date.now() - startTime}ms, ${workbook.SheetNames.length} sheets`)
+
     let text = ''
     for (const sheetName of workbook.SheetNames) {
       const sheet = workbook.Sheets[sheetName]
       text += XLSX.utils.sheet_to_csv(sheet) + '\n'
     }
+
     return text
   } catch (error) {
+    log.warn(`[WARN] XLSX failed: ${error.message}`)
     return ''
   }
 }
 
-async function extractTextFromPdf(filePath: string): Promise<string> {
+async function extractTextFromPdf(filePath: string, fileSize?: number): Promise<string> {
+  // 大小检查 - PDF 限制 50MB
+  if (fileSize !== undefined && fileSize > 50 * 1024 * 1024) {
+    log.warn(`[PDF] Skip large file (${formatSize(fileSize)}): ${filePath}`)
+    return ''
+  }
+  const startTime = Date.now()
   try {
     const pdfParse = require('pdf-parse')
     const dataBuffer = await fs.readFile(filePath)
-    const data = await pdfParse(dataBuffer)
+    const parsePromise = pdfParse(dataBuffer)
+    const data = await withTimeout(parsePromise, TIMEOUT_MS)
+    log.info(`[EXTRACT] PDF done: ${Date.now() - startTime}ms`)
     return data.text || ''
   } catch (error) {
+    log.warn(`[WARN] PDF failed: ${error.message}`)
     return ''
   }
 }
 
-async function extractTextFromPptx(filePath: string): Promise<string> {
+async function extractTextFromPptx(filePath: string, fileSize?: number): Promise<string> {
+  // 大小检查
+  if (fileSize !== undefined && fileSize > MAX_FILE_SIZE) {
+    log.warn(`[PPTX] Skip large file (${formatSize(fileSize)}): ${filePath}`)
+    return ''
+  }
+  const startTime = Date.now()
   try {
     const JSZip = require('jszip')
     const data = await fs.readFile(filePath)
-    const zip = await JSZip.loadAsync(data)
-    let text = ''
 
+    // ZIP 头部检测
+    if (!isValidZip(data)) {
+      log.warn(`[PPTX] Skip invalid ZIP header: ${filePath}`)
+      return ''
+    }
+
+    const zip = await withTimeout(JSZip.loadAsync(data), TIMEOUT_MS)
+    log.info(`[EXTRACT] PPTX done: ${Date.now() - startTime}ms, ${Object.keys(zip.files).length} files`)
+
+    let text = ''
     const slideFiles = Object.keys(zip.files).filter((name: string) =>
       name.match(/^ppt\/slides\/slide\d+\.xml$/)
     )
@@ -113,6 +214,7 @@ async function extractTextFromPptx(filePath: string): Promise<string> {
 
     return text
   } catch (error) {
+    log.warn(`[WARN] PPTX failed: ${error.message}`)
     return ''
   }
 }
@@ -138,26 +240,47 @@ async function extractTextFromRtf(filePath: string): Promise<string> {
 }
 
 // Extract plain text from ODF files (ODT, ODS, ODP)
-async function extractTextFromOdf(filePath: string): Promise<string> {
+async function extractTextFromOdf(filePath: string, fileSize?: number): Promise<string> {
+  // 大小检查
+  if (fileSize !== undefined && fileSize > MAX_FILE_SIZE) {
+    log.warn(`[ODF] Skip large file (${formatSize(fileSize)}): ${filePath}`)
+    return ''
+  }
   try {
     const JSZip = require('jszip')
     const data = await fs.readFile(filePath)
-    const zip = await JSZip.loadAsync(data)
+    // ZIP 头部检测
+    if (!isValidZip(data)) {
+      log.warn(`[ODF] Skip invalid ZIP header: ${filePath}`)
+      return ''
+    }
+    const zip = await withTimeout(JSZip.loadAsync(data), TIMEOUT_MS)
     const contentXml = await zip.file('content.xml')?.async('string')
     if (!contentXml) return ''
     const textMatches = contentXml.match(/<text:[pwhs][^>]*>([^<]*)<\/text:[pwhs]>/g) || []
     return textMatches.map((m: string) => m.replace(/<[^>]+>/g, '')).filter((t: string) => t.trim().length > 0).join('\n')
   } catch (error) {
+    log.warn(`[WARN] ODF failed: ${error.message}`)
     return ''
   }
 }
 
 // Extract plain text from CHM files using jszip
-async function extractTextFromChm(filePath: string): Promise<string> {
+async function extractTextFromChm(filePath: string, fileSize?: number): Promise<string> {
+  // 大小检查
+  if (fileSize !== undefined && fileSize > MAX_FILE_SIZE) {
+    log.warn(`[CHM] Skip large file (${formatSize(fileSize)}): ${filePath}`)
+    return ''
+  }
   try {
     const JSZip = require('jszip')
     const data = await fs.readFile(filePath)
-    const zip = await JSZip.loadAsync(data)
+    // ZIP 头部检测
+    if (!isValidZip(data)) {
+      log.warn(`[CHM] Skip invalid ZIP header: ${filePath}`)
+      return ''
+    }
+    const zip = await withTimeout(JSZip.loadAsync(data), TIMEOUT_MS)
     const texts: string[] = []
 
     for (const [name, file] of Object.entries(zip.files) as [string, { dir: boolean, async: (type: string) => Promise<string> }][]) {
@@ -181,6 +304,7 @@ async function extractTextFromChm(filePath: string): Promise<string> {
 
     return texts.join('\n\n')
   } catch (error) {
+    log.warn(`[WARN] CHM failed: ${error.message}`)
     return ''
   }
 }
@@ -245,11 +369,21 @@ async function extractTextFromMbox(filePath: string): Promise<string> {
 }
 
 // Extract text from EPUB files (ZIP containing XML: content.opf + XHTML chapters)
-async function extractTextFromEpub(filePath: string): Promise<string> {
+async function extractTextFromEpub(filePath: string, fileSize?: number): Promise<string> {
+  // 大小检查
+  if (fileSize !== undefined && fileSize > MAX_FILE_SIZE) {
+    log.warn(`[EPUB] Skip large file (${formatSize(fileSize)}): ${filePath}`)
+    return ''
+  }
   try {
     const JSZip = require('jszip')
     const data = await fs.readFile(filePath)
-    const zip = await JSZip.loadAsync(data)
+    // ZIP 头部检测
+    if (!isValidZip(data)) {
+      log.warn(`[EPUB] Skip invalid ZIP header: ${filePath}`)
+      return ''
+    }
+    const zip = await withTimeout(JSZip.loadAsync(data), TIMEOUT_MS)
     const texts: string[] = []
 
     // Find content.opf via META-INF/container.xml
@@ -296,7 +430,7 @@ async function extractTextFromEpub(filePath: string): Promise<string> {
 
     return texts.join('\n\n')
   } catch (error) {
-    log.warn(`Failed to extract text from epub: ${filePath}`, error)
+    log.warn(`[WARN] EPUB failed: ${error.message}`)
     return ''
   }
 }
@@ -305,10 +439,18 @@ const MAX_ZIP_DEPTH = 3
 
 async function extractTextFromZip(filePath: string, depth = 0): Promise<string> {
   if (depth >= MAX_ZIP_DEPTH) return ''
+  const startTime = Date.now()
   try {
     const JSZip = require('jszip')
     const data = await fs.readFile(filePath)
-    const zip = await JSZip.loadAsync(data)
+
+    // ZIP 头部检测
+    if (!isValidZip(data)) {
+      log.warn(`[ZIP] Skip invalid ZIP header: ${filePath}`)
+      return ''
+    }
+
+    const zip = await withTimeout(JSZip.loadAsync(data), TIMEOUT_MS)
     const texts: string[] = []
 
     for (const [name, file] of Object.entries(zip.files) as [string, { dir: boolean, async: (type: string) => Promise<string> }][]) {
@@ -318,72 +460,77 @@ async function extractTextFromZip(filePath: string, depth = 0): Promise<string> 
       const ext = path.extname(baseName).toLowerCase()
 
       if (ext === '.zip') {
-        const nestedContent = await file.async('string')
-        const tmpPath = filePath + '.nested.' + baseName
-        await fs.writeFile(tmpPath, Buffer.from(nestedContent, 'binary'))
+        // 递归处理嵌套 ZIP
         try {
-          const nestedText = await extractTextFromZip(tmpPath, depth + 1)
-          if (nestedText.trim()) texts.push(`[${baseName}]\n${nestedText}`)
-        } finally {
-          try { await fs.unlink(tmpPath) } catch {}
+          const nestedContent = await file.async('string')
+          const tmpPath = filePath + '.nested.' + baseName
+          await fs.writeFile(tmpPath, Buffer.from(nestedContent, 'binary'))
+          try {
+            const nestedText = await extractTextFromZip(tmpPath, depth + 1)
+            if (nestedText.trim()) texts.push(`[${baseName}]\n${nestedText}`)
+          } finally {
+            try { await fs.unlink(tmpPath) } catch {}
+          }
+        } catch (e) {
+          // 嵌套 ZIP 处理失败，跳过
         }
         continue
       }
 
       if (!ARCHIVE_NESTED_EXTENSIONS.has(ext)) continue
 
-      const fileContent = await file.async('string')
+      // Skip Office files inside ZIP - they often get corrupted during transfer
+      if (ext === '.docx' || ext === '.xlsx' || ext === '.pptx' || ext === '.odt' || ext === '.ods' || ext === '.odp') {
+        continue
+      }
 
-      if (ext === '.eml') {
-        const subjectMatch = fileContent.match(/^Subject:\s*(.*)$/mi)
-        let snippet = subjectMatch ? `Subject: ${subjectMatch[1].trim()}\n` : ''
-        const bodyStart = fileContent.search(/\r?\n\r?\n/)
-        if (bodyStart >= 0) {
-          snippet += fileContent.slice(bodyStart).replace(/<[^>]+>/g, ' ').replace(/\s{2,}/g, ' ').trim()
+      try {
+        const fileContent = await file.async('string')
+        if (ext === '.eml') {
+          const subjectMatch = fileContent.match(/^Subject:\s*(.*)$/mi)
+          let snippet = subjectMatch ? `Subject: ${subjectMatch[1].trim()}\n` : ''
+          const bodyStart = fileContent.search(/\r?\n\r?\n/)
+          if (bodyStart >= 0) {
+            snippet += fileContent.slice(bodyStart).replace(/<[^>]+>/g, ' ').replace(/\s{2,}/g, ' ').trim()
+          }
+          texts.push(`[${baseName}]\n${snippet}`)
+        } else {
+          const innerText = fileContent.replace(/<[^>]+>/g, ' ').replace(/\s{2,}/g, ' ').trim()
+          if (innerText) texts.push(`[${baseName}]\n${innerText}`)
         }
-        texts.push(`[${baseName}]\n${snippet}`)
-      } else if (ext === '.docx' || ext === '.xlsx' || ext === '.pptx' || ext === '.odt' || ext === '.ods' || ext === '.odp') {
-        const tmpPath = filePath + '.tmp.' + baseName
-        await fs.writeFile(tmpPath, Buffer.from(fileContent, 'binary'))
-        try {
-          const innerExt = path.extname(baseName)
-          const innerText = await extractText(tmpPath, innerExt)
-          if (innerText.trim()) texts.push(`[${baseName}]\n${innerText}`)
-        } finally {
-          try { await fs.unlink(tmpPath) } catch {}
-        }
-      } else {
-        const innerText = fileContent.replace(/<[^>]+>/g, ' ').replace(/\s{2,}/g, ' ').trim()
-        if (innerText) texts.push(`[${baseName}]\n${innerText}`)
+      } catch (e) {
+        // 单个文件读取失败，跳过
       }
     }
 
+    log.info(`[EXTRACT] ZIP done: ${Date.now() - startTime}ms, ${texts.length} texts`)
     return texts.join('\n---\n')
   } catch (error) {
+    log.warn(`[WARN] ZIP failed: ${error.message}`)
     return ''
   }
 }
 
-async function extractText(filePath: string, ext: string): Promise<string> {
+async function extractText(filePath: string, ext: string, fileSize?: number): Promise<string> {
   const lowerExt = ext.toLowerCase()
 
   switch (lowerExt) {
     case '.docx':
-      return extractTextFromDocx(filePath)
+      return extractTextFromDocx(filePath, fileSize)
     case '.xlsx':
     case '.xls':
-      return extractTextFromXlsx(filePath)
+      return extractTextFromXlsx(filePath, fileSize)
     case '.pptx':
     case '.ppt':
-      return extractTextFromPptx(filePath)
+      return extractTextFromPptx(filePath, fileSize)
     case '.pdf':
-      return extractTextFromPdf(filePath)
+      return extractTextFromPdf(filePath, fileSize)
     case '.rtf':
       return extractTextFromRtf(filePath)
     case '.odt':
     case '.ods':
     case '.odp':
-      return extractTextFromOdf(filePath)
+      return extractTextFromOdf(filePath, fileSize)
     case '.chm':
       return extractTextFromChm(filePath)
     case '.eml':
@@ -393,12 +540,12 @@ async function extractText(filePath: string, ext: string): Promise<string> {
     case '.epub':
       return extractTextFromEpub(filePath)
     case '.wps':
-      return extractTextFromDocx(filePath)
+      return extractTextFromDocx(filePath, fileSize)
     case '.wpp':
     case '.dps':
-      return extractTextFromPptx(filePath)
+      return extractTextFromPptx(filePath, fileSize)
     case '.et':
-      return extractTextFromXlsx(filePath)
+      return extractTextFromXlsx(filePath, fileSize)
     case '.zip':
       return extractTextFromZip(filePath)
     case '.txt':
@@ -476,17 +623,18 @@ async function processFile(filePath: string): Promise<FileInfo | null> {
     }
 
     // Calculate hash for files < 100MB
-    if (stats.size > 0 && stats.size < 100 * 1024 * 1024) {
+    if (stats.size > 0 && stats.size < MAX_FILE_SIZE) {
       fileInfo.hash = await calculateHash(filePath)
     }
 
     // Extract text content
     if (SUPPORTED_EXTENSIONS.has(ext)) {
-      fileInfo.content = await extractText(filePath, ext)
+      fileInfo.content = await extractText(filePath, ext, stats.size)
     }
 
     return fileInfo
   } catch (error) {
+    log.warn(`[ERROR] Failed to process: ${error.message}`)
     return null
   }
 }
