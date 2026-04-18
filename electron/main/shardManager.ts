@@ -51,6 +51,7 @@ export interface SearchResult {
   updated_at?: string
   shardId?: number  // Which shard this result came from
   rank?: number     // BM25 rank for cross-shard sorting
+  match_type?: 'content' | 'filename'
 }
 
 export interface SearchOptions {
@@ -68,7 +69,7 @@ export interface FileRecord {
   hash: string | null
   file_type: string | null
   content: string | null
-  is_supported?: number
+  is_supported?: boolean
 }
 
 // ============ Constants ============
@@ -586,7 +587,8 @@ function searchShardDb(
       created_at: r.created_at as string | undefined,
       updated_at: r.updated_at as string | undefined,
       shardId,
-      rank: r.rank as number
+      rank: r.rank as number,
+      match_type: 'content'
     })
   }
 
@@ -635,6 +637,124 @@ export async function searchAllShards(
   merged.sort((a, b) => (a.rank ?? 0) - (b.rank ?? 0))
 
   return merged.slice(0, 200) // Limit to top 200 results
+}
+
+/**
+ * Search files by filename only using FTS.
+ * Reuses shard search infrastructure but scopes to name field only.
+ */
+export async function searchByFileName(
+  query: string,
+  options?: SearchOptions
+): Promise<SearchResult[]> {
+  await initShardManager()
+
+  if (!query.trim()) return []
+
+  const keywords = query.trim().split(/\s+/).filter(k => k.length > 0)
+  if (keywords.length === 0) return []
+
+  // Build filename-only FTS query (restrict to name column)
+  const ftsQuery = keywords.map(k => `"${k.replace(/"/g, '""')}"*`).join(' AND ')
+  const readyShards = getReadyShards()
+  if (readyShards.length === 0) return []
+
+  // Search each shard in parallel with name-only FTS query
+  const searchPromises = readyShards.map(shard => {
+    return (async () => {
+      try {
+        const db = new Database(shard.dbPath, { readonly: true })
+        db.pragma('journal_mode = WAL')
+        const results = searchShardDbNameOnly(db, ftsQuery, options, shard.id)
+        db.close()
+        return results
+      } catch (err) {
+        log.warn(`[shardManager] searchByFileName failed on shard ${shard.id}:`, err)
+        return []
+      }
+    })()
+  })
+
+  const resultsArrays = await Promise.all(searchPromises)
+  const merged = resultsArrays.flat()
+  merged.sort((a, b) => (a.rank ?? 0) - (b.rank ?? 0))
+
+  return merged.slice(0, 200)
+}
+
+/**
+ * Search a single shard database for filename matches only.
+ * Uses a separate FTS query that targets only the name column.
+ */
+function searchShardDbNameOnly(
+  db: Database,
+  ftsQuery: string,
+  options?: SearchOptions,
+  shardId?: number
+): SearchResult[] {
+  // For filename-only search: use name column restriction in FTS query
+  const nameFtsQuery = `name:${ftsQuery}`
+  const whereClauses: string[] = ['shard_files_fts MATCH ?']
+  const params: (string | number)[] = [nameFtsQuery]
+
+  if (options?.fileTypes && options.fileTypes.length > 0) {
+    const placeholders = options.fileTypes.map(() => '?').join(', ')
+    whereClauses.push(`f.file_type IN (${placeholders})`)
+    params.push(...options.fileTypes)
+  }
+
+  if (options?.sizeMin !== undefined && options.sizeMin > 0) {
+    whereClauses.push('f.size >= ?')
+    params.push(options.sizeMin)
+  }
+  if (options?.sizeMax !== undefined && options.sizeMax > 0) {
+    whereClauses.push('f.size <= ?')
+    params.push(options.sizeMax)
+  }
+  if (options?.dateFrom) {
+    whereClauses.push('f.updated_at >= ?')
+    params.push(options.dateFrom)
+  }
+  if (options?.dateTo) {
+    whereClauses.push('f.updated_at <= ?')
+    params.push(options.dateTo)
+  }
+
+  // Only search supported files
+  whereClauses.push('f.is_supported = 1')
+
+  const whereClause = whereClauses.join(' AND ')
+
+  const stmt = db.prepare(`
+    SELECT f.*, bm25(shard_files_fts) as rank
+    FROM shard_files_fts fts
+    JOIN shard_files f ON fts.rowid = f.id
+    WHERE ${whereClause}
+    ORDER BY rank
+  `)
+
+  stmt.bind(params)
+
+  const results: SearchResult[] = []
+  for (const row of stmt.iterate() as IterableIterator<Record<string, unknown>>) {
+    const r = row as Record<string, unknown>
+    results.push({
+      id: r.id as number,
+      path: r.path as string,
+      name: r.name as string,
+      size: r.size as number,
+      hash: r.hash as string | null,
+      file_type: r.file_type as string | null,
+      content: r.content as string | null,
+      created_at: r.created_at as string | undefined,
+      updated_at: r.updated_at as string | undefined,
+      shardId,
+      rank: r.rank as number,
+      match_type: 'filename'
+    })
+  }
+
+  return results
 }
 
 /**

@@ -62,7 +62,11 @@ export function closeDatabase(): void {
 
 // ============ Re-export types and functions from meta ============
 
-export type { ScannedFolder, SavedSearch, SearchHistoryEntry, SearchOptions }
+export type { ScannedFolder, SavedSearch, SearchHistoryEntry, SearchOptions, SearchResult }
+
+export {
+  searchByFileName
+} from './shardManager'
 
 // Note: scanned_folders operations are now in meta.ts
 // These are re-exported here for backward compatibility with ipc.ts
@@ -97,7 +101,8 @@ export interface FileRecord {
   content: string | null
   created_at?: string
   updated_at?: string
-  is_supported?: number
+  is_supported?: boolean
+  match_type?: 'content' | 'filename' | 'both'
 }
 
 export function insertFile(file: FileRecord): number {
@@ -158,7 +163,9 @@ export async function searchFilesAsync(query: string): Promise<FileRecord[]> {
     file_type: r.file_type,
     content: r.content,
     created_at: r.created_at,
-    updated_at: r.updated_at
+    updated_at: r.updated_at,
+    is_supported: r.is_supported === 1 ? true : r.is_supported === 0 ? false : undefined,
+    match_type: r.match_type
   }))
 }
 
@@ -177,7 +184,9 @@ export async function searchFilesAdvancedAsync(query: string, options?: SearchOp
     file_type: r.file_type,
     content: r.content,
     created_at: r.created_at,
-    updated_at: r.updated_at
+    updated_at: r.updated_at,
+    is_supported: r.is_supported === 1 ? true : r.is_supported === 0 ? false : undefined,
+    match_type: r.match_type
   }))
 }
 

@@ -30,6 +30,7 @@ import {
   openNextShard,
   insertFileBatch,
   searchAllShards,
+  searchByFileName as shardSearchByFileName,
   getSearchSnippets as shardGetSearchSnippets,
   getShardInfo,
   getTotalFileCount,
@@ -82,10 +83,38 @@ export function registerIpcHandlers(): void {
         file_type: r.file_type,
         content: r.content,
         created_at: r.created_at,
-        updated_at: r.updated_at
+        updated_at: r.updated_at,
+        is_supported: r.is_supported === 1 ? true : r.is_supported === 0 ? false : undefined,
+        match_type: r.match_type ?? 'content'
       }))
     } catch (err) {
       log.error('[IPC] search-files error:', err)
+      return []
+    }
+  })
+
+  // Search by filename only
+  ipcMain.handle('search-by-filename', async (_, query: string, options?: SearchOptions): Promise<FileRecord[]> => {
+    if (query.trim()) {
+      addSearchHistory(query)
+    }
+    try {
+      const results = await shardSearchByFileName(query, options)
+      return results.map(r => ({
+        id: r.id,
+        path: r.path,
+        name: r.name,
+        size: r.size,
+        hash: r.hash,
+        file_type: r.file_type,
+        content: r.content,
+        created_at: r.created_at,
+        updated_at: r.updated_at,
+        is_supported: r.is_supported === 1 ? true : r.is_supported === 0 ? false : undefined,
+        match_type: r.match_type ?? 'filename'
+      }))
+    } catch (err) {
+      log.error('[IPC] search-by-filename error:', err)
       return []
     }
   })
@@ -106,7 +135,9 @@ export function registerIpcHandlers(): void {
         file_type: r.file_type,
         content: r.content,
         created_at: r.created_at,
-        updated_at: r.updated_at
+        updated_at: r.updated_at,
+        is_supported: r.is_supported === 1 ? true : r.is_supported === 0 ? false : undefined,
+        match_type: r.match_type ?? 'content'
       }))
     } catch (err) {
       log.error('[IPC] search-files-advanced error:', err)
