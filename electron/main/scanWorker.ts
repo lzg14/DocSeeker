@@ -604,7 +604,7 @@ async function calculateHash(filePath: string): Promise<string | null> {
   }
 }
 
-// Recursively scan directory
+// Recursively scan directory - collects ALL files regardless of extension
 async function scanDirectory(dirPath: string): Promise<string[]> {
   const files: string[] = []
 
@@ -620,10 +620,7 @@ async function scanDirectory(dirPath: string): Promise<string[]> {
             await scan(fullPath)
           }
         } else if (entry.isFile()) {
-          const ext = path.extname(entry.name).toLowerCase()
-          if (SUPPORTED_EXTENSIONS.has(ext)) {
-            files.push(fullPath)
-          }
+          files.push(fullPath)
         }
       }
     } catch (error) {
@@ -635,12 +632,13 @@ async function scanDirectory(dirPath: string): Promise<string[]> {
   return files
 }
 
-// Process a single file
+// Process a single file - always returns FileInfo for all files
 async function processFile(filePath: string): Promise<FileInfo | null> {
   try {
     const stats = await fs.stat(filePath)
     const name = path.basename(filePath)
     const ext = path.extname(name).toLowerCase()
+    const isSupported = SUPPORTED_EXTENSIONS.has(ext)
     const fileType = getFileType(ext)
 
     const fileInfo: FileInfo = {
@@ -650,7 +648,7 @@ async function processFile(filePath: string): Promise<FileInfo | null> {
       hash: null,
       fileType,
       content: null,
-      is_supported: 1  // File passed extension check to reach this point; 1 = searchable
+      is_supported: isSupported ? 1 : 0
     }
 
     // Calculate hash for files < 100MB
@@ -658,14 +656,14 @@ async function processFile(filePath: string): Promise<FileInfo | null> {
       fileInfo.hash = await calculateHash(filePath)
     }
 
-    // Extract text content
-    if (SUPPORTED_EXTENSIONS.has(ext)) {
+    // Extract text content only for supported file types
+    if (isSupported) {
       fileInfo.content = await extractText(filePath, ext, stats.size)
     }
 
     return fileInfo
   } catch (error) {
-    log.warn(`[ERROR] Failed to process: ${error.message}`)
+    log.warn(`[WARN] Failed to process file (stat error): ${filePath} - ${error.message}`)
     return null
   }
 }
@@ -685,7 +683,7 @@ function getFileType(ext: string): string {
     '.mbox': 'email', '.eml': 'email',
     '.wps': 'docx', '.wpp': 'pptx', '.et': 'xlsx', '.dps': 'pptx'
   }
-  return map[ext] || 'unknown'
+  return map[ext] ?? 'unsupported'
 }
 
 // Main scan function
