@@ -186,8 +186,9 @@ export function detectMachineProfile(): MachineProfile {
  * - parallelWorkers: min(cpuCores - 1, 8)
  */
 export function computeShardConfig(profile: MachineProfile): ShardConfig {
-  // Shard size limit: ensure it can be loaded within 2 seconds
+  // Shard size limit: ensure it can be loaded within 2 seconds, cap at 2000MB
   const maxSizeMB = Math.max(50, Math.min(profile.diskReadSpeedMBps * 2, 2000))
+  log.info(`[ShardManager] computeShardConfig: speed=${profile.diskReadSpeedMBps} MB/s → maxSizeMB=${maxSizeMB}`)
 
   // Parallel workers: leave 1 core for main thread, cap at 8
   const parallelWorkers = Math.min(Math.max(profile.cpuCores - 1, 1), 8)
@@ -224,8 +225,12 @@ function loadCachedProfile(): MachineProfile | null {
     if (cached && typeof cached.cpuCores === 'number' && typeof cached.diskReadSpeedMBps === 'number') {
       log.info(`[ShardManager] Loaded cached profile: ${cached.cpuCores} cores, ${cached.diskReadSpeedMBps} MB/s`)
       return { cpuCores: cached.cpuCores, diskReadSpeedMBps: cached.diskReadSpeedMBps }
+    } else {
+      log.info(`[ShardManager] Profile cache not found or invalid (cached=${JSON.stringify(cached)}), running speed test`)
     }
-  } catch {}
+  } catch (e) {
+    log.warn('[ShardManager] loadCachedProfile error:', e)
+  }
   return null
 }
 
@@ -251,8 +256,12 @@ function loadCachedConfig(): ShardConfig | null {
     if (cached && typeof cached.maxSizeMB === 'number' && typeof cached.parallelWorkers === 'number') {
       log.info(`[ShardManager] Loaded cached config: maxSize=${cached.maxSizeMB}MB, parallelWorkers=${cached.parallelWorkers}`)
       return { maxSizeMB: cached.maxSizeMB, parallelWorkers: cached.parallelWorkers }
+    } else {
+      log.info(`[ShardManager] Config cache not found or invalid (cached=${JSON.stringify(cached)})`)
     }
-  } catch {}
+  } catch (e) {
+    log.warn('[ShardManager] loadCachedConfig error:', e)
+  }
   return null
 }
 
@@ -456,7 +465,7 @@ function getCurrentShard(): ShardInfo | undefined {
 
 function isShardFull(shard: ShardInfo): boolean {
   if (!config) return false
-  const maxBytes = config.maxSizeMB * 1024 * 1024
+  const maxBytes = Math.min(config.maxSizeMB, 2000) * 1024 * 1024
   return shard.currentSizeBytes >= maxBytes
 }
 

@@ -258,6 +258,9 @@ export function registerIpcHandlers(): void {
   ipcMain.handle('incremental-scan', async (event, folderPath: string): Promise<{ success: boolean; filesProcessed: number; skipped: number; errors: string[] }> => {
     log.info(`IPC: incremental-scan called for ${folderPath}`)
 
+    const folder = getScannedFolderByPath(folderPath)
+    const lastScanAt = folder?.last_scan_at ?? folder?.last_full_scan_at ?? undefined
+
     return new Promise((resolve) => {
       const workerPath = join(__dirname, 'scanWorker.js')
       const scanSettings = getScanSettings()
@@ -267,6 +270,7 @@ export function registerIpcHandlers(): void {
           workerData: {
             dirPath: folderPath,
             incremental: true,
+            lastScanAt,
             settings: {
               includeHidden: scanSettings.includeHidden,
               includeSystem: scanSettings.includeSystem
@@ -276,6 +280,7 @@ export function registerIpcHandlers(): void {
 
         let filesProcessed = 0
         let skipped = 0
+        let totalSize = 0
         const errors: string[] = []
         let shardId = -1
 
@@ -305,6 +310,20 @@ export function registerIpcHandlers(): void {
 
                   const result = await insertFileBatch(shardId, records)
                   filesProcessed += result.fileCount
+
+                  // Track total size of processed files for metadata update
+                  totalSize += records.reduce((sum, r) => sum + (r.size || 0), 0)
+
+                  // Check if current shard is full; open next shard if so
+                  const shardInfo = getShardInfo().find(s => s.id === shardId)
+                  const shardConfig = getShardConfigInfo()
+                  if (shardInfo && shardConfig) {
+                    const maxBytes = Math.min(shardConfig.maxSizeMB, 2000) * 1024 * 1024
+                    if (shardInfo.currentSizeBytes >= maxBytes) {
+                      const nextShard = await openNextShard()
+                      currentShardId = nextShard?.id ?? -1
+                    }
+                  }
                 } catch (err) {
                   log.error('[IPC] Batch insert error:', err)
                   errors.push((err as Error).message)
@@ -313,7 +332,11 @@ export function registerIpcHandlers(): void {
               break
             }
             case 'complete':
-              log.info(`Incremental scan complete: ${filesProcessed} files, time: ${message.data.totalTime}ms`)
+              log.info(`Incremental scan complete: ${filesProcessed} files, skipped: ${message.data.skipped}, time: ${message.data.totalTime}ms`)
+              // Update folder metadata with current total file count
+              if (folder && folder.id) {
+                updateFolderScanComplete(folder.id, getTotalFileCount(), totalSize)
+              }
               event.sender.send('scan-progress', {
                 current: filesProcessed,
                 total: filesProcessed,
@@ -368,6 +391,7 @@ export function registerIpcHandlers(): void {
         })
 
         let filesProcessed = 0
+        let totalSize = 0
         const errors: string[] = []
         let shardId = -1
 
@@ -397,13 +421,17 @@ export function registerIpcHandlers(): void {
 
                   const result = await insertFileBatch(shardId, records)
                   filesProcessed += result.fileCount
+                  totalSize += records.reduce((sum, r) => sum + (r.size || 0), 0)
 
-                  // Check if shard is full
+                  // Check if shard is full (apply 2000MB cap regardless of config)
                   const shardInfo = getShardInfo().find(s => s.id === shardId)
-                  const config = getShardConfigInfo()
-                  if (shardInfo && config && shardInfo.currentSizeBytes >= (config.maxSizeMB * 1024 * 1024)) {
-                    const nextShard = await openNextShard()
-                    currentShardId = nextShard?.id ?? -1
+                  const shardConfig = getShardConfigInfo()
+                  if (shardInfo && shardConfig) {
+                    const maxBytes = Math.min(shardConfig.maxSizeMB, 2000) * 1024 * 1024
+                    if (shardInfo.currentSizeBytes >= maxBytes) {
+                      const nextShard = await openNextShard()
+                      currentShardId = nextShard?.id ?? -1
+                    }
                   }
                 } catch (err) {
                   log.error('[IPC] Batch insert error:', err)
@@ -415,7 +443,7 @@ export function registerIpcHandlers(): void {
             case 'complete':
               log.info(`Full rescan complete: ${filesProcessed} files, time: ${message.data.totalTime}ms`)
               if (folder && folder.id) {
-                updateFolderFullScanComplete(folder.id, filesProcessed, 0)
+                updateFolderFullScanComplete(folder.id, getTotalFileCount(), totalSize)
               }
               event.sender.send('scan-progress', {
                 current: filesProcessed,
