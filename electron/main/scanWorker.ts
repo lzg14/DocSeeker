@@ -605,8 +605,12 @@ async function calculateHash(filePath: string): Promise<string | null> {
 }
 
 // Recursively scan directory - collects ALL files regardless of extension
-async function scanDirectory(dirPath: string): Promise<string[]> {
+type ProgressCallback = (foundCount: number) => void
+
+async function scanDirectory(dirPath: string, onProgress?: ProgressCallback): Promise<string[]> {
   const files: string[] = []
+  let lastReportTime = Date.now()
+  const REPORT_INTERVAL_MS = 10_000  // Report progress every 10 seconds
 
   async function scan(dir: string): Promise<void> {
     try {
@@ -621,6 +625,13 @@ async function scanDirectory(dirPath: string): Promise<string[]> {
           }
         } else if (entry.isFile()) {
           files.push(fullPath)
+
+          // Report progress periodically during Phase 1
+          const now = Date.now()
+          if (onProgress && now - lastReportTime >= REPORT_INTERVAL_MS) {
+            lastReportTime = now
+            onProgress(files.length)
+          }
         }
       }
     } catch (error) {
@@ -629,6 +640,10 @@ async function scanDirectory(dirPath: string): Promise<string[]> {
   }
 
   await scan(dirPath)
+  // Final report if files were found after last interval
+  if (onProgress && files.length > 0) {
+    onProgress(files.length)
+  }
   return files
 }
 
@@ -716,8 +731,13 @@ async function runScan(): Promise<void> {
     data: { current: 0, total: 0, currentFile: isIncremental ? 'Incremental scan...' : 'Scanning directory...', phase: 'scanning' }
   })
 
-  // Phase 1: Collect all files
-  const files = await scanDirectory(dirPath)
+  // Phase 1: Collect all files (with progress updates every 10s)
+  const files = await scanDirectory(dirPath, (foundCount) => {
+    parentPort?.postMessage({
+      type: 'progress',
+      data: { current: 0, total: foundCount, currentFile: 'Scanning directory...', phase: 'scanning', foundCount }
+    })
+  })
   const total = files.length
 
   parentPort?.postMessage({

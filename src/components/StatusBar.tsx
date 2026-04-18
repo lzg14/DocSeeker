@@ -45,6 +45,11 @@ function StatusBar(): JSX.Element {
     return (
       <div className="status-bar status-bar--scanning">
         <span>{translate('scan.scanning')} {percent}%</span>
+        {scanProgress.phase === 'scanning' && scanProgress.total > 0 && (
+          <span style={{ fontSize: '11px', color: '#888', marginLeft: '8px' }}>
+            已发现 {scanProgress.total.toLocaleString()} 个文件
+          </span>
+        )}
         <span className="scan-file-name" title={scanProgress.currentFile}>
           {scanProgress.currentFile || translate('scan.preparing')}
         </span>
