@@ -123,3 +123,78 @@ A: 正常。这是 macOS 工具链的 symlink，Windows 忽略即可，确保 `r
 
 **Q: 图标未更新？**
 A: 手动调用 `rcedit-x64.exe` 设置图标（见上文手动设置步骤）。
+
+## Native 模块问题（better-sqlite3）
+
+### 问题描述
+
+`better-sqlite3` 是 Node.js 原生模块（需 C++ 编译）。当执行 `npm install` / `npm rebuild` 时：
+
+- 如果没有指定 `--ignore-scripts`，会尝试编译 native 模块
+- 编译时使用系统 Node.js（可能是 Node 20/22/24，ABI 版本较新）
+- 但 Electron 内部使用的是更旧的 Node，ABI 版本不同
+- 结果：`"was compiled against a different Node.js version"` 错误
+
+### 症状
+
+```
+Failed to init database: Error: The module '...\better-sqlite3\build\Release\better_sqlite3.node'
+was compiled against a different Node.js version using
+NODE_MODULE_VERSION 133. This version of Node.js requires
+NODE_MODULE_VERSION 130.
+```
+
+### 原因
+
+Node.js ABI（应用二进制接口）版本对照：
+
+| Electron 版本 | 内部 Node 版本 | ABI 版本 |
+|---------------|----------------|----------|
+| Electron 28   | Node ~18.x     | v122     |
+| Electron 29   | Node ~18.x     | v124     |
+| Electron 30   | Node ~18.x     | v125     |
+| Electron 31   | Node ~18.x     | v127     |
+| Electron 32   | Node ~18.x     | v128     |
+| **Electron 33** | **Node ~18.x** | **v130** |
+| Electron 34   | Node ~20.x     | v132     |
+| Electron 35   | Node ~20.x     | v133     |
+
+**当前项目**：Electron 33.x → 需要 `electron-v130` 预编译
+
+### 修复方法（推荐）
+
+运行恢复脚本，自动下载并安装正确的预编译版本：
+
+```powershell
+# 在项目根目录执行
+.\electron\main\scripts\fix-native.ps1
+
+# 或指定 Electron ABI 版本（默认 130）
+.\electron\main\scripts\fix-native.ps1 -ElectronVersion 130
+```
+
+### 手动修复
+
+如果脚本不可用，手动执行：
+
+1. 确认当前 Electron 版本：
+   ```bash
+   npx electron -v
+   # 例如输出 v33.4.11 → 对应 ABI 130
+   ```
+
+2. 下载对应预编译版本（`better-sqlite3` 需升级到 v12.9.0）：
+   - 地址：`https://github.com/WiseLibs/better-sqlite3/releases`
+   - 文件名格式：`better-sqlite3-v12.9.0-electron-v{ABI}-win32-x64.tar.gz`
+   - 例如：`better-sqlite3-v12.9.0-electron-v130-win32-x64.tar.gz`
+
+3. 解压，将 `better_sqlite3.node` 放入：
+   ```
+   node_modules/better-sqlite3/build/Release/better_sqlite3.node
+   ```
+
+### 开发注意事项
+
+- **不要**运行 `npm rebuild better-sqlite3`，除非系统 Node 版本恰好匹配 Electron ABI
+- `npm install --ignore-scripts` 可以跳过 native 模块编译，但需要手动安装预编译版本
+- 如需升级 `better-sqlite3` 版本，先确认新版本有对应 Electron ABI 的预编译
