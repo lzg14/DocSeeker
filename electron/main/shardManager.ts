@@ -893,14 +893,13 @@ export function deleteFileFromAllShards(filePath: string): number {
       const db = new Database(shard.dbPath)
       const stmt = db.prepare('DELETE FROM shard_files WHERE path = ?')
       const result = stmt.run(filePath)
-      db.close()
       if (result.changes > 0) {
-        deletedCount++
-        // Update file count for this shard
         const countRow = db.prepare('SELECT COUNT(*) as count FROM shard_files').get() as { count: number } | undefined
         shard.fileCount = countRow?.count ?? shard.fileCount
         log.info(`[ShardManager] Deleted file ${filePath} from shard ${shard.id}`)
       }
+      db.close()
+      if (result.changes > 0) deletedCount++
     } catch (err) {
       log.warn(`[ShardManager] Failed to delete file ${filePath} from shard ${shard.id}:`, err)
     }
