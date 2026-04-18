@@ -18,11 +18,15 @@ function ScanPage(): JSX.Element {
   const [confirmDelete, setConfirmDelete] = useState<ScannedFolder | null>(null)
   const [includeHidden, setIncludeHidden] = useState(false)
   const [includeSystem, setIncludeSystem] = useState(false)
+  const [totalFiles, setTotalFiles] = useState<number>(0)
 
   const loadFolders = useCallback(async () => {
     try {
       const result = await window.electron.getScannedFolders()
       setFolders(result)
+      // Get total file count from shards
+      const count = await window.electron.getFileCount()
+      setTotalFiles(count)
     } catch (error) {
       console.error('Failed to load scanned folders:', error)
     } finally {
@@ -134,9 +138,7 @@ function ScanPage(): JSX.Element {
           <h2 className="page-title">{t('scan.title')}</h2>
           {folders.length > 0 && (
             <span className="config-header-summary">
-              {folders.length} {t('config.dirCount').replace('{count}', '')}
-              {' · '}
-              {folders.reduce((sum, f) => sum + (f.file_count || 0), 0).toLocaleString()} {t('config.files')}
+              {folders.length} {t('config.dirCount').replace('{count}', '')} · {totalFiles.toLocaleString()} {t('config.files')}
             </span>
           )}
         </div>

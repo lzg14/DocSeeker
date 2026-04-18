@@ -1,6 +1,6 @@
 {
   "name": "docseeker",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Personal document search tool with full-text search and scheduled scanning",
   "main": "./out/main/index.js",
   "author": "lzg14",

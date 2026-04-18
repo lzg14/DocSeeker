@@ -59,7 +59,7 @@ function StatusBar(): JSX.Element {
 
   return (
     <div className="status-bar">
-      <span>DocSeeker v1.0.0</span>
+      <span>DocSeeker v1.1.0</span>
       <div className="statusbar-right">
         <span>
           {fileCount !== null && fileCount >= 0

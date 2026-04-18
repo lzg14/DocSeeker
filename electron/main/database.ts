@@ -14,7 +14,7 @@ import {
   initShardManager,
   searchAllShards,
   getSearchSnippets as shardGetSearchSnippets,
-  getTotalFileCount,
+  getTotalFileCountAsync,
   deleteFileFromAllShards,
   deleteFilesByFolderPrefixFromAllShards,
   closeAllShards,
@@ -146,8 +146,8 @@ export function clearAllFiles(): void {
   log.warn('[Database] clearAllFiles not yet implemented in shard mode')
 }
 
-export function getFileCount(): number {
-  return getTotalFileCount()
+export async function getFileCount(): Promise<number> {
+  return getTotalFileCountAsync()
 }
 
 // Shard-aware search

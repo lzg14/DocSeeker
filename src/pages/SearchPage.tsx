@@ -581,30 +581,32 @@ function SearchPage(): JSX.Element {
 
       </div>
 
+      {/* 二次筛选栏 - 在搜索框下方独立一行 */}
+      {files.length > 0 && (
+        <div className="secondary-filter-bar">
+          <input
+            type="text"
+            className="secondary-filter-input"
+            placeholder={t('search.secondaryFilterPlaceholder') || '在结果中筛选...'}
+            value={secondaryFilter}
+            onChange={(e) => setSecondaryFilter(e.target.value)}
+          />
+          {secondaryFilter && (
+            <button
+              className="secondary-filter-clear"
+              onClick={() => setSecondaryFilter('')}
+              title={t('search.clearSecondaryFilter') || '清除筛选'}
+            >
+              ×
+            </button>
+          )}
+          <span className="secondary-filter-count">
+            {filteredFiles.length} / {files.length}
+          </span>
+        </div>
+      )}
+
       <div className="search-content">
-        {files.length > 0 && (
-          <div className="secondary-filter-bar">
-            <input
-              type="text"
-              className="secondary-filter-input"
-              placeholder={t('search.secondaryFilterPlaceholder') || '在结果中筛选...'}
-              value={secondaryFilter}
-              onChange={(e) => setSecondaryFilter(e.target.value)}
-            />
-            {secondaryFilter && (
-              <button
-                className="secondary-filter-clear"
-                onClick={() => setSecondaryFilter('')}
-                title={t('search.clearSecondaryFilter') || '清除筛选'}
-              >
-                ×
-              </button>
-            )}
-            <span className="secondary-filter-count">
-              {filteredFiles.length} / {files.length}
-            </span>
-          </div>
-        )}
         <div className="file-list-wrapper">
           <FileList
             files={filteredFiles}

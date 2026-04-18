@@ -21,7 +21,8 @@ import {
   searchByFileName as shardSearchByFileName,
   getSearchSnippets as shardGetSearchSnippets,
   getShardInfo,
-  getTotalFileCount,
+  getTotalFileCountAsync,
+  countFilesInFolder,
   getShardConfigInfo,
   deleteFileFromAllShards,
   deleteFilesByFolderPrefixFromAllShards,
@@ -225,9 +226,9 @@ export function registerIpcHandlers(): void {
     }
   })
 
-  // Get file count
+  // Get file count (triggers lazy loading if needed)
   ipcMain.handle('get-file-count', async (): Promise<number> => {
-    return getTotalFileCount()
+    return getTotalFileCountAsync()
   })
 
   // Get shard info (diagnostics)
@@ -373,7 +374,9 @@ export function registerIpcHandlers(): void {
               log.info(`Incremental scan complete: ${filesProcessed} files, skipped: ${message.data.skipped}, time: ${message.data.totalTime}ms`)
               // Update folder metadata with files processed in this scan
               if (folder && folder.id) {
-                updateFolderScanComplete(folder.id, filesProcessed, totalSize)
+                // Count total files in folder from shards and store
+                const totalInFolder = countFilesInFolder(folderPath)
+                updateFolderScanComplete(folder.id, totalInFolder, totalSize)
               }
               event.sender.send('scan-progress', {
                 current: filesProcessed,
@@ -481,7 +484,9 @@ export function registerIpcHandlers(): void {
             case 'complete':
               log.info(`Full rescan complete: ${filesProcessed} files, time: ${message.data.totalTime}ms`)
               if (folder && folder.id) {
-                updateFolderFullScanComplete(folder.id, filesProcessed, totalSize)
+                // Count total files in folder from shards and store
+                const totalInFolder = countFilesInFolder(folderPath)
+                updateFolderFullScanComplete(folder.id, totalInFolder, totalSize)
               }
               event.sender.send('scan-progress', {
                 current: filesProcessed,

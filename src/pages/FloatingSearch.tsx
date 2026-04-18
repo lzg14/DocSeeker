@@ -16,6 +16,7 @@ function FloatingSearch(): JSX.Element {
   const [results, setResults] = useState<FileRecord[]>([])
   const [isSearching, setIsSearching] = useState(false)
   const [selected, setSelected] = useState(0)
+  const [searched, setSearched] = useState(false)
   const [contextMenu, setContextMenu] = useState<ContextMenuState>({ visible: false, x: 0, y: 0, file: null })
   const hasNavigated = useRef(false)
   const inputRef = useRef<HTMLInputElement>(null)
@@ -45,12 +46,8 @@ function FloatingSearch(): JSX.Element {
       const res = await window.electron.searchFiles(q)
       if (thisVersion !== searchVersion.current) return // 新搜索已发出，忽略旧结果
       setResults(res.slice(0, 8))
+      setSearched(true)
       setIsSearching(false)
-      const first = hasNavigated.current ? res.slice(0, 8)[selected] : res.slice(0, 8)[0]
-      if (first) {
-        window.electron.showInFolder(first.path)
-        window.electron.hideFloatingWindow?.()
-      }
     } catch (err) {
       console.error('Floating search error:', err)
       if (thisVersion !== searchVersion.current) return
@@ -59,12 +56,25 @@ function FloatingSearch(): JSX.Element {
     }
   }
 
+  const openSelected = () => {
+    if (results.length === 0) return
+    const file = results[selected] || results[0]
+    if (file) {
+      window.electron.showInFolder(file.path)
+      window.electron.hideFloatingWindow?.()
+    }
+  }
+
   const handleKey = (e: React.KeyboardEvent) => {
     if (e.key === 'Escape') {
       window.electron.hideFloatingWindow?.()
     } else if (e.key === 'Enter') {
       if (query.trim()) {
-        search(query.trim())
+        if (results.length > 0) {
+          openSelected()
+        } else {
+          search(query.trim())
+        }
       }
     } else if (e.key === 'ArrowDown') {
       e.preventDefault()

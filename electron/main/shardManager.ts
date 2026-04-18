@@ -187,7 +187,7 @@ export function detectMachineProfile(): MachineProfile {
  */
 export function computeShardConfig(profile: MachineProfile): ShardConfig {
   // Shard size limit: ensure it can be loaded within 2 seconds, cap at 2000MB
-  const maxSizeMB = Math.max(50, Math.min(profile.diskReadSpeedMBps * 2, 2000))
+  const maxSizeMB = Math.max(50, Math.min(profile.diskReadSpeedMBps * 2, 1000))
   log.info(`[ShardManager] computeShardConfig: speed=${profile.diskReadSpeedMBps} MB/s → maxSizeMB=${maxSizeMB}`)
 
   // Parallel workers: leave 1 core for main thread, cap at 8
@@ -1021,15 +1021,49 @@ export function getSearchSnippets(
 }
 
 /**
- * Get total file count across all shards.
+ * Get total file count across all shards (sync version for internal use).
  */
-export function getTotalFileCount(): number {
+function getTotalFileCount(): number {
   if (totalFileCount > 0) return totalFileCount
-  // Fallback: sum fileCount from loaded shards (avoids showing 0 on restart before first search)
   if (shardsDiscovered) {
     return shards.reduce((sum, s) => sum + (s.status === 'ready' ? s.fileCount : 0), 0)
   }
   return 0
+}
+
+/**
+ * Get total file count across all shards.
+ * Triggers lazy loading of pending shards and waits for completion.
+ */
+export async function getTotalFileCountAsync(): Promise<number> {
+  await initShardManager()
+  await loadPendingShards()
+  return getTotalFileCount()
+}
+
+/**
+ * Count files for a specific folder across all shards.
+ * Returns the total file count for the given folder path.
+ */
+export function countFilesInFolder(folderPath: string): number {
+  let count = 0
+  const readyShards = getReadyShards()
+  for (const shard of readyShards) {
+    try {
+      const db = new Database(shard.dbPath)
+      // Normalize path separators for matching
+      const normalizedFolder = folderPath.replace(/\\/g, '/')
+      const rows = db.prepare(`
+        SELECT COUNT(*) as cnt FROM shard_files
+        WHERE path LIKE ? || '%' AND (path = ? OR substr(path, length(?) + 1, 1) IN ('/', '\\'))
+      `).all(normalizedFolder, normalizedFolder, normalizedFolder) as { cnt: number }[]
+      count += rows[0]?.cnt ?? 0
+      db.close()
+    } catch (err) {
+      log.error(`[ShardManager] countFilesInFolder: failed on shard ${shard.id}`, err)
+    }
+  }
+  return count
 }
 
 /**

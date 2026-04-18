@@ -186,7 +186,7 @@ function detectMachineProfile(): MachineProfile {
 }
 
 function computeShardConfig(profile: MachineProfile): ShardConfig {
-  const maxSizeMB = Math.max(50, Math.min(profile.diskReadSpeedMBps * 2, 2000))
+  const maxSizeMB = Math.max(50, Math.min(profile.diskReadSpeedMBps * 2, 1000))
   const parallelWorkers = Math.min(Math.max(profile.cpuCores - 1, 1), 8)
   return { maxSizeMB, parallelWorkers }
 }

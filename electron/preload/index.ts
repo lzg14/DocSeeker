@@ -90,6 +90,7 @@ export interface ElectronAPI {
   searchByFileName: (query: string, options?: SearchOptions) => Promise<FileRecord[]>
   deleteFile: (filePath: string) => Promise<boolean>
   getFileCount: () => Promise<number>
+  getFilesByFolder: () => Promise<Record<string, number>>
   showInFolder: (filePath: string) => Promise<void>
   openFile: (filePath: string) => Promise<void>
   getScannedFolders: () => Promise<ScannedFolder[]>
