@@ -27,6 +27,7 @@ import {
   deleteFileFromAllShards,
   deleteFilesByFolderPrefixFromAllShards,
   isShardManagerInitialized,
+  deduplicateResults,
   type FileRecord as ShardFileRecord
 } from './shardManager'
 import {
@@ -178,6 +179,31 @@ export function registerIpcHandlers(): void {
       }))
     } catch (err) {
       log.error('[IPC] search-files-advanced error:', err)
+      return []
+    }
+  })
+
+  // Search with deduplication
+  ipcMain.handle('search-deduplicate', async (_, query: string, options?: SearchOptions): Promise<FileRecord[]> => {
+    if (query.trim()) addSearchHistory(query)
+    try {
+      const results = await searchAllShards(query, options)
+      const deduped = deduplicateResults(results)
+      return deduped.map(r => ({
+        id: r.id,
+        path: r.path,
+        name: r.name,
+        size: r.size,
+        hash: r.hash,
+        file_type: r.file_type,
+        content: r.content,
+        created_at: r.created_at,
+        updated_at: r.updated_at,
+        is_supported: r.is_supported === 1 ? true : r.is_supported === 0 ? false : undefined,
+        match_type: r.match_type ?? 'content'
+      }))
+    } catch (err) {
+      log.error('[IPC] search-deduplicate error:', err)
       return []
     }
   })

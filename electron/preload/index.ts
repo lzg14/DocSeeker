@@ -88,6 +88,7 @@ export interface ElectronAPI {
   searchFiles: (query: string) => Promise<FileRecord[]>
   searchFilesAdvanced: (query: string, options?: SearchOptions) => Promise<FileRecord[]>
   searchByFileName: (query: string, options?: SearchOptions) => Promise<FileRecord[]>
+  searchDeduplicate: (query: string, options?: SearchOptions) => Promise<FileRecord[]>
   deleteFile: (filePath: string) => Promise<boolean>
   getFileCount: () => Promise<number>
   getFilesByFolder: () => Promise<Record<string, number>>
@@ -154,6 +155,8 @@ const electronAPI: ElectronAPI = {
   searchFilesAdvanced: (query: string, options?: SearchOptions) => ipcRenderer.invoke('search-files-advanced', query, options),
 
   searchByFileName: (query: string, options?: SearchOptions) => ipcRenderer.invoke('search-by-filename', query, options),
+
+  searchDeduplicate: (query: string, options?: SearchOptions) => ipcRenderer.invoke('search-deduplicate', query, options),
 
   deleteFile: (filePath: string) => ipcRenderer.invoke('delete-file', filePath),
 

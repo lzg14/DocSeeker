@@ -59,6 +59,7 @@ function SearchPage(): JSX.Element {
   const [isExtracting, setIsExtracting] = useState(false)
   const [searchScope, setSearchScope] = useState<'all' | 'filename'>('all')
   const [secondaryFilter, setSecondaryFilter] = useState('')
+  const [dedupEnabled, setDedupEnabled] = useState(false)
   const { t } = useLanguage()
 
   const inputRef = useRef<HTMLInputElement>(null)
@@ -160,13 +161,15 @@ function SearchPage(): JSX.Element {
         const hasFilters = opts &&
           (opts.fileTypes?.length || opts.sizeMin || opts.sizeMax || opts.dateFrom || opts.dateTo)
 
-        const ftsResults = hasFilters
-          ? (scope === 'filename'
-            ? await window.electron.searchByFileName(bareQuery, opts)
-            : await window.electron.searchFilesAdvanced(bareQuery, opts))
-          : bareQuery
-            ? await window.electron.searchFiles(bareQuery)
-            : hasFilters ? await window.electron.searchFilesAdvanced('', opts) : []
+        const ftsResults = dedupEnabled
+          ? await window.electron.searchDeduplicate(bareQuery, opts)
+          : (hasFilters
+            ? (scope === 'filename'
+              ? await window.electron.searchByFileName(bareQuery, opts)
+              : await window.electron.searchFilesAdvanced(bareQuery, opts))
+            : bareQuery
+              ? await window.electron.searchFiles(bareQuery)
+              : hasFilters ? await window.electron.searchFilesAdvanced('', opts) : [])
 
         // Filter results by regex against path and content
         const re = new RegExp(regexPattern, 'i')
@@ -176,11 +179,15 @@ function SearchPage(): JSX.Element {
         const hasFilters = opts &&
           (opts.fileTypes?.length || opts.sizeMin || opts.sizeMax || opts.dateFrom || opts.dateTo)
 
-        result = hasFilters
-          ? (scope === 'filename'
-            ? await window.electron.searchByFileName(query, opts)
-            : await window.electron.searchFilesAdvanced(query, opts))
-          : await window.electron.searchFiles(query)
+        if (dedupEnabled) {
+          result = await window.electron.searchDeduplicate(query, opts)
+        } else {
+          result = hasFilters
+            ? (scope === 'filename'
+              ? await window.electron.searchByFileName(query, opts)
+              : await window.electron.searchFilesAdvanced(query, opts))
+            : await window.electron.searchFiles(query)
+        }
       }
 
       setFiles(result)
@@ -199,7 +206,7 @@ function SearchPage(): JSX.Element {
     } finally {
       setIsSearching(false)
     }
-  }, [])
+  }, [dedupEnabled, searchScope])
 
   const handleSearch = () => {
     // Clear any pending debounce so immediate search is not delayed
@@ -456,6 +463,13 @@ function SearchPage(): JSX.Element {
               title={searchScope === 'all' ? '切换到仅文件名搜索' : '切换到全部搜索'}
             >
               {searchScope === 'all' ? '🔍 全部' : '📄 仅文件名'}
+            </button>
+            <button
+              className={`toolbar-btn ${dedupEnabled ? 'active' : ''}`}
+              onClick={() => setDedupEnabled(d => !d)}
+              title={t('search.dedup')}
+            >
+              🔗 {t('search.dedup')}
             </button>
             <button
               className={`toolbar-btn ${showSyntaxHelp ? 'active' : ''}`}

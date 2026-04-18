@@ -130,7 +130,7 @@ DocSeeker 是一款基于 Electron + React + TypeScript 的本地文档全文搜
 #### 里程碑
 
 - [ ] **M4.1** 搜索结果缩略图预览（图片 / PDF 首帧）
-- [ ] **M4.2** 全局快捷键浮层搜索（类 Listary 双击 Ctrl）
+- [x] **M4.2** 全局快捷键浮层搜索（类 Listary 双击 Ctrl）
 - [x] **M4.3** Electron 冷启动优化（分片架构：config.db 同步加载 + shards 后台并行加载，UI <100ms 可交互）
 - [ ] **M4.4** 跨平台支持评估（macOS / Linux）
 - [x] **M4.5** 搜索结果命中词高亮增强

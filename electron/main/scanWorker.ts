@@ -679,7 +679,7 @@ async function processFile(filePath: string): Promise<FileInfo | null> {
     const fileType = getFileType(ext)
 
     const fileInfo: FileInfo = {
-      path: filePath,
+      path: filePath.replace(/\\/g, '/'),
       name,
       size: stats.size,
       hash: null,

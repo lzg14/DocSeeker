@@ -44,6 +44,104 @@
   justify-content: flex-end;
 }
 
+/* === 删除目录确认弹窗 === */
+.delete-folder-dialog {
+  max-width: 440px;
+  border: 1px solid var(--border);
+}
+
+.delete-folder-icon {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 12px;
+  color: #e53935;
+}
+
+.delete-folder-title {
+  text-align: center;
+  color: #e53935 !important;
+  margin-bottom: 16px;
+}
+
+.delete-folder-body {
+  background: var(--bg-secondary);
+  border-radius: 6px;
+  padding: 12px;
+  margin-bottom: 16px;
+}
+
+.delete-folder-warning {
+  font-size: 14px;
+  color: var(--text-primary);
+  margin: 0 0 8px;
+}
+
+.delete-folder-cost {
+  font-size: 14px;
+  color: #e53935;
+  margin: 0 0 8px;
+}
+
+.delete-folder-cost strong {
+  font-weight: 600;
+}
+
+.delete-folder-hint {
+  font-size: 12px;
+  color: var(--text-secondary);
+  margin: 0;
+}
+
+.delete-folder-confirm-input {
+  margin-bottom: 16px;
+}
+
+.delete-folder-confirm-input label {
+  display: block;
+  font-size: 12px;
+  color: var(--text-secondary);
+  margin-bottom: 6px;
+}
+
+.delete-folder-confirm-input input {
+  width: 100%;
+  padding: 8px 12px;
+  font-size: 14px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  box-sizing: border-box;
+  outline: none;
+  transition: border-color var(--transition-base);
+}
+
+.delete-folder-confirm-input input:focus {
+  border-color: var(--primary-color);
+}
+
+.delete-folder-confirm-input input::placeholder {
+  color: var(--text-secondary);
+}
+
+.btn-danger {
+  background: #e53935 !important;
+  color: #fff !important;
+  border-color: #e53935 !important;
+}
+
+.btn-danger:hover:not(:disabled) {
+  background: #c62828 !important;
+  border-color: #c62828 !important;
+}
+
+.btn-danger:disabled {
+  background: #a0a0a0 !important;
+  border-color: #a0a0a0 !important;
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
 /* === Light（浅色）— 默认主题 === */
 [data-theme="light"],
 :root {

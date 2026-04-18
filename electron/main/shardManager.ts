@@ -1051,12 +1051,15 @@ export function countFilesInFolder(folderPath: string): number {
   for (const shard of readyShards) {
     try {
       const db = new Database(shard.dbPath)
-      // Normalize path separators for matching
+      // Paths stored with forward slashes (normalized at write time)
+      // Escape LIKE wildcards (%) and (_) in folder path
       const normalizedFolder = folderPath.replace(/\\/g, '/')
+      const escapedFolder = normalizedFolder.replace(/%/g, '\\%').replace(/_/g, '\\_')
       const rows = db.prepare(`
         SELECT COUNT(*) as cnt FROM shard_files
-        WHERE path LIKE ? || '%' AND (path = ? OR substr(path, length(?) + 1, 1) IN ('/', '\\'))
-      `).all(normalizedFolder, normalizedFolder, normalizedFolder) as { cnt: number }[]
+        WHERE path LIKE ? || '%' AND (path = ? OR substr(path, length(?) + 1, 1) = '/')
+      `).all(escapedFolder, normalizedFolder, normalizedFolder) as { cnt: number }[]
+      count += rows[0]?.cnt ?? 0
       count += rows[0]?.cnt ?? 0
       db.close()
     } catch (err) {
@@ -1098,26 +1101,21 @@ export function deleteFileFromAllShards(filePath: string): number {
  */
 export function deleteFilesByFolderPrefixFromAllShards(folderPath: string): number {
   let totalDeleted = 0
-  const prefix = folderPath.endsWith('/') || folderPath.endsWith('\\')
-    ? folderPath
-    : folderPath + (folderPath.includes('\\') ? '\\' : '/')
+  // Normalize to forward slashes to match storage format
+  const normalizedFolder = folderPath.replace(/\\/g, '/')
+  const prefix = normalizedFolder.endsWith('/') ? normalizedFolder : normalizedFolder + '/'
   const readyShards = getReadyShards()
   for (const shard of readyShards) {
     try {
       const db = new Database(shard.dbPath)
-      const beforeSize = require('fs').statSync(shard.dbPath).size
       const stmt = db.prepare("DELETE FROM shard_files WHERE path LIKE ? || '%'")
       const result = stmt.run(prefix)
+      stmt.free()
+      db.close()
       if (result.changes > 0) {
         totalDeleted += result.changes
-        // Run VACUUM to reclaim space after deletion
-        db.exec('PRAGMA wal_checkpoint(TRUNCATE)')
-        db.exec('VACUUM')
-        const afterSize = require('fs').statSync(shard.dbPath).size
-        const savedBytes = beforeSize - afterSize
-        log.info(`[ShardManager] Deleted ${result.changes} files from shard ${shard.id}, VACUUM saved ${savedBytes} bytes`)
+        log.info(`[ShardManager] Deleted ${result.changes} files from shard ${shard.id}`)
       }
-      db.close()
     } catch (err) {
       log.warn(`[ShardManager] Failed to delete files under ${folderPath} from shard ${shard.id}:`, err)
     }
@@ -1137,6 +1135,35 @@ export function getMachineProfile(): MachineProfile | null {
  */
 export function getShardConfigInfo(): ShardConfig | null {
   return config ? { ...config } : null
+}
+
+/**
+ * Deduplicate search results by hash.
+ * Groups results with the same hash and keeps the one with the latest updated_at.
+ * Files without a hash are grouped by path (each path is unique anyway).
+ */
+export function deduplicateResults(results: SearchResult[]): SearchResult[] {
+  const seen = new Map<string, SearchResult>()
+  for (const r of results) {
+    const key = r.hash || r.path
+    if (!key) {
+      // No identifier, keep the entry as-is (path is the best we have)
+      seen.set(r.path, r)
+      continue
+    }
+    const existing = seen.get(key)
+    if (!existing) {
+      seen.set(key, r)
+    } else {
+      // Keep the newer one
+      const existingTime = existing.updated_at || ''
+      const newTime = r.updated_at || ''
+      if (newTime > existingTime) {
+        seen.set(key, r)
+      }
+    }
+  }
+  return Array.from(seen.values())
 }
 
 // Export types for use by other modules

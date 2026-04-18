@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { ScannedFolder } from '../types'
 import { useAppContext } from '../context/AppContext'
 import { useLanguage } from '../context/LanguageContext'
-import ConfirmDialog from '../components/ConfirmDialog'
+import DeleteFolderConfirmDialog from '../components/DeleteFolderConfirmDialog'
 import { formatSize } from '../utils/format'
 
 function ScanPage(): JSX.Element {
@@ -16,6 +16,7 @@ function ScanPage(): JSX.Element {
   const [expandedId, setExpandedId] = useState<number | null>(null)
   const [loading, setLoading] = useState(true)
   const [confirmDelete, setConfirmDelete] = useState<ScannedFolder | null>(null)
+  const [isDeleting, setIsDeleting] = useState(false)
   const [includeHidden, setIncludeHidden] = useState(false)
   const [includeSystem, setIncludeSystem] = useState(false)
   const [totalFiles, setTotalFiles] = useState<number>(0)
@@ -63,6 +64,7 @@ function ScanPage(): JSX.Element {
   const handleIncrementalScan = async (folder: ScannedFolder) => {
     try {
       await window.electron.incrementalScan(folder.path)
+      await loadFolders()
     } catch (error) {
       console.error('Failed to run incremental scan:', error)
     }
@@ -71,6 +73,7 @@ function ScanPage(): JSX.Element {
   const handleFullRescan = async (folder: ScannedFolder) => {
     try {
       await window.electron.fullRescan(folder.path)
+      await loadFolders()
     } catch (error) {
       console.error('Failed to run full rescan:', error)
     }
@@ -104,11 +107,14 @@ function ScanPage(): JSX.Element {
 
   const handleConfirmDelete = async () => {
     if (!confirmDelete) return
+    setIsDeleting(true)
     try {
       await window.electron.deleteScannedFolder(confirmDelete.id!)
       await loadFolders()
     } catch (error) {
       console.error('Failed to delete folder:', error)
+    } finally {
+      setIsDeleting(false)
     }
     setConfirmDelete(null)
   }
@@ -116,10 +122,9 @@ function ScanPage(): JSX.Element {
   const handleStartScan = async (): Promise<void> => {
     if (folders.length === 0) return
     for (const folder of folders) {
+      // eslint-disable-next-line no-await-in-loop
       await handleIncrementalScan(folder)
     }
-    await loadFolders()
-    triggerRefresh()
   }
 
   if (loading) {
@@ -242,7 +247,7 @@ function ScanPage(): JSX.Element {
                       <button
                         className="btn btn-danger"
                         onClick={() => setConfirmDelete(folder)}
-                        disabled={isScanning}
+                        disabled={isScanning || isDeleting}
                       >
                         {t('config.delete')}
                       </button>
@@ -256,9 +261,8 @@ function ScanPage(): JSX.Element {
       </div>
 
       {confirmDelete && (
-        <ConfirmDialog
-          title={t('config.delete')}
-          message={t('config.deleteConfirm').replace('{name}', confirmDelete.name)}
+        <DeleteFolderConfirmDialog
+          folder={confirmDelete}
           onConfirm={handleConfirmDelete}
           onCancel={() => setConfirmDelete(null)}
         />
