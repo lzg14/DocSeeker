@@ -1066,13 +1066,19 @@ export function deleteFilesByFolderPrefixFromAllShards(folderPath: string): numb
   for (const shard of readyShards) {
     try {
       const db = new Database(shard.dbPath)
+      const beforeSize = require('fs').statSync(shard.dbPath).size
       const stmt = db.prepare("DELETE FROM shard_files WHERE path LIKE ? || '%'")
       const result = stmt.run(prefix)
-      db.close()
       if (result.changes > 0) {
         totalDeleted += result.changes
-        log.info(`[ShardManager] Deleted ${result.changes} files under ${folderPath} from shard ${shard.id}`)
+        // Run VACUUM to reclaim space after deletion
+        db.exec('PRAGMA wal_checkpoint(TRUNCATE)')
+        db.exec('VACUUM')
+        const afterSize = require('fs').statSync(shard.dbPath).size
+        const savedBytes = beforeSize - afterSize
+        log.info(`[ShardManager] Deleted ${result.changes} files from shard ${shard.id}, VACUUM saved ${savedBytes} bytes`)
       }
+      db.close()
     } catch (err) {
       log.warn(`[ShardManager] Failed to delete files under ${folderPath} from shard ${shard.id}:`, err)
     }

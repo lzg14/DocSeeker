@@ -2,6 +2,7 @@ import { app, ipcMain, dialog, shell, BrowserWindow } from 'electron'
 import log from 'electron-log/main'
 import { Worker } from 'worker_threads'
 import { join, extname } from 'path'
+import { getHotResults, setHotResults } from './hotCache'
 import {
   deleteFileByPath,
   removeFilesByFolderPath,
@@ -75,10 +76,28 @@ export function registerIpcHandlers(): void {
 
   // Search files (via shard manager)
   ipcMain.handle('search-files', async (_, query: string): Promise<FileRecord[]> => {
-    if (query.trim()) addSearchHistory(query)
+    if (!query.trim()) return []
+
+    // LFU hot cache: check cache first
+    const cached = getHotResults(query)
+    if (cached !== undefined) {
+      log.info(`[IPC] search-files: cache hit for "${query}" (${cached.length} results)`)
+      return cached.map(e => ({
+        path: e.path,
+        name: e.name,
+        size: e.size,
+        hash: e.hash,
+        file_type: e.file_type,
+        content: e.content,
+        created_at: e.created_at,
+        updated_at: e.updated_at,
+      }))
+    }
+
+    addSearchHistory(query)
     try {
       const results = await searchAllShards(query)
-      return results.map(r => ({
+      const mapped = results.map(r => ({
         id: r.id,
         path: r.path,
         name: r.name,
@@ -91,6 +110,22 @@ export function registerIpcHandlers(): void {
         is_supported: r.is_supported === 1 ? true : r.is_supported === 0 ? false : undefined,
         match_type: r.match_type ?? 'content'
       }))
+
+      // Cache non-empty results with LFU strategy
+      if (results.length > 0) {
+        setHotResults(query, results.map(r => ({
+          path: r.path,
+          name: r.name,
+          size: r.size,
+          hash: r.hash,
+          file_type: r.file_type,
+          content: r.content,
+          created_at: r.created_at,
+          updated_at: r.updated_at,
+        })))
+      }
+
+      return mapped
     } catch (err) {
       log.error('[IPC] search-files error:', err)
       return []

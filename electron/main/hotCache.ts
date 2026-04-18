@@ -1,7 +1,10 @@
 /**
  * Hot Cache (db/hot-cache.json)
  *
- * Stores frequently-searched results for fast retrieval without hitting shards.
+ * LFU (Least Frequently Used) cache for frequently-searched results.
+ * - Tracks access frequency per query
+ * - Evicts least-frequently-used queries when limit exceeded
+ * - Persists both cached results and access stats
  */
 
 import { app } from 'electron'
@@ -24,10 +27,16 @@ export interface HotCache {
   [query: string]: HotCacheEntry[]
 }
 
+interface PersistedCache {
+  cache: HotCache
+  stats: Record<string, number>  // query → access count
+}
+
 const MAX_ENTRIES_PER_QUERY = 50
 const MAX_CACHED_QUERIES = 100
 
 let cache: HotCache = {}
+let queryStats: Record<string, number> = {}  // query → access count
 
 function getHotCachePath(): string {
   return join(app.getPath('userData'), 'db', 'hot-cache.json')
@@ -43,7 +52,8 @@ function ensureDir(): void {
 function persist(): void {
   try {
     ensureDir()
-    writeFileSync(getHotCachePath(), JSON.stringify(cache), 'utf-8')
+    const data: PersistedCache = { cache, stats: queryStats }
+    writeFileSync(getHotCachePath(), JSON.stringify(data), 'utf-8')
   } catch (err) {
     log.warn('[HotCache] Failed to write hot cache:', err)
   }
@@ -57,10 +67,12 @@ export function initHotCache(): void {
   try {
     if (existsSync(cachePath)) {
       const raw = readFileSync(cachePath, 'utf-8')
-      cache = JSON.parse(raw) as HotCache
+      const data = JSON.parse(raw) as PersistedCache
+      cache = data.cache ?? {}
+      queryStats = data.stats ?? {}
     }
   } catch {}
-  log.info(`[HotCache] Initialized, ${Object.keys(cache).length} entries`)
+  log.info(`[HotCache] Initialized, ${Object.keys(cache).length} cached queries, LFU strategy`)
 }
 
 /**
@@ -73,23 +85,42 @@ export function closeHotCache(): void {
 
 /**
  * Get cached search results for a query.
+ * Increments the access frequency for this query (LFU tracking).
  */
 export function getHotResults(query: string): HotCacheEntry[] | undefined {
-  return cache[query]
+  const results = cache[query]
+  if (results) {
+    // Increment access frequency (LFU)
+    queryStats[query] = (queryStats[query] ?? 0) + 1
+    // Async persist to avoid blocking
+    setImmediate(() => persist())
+  }
+  return results
 }
 
 /**
  * Store search results for a query.
+ * Uses LFU eviction: removes the least-frequently-used query when limit exceeded.
  */
 export function setHotResults(query: string, results: HotCacheEntry[]): void {
   cache[query] = results.slice(0, MAX_ENTRIES_PER_QUERY)
 
   const queries = Object.keys(cache)
   if (queries.length > MAX_CACHED_QUERIES) {
-    const toRemove = queries.slice(MAX_CACHED_QUERIES)
-    for (const key of toRemove) {
-      delete cache[key]
+    // Find the query with the lowest access frequency
+    let minFreq = Infinity
+    let lfuQuery = queries[0]
+    for (const q of queries) {
+      const freq = queryStats[q] ?? 0
+      if (freq < minFreq) {
+        minFreq = freq
+        lfuQuery = q
+      }
     }
+    // Evict the LFU entry
+    delete cache[lfuQuery]
+    delete queryStats[lfuQuery]
+    log.info(`[HotCache] LFU eviction: "${lfuQuery}" (freq=${minFreq})`)
   }
 
   persist()
@@ -100,6 +131,7 @@ export function setHotResults(query: string, results: HotCacheEntry[]): void {
  */
 export function clearHotCache(): void {
   cache = {}
+  queryStats = {}
   persist()
   log.info('[HotCache] Cleared')
 }
