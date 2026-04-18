@@ -2345,6 +2345,48 @@ button, input, select {
   }
 }
 
+/* === Appearance / Theme Settings === */
+.appearance-settings {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+.setting-group-title {
+  font-size: 14px;
+  font-weight: 500;
+  margin-bottom: 12px;
+  color: var(--text-primary);
+}
+.theme-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.theme-card {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 10px 16px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg-secondary);
+  cursor: pointer;
+  font-size: 13px;
+  color: var(--text-secondary);
+  transition: border-color 0.2s, background 0.2s, color 0.2s;
+  font-family: inherit;
+}
+.theme-card:hover {
+  border-color: var(--accent);
+  color: var(--text-primary);
+}
+.theme-card.active {
+  border-color: var(--accent);
+  background: var(--accent-subtle);
+  color: var(--accent);
+  font-weight: 500;
+}
+
 /* SettingsPage */
 .settings-page {
   display: flex;
@@ -2364,7 +2406,7 @@ button, input, select {
 .settings-tabs {
   display: flex;
   gap: 4px;
-  border-bottom: 1px solid var(--border-color);
+  border-bottom: 1px solid var(--border);
   margin-bottom: 24px;
 }
 .settings-tabs button {
@@ -2382,8 +2424,8 @@ button, input, select {
   color: var(--text-primary);
 }
 .settings-tabs button.active {
-  color: var(--primary-color);
-  border-bottom-color: var(--primary-color);
+  color: var(--accent);
+  border-bottom-color: var(--accent);
 }
 .settings-content {
   flex: 1;
@@ -2392,4 +2434,33 @@ button, input, select {
   color: var(--text-secondary);
   font-size: 13px;
   padding: 8px 0;
+}
+
+/* Window Settings */
+.window-settings {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.setting-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px;
+  background: var(--bg-secondary);
+  border-radius: 8px;
+  border: 1px solid var(--border);
+}
+.setting-item-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.setting-item-title {
+  font-size: 14px;
+  font-weight: 500;
+}
+.setting-item-desc {
+  font-size: 12px;
+  color: var(--text-secondary);
 }
