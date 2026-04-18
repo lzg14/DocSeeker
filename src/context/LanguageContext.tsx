@@ -2,7 +2,7 @@ import React, { createContext, useContext, useState, useEffect, ReactNode } from
 
 type Language = 'zh-CN' | 'en'
 
-export type ThemeId = 'light' | 'dark' | 'ocean' | 'nord' | 'warm' | 'solarized'
+export type ThemeId = 'light' | 'dark' | 'ocean' | 'nord' | 'warm' | 'solarized' | 'system'
 
 export interface ThemeMeta {
   id: ThemeId
@@ -51,6 +51,12 @@ export const themes: ThemeMeta[] = [
     labelKey: 'theme.solarized',
     descKey: 'theme.solarized.desc',
     preview: { bg: '#fdf6e3', bgSecondary: '#eee8d5', accent: '#268bd2' },
+  },
+  {
+    id: 'system',
+    labelKey: 'theme.system',
+    descKey: 'theme.system.desc',
+    preview: { bg: '#ffffff', bgSecondary: '#f6f8fa', accent: '#808080' },
   },
 ]
 
@@ -206,6 +212,8 @@ const translations: Record<Language, Record<string, string>> = {
     'theme.warm.desc': '夜间阅读 / 眼睛舒适',
     'theme.solarized': '太阳升',
     'theme.solarized.desc': '暖灰 / 专业写作者',
+    'theme.system': '跟随系统',
+    'theme.system.desc': '跟随操作系统深浅色设置',
     // Confirm dialog
     'confirm.cancel': '取消',
     'confirm.ok': '确定',
@@ -354,6 +362,8 @@ const translations: Record<Language, Record<string, string>> = {
     'theme.warm.desc': 'Night reading / Eye comfort',
     'theme.solarized': 'Solarized',
     'theme.solarized.desc': 'Warm gray / Writers',
+    'theme.system': 'System',
+    'theme.system.desc': 'Follow OS light/dark mode',
     // Confirm dialog
     'confirm.cancel': 'Cancel',
     'confirm.ok': 'OK',
@@ -382,7 +392,18 @@ export function LanguageProvider({ children }: { children: ReactNode }): JSX.Ele
   }
 
   useEffect(() => {
-    document.documentElement.setAttribute('data-theme', theme)
+    if (theme === 'system') {
+      const applySystemTheme = () => {
+        const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches
+        document.documentElement.setAttribute('data-theme', prefersDark ? 'dark' : 'light')
+      }
+      applySystemTheme()
+      const mq = window.matchMedia('(prefers-color-scheme: dark)')
+      mq.addEventListener('change', applySystemTheme)
+      return () => mq.removeEventListener('change', applySystemTheme)
+    } else {
+      document.documentElement.setAttribute('data-theme', theme)
+    }
   }, [theme])
 
   const t = (key: string): string => {
