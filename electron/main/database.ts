@@ -17,8 +17,13 @@ import {
   getSearchSnippets as shardGetSearchSnippets,
   getTotalFileCount,
   closeAllShards,
-  type SearchOptions
+  type SearchOptions,
+  type SearchResult
 } from './shardManager'
+import {
+  needsMigration,
+  migrateToShards
+} from './migration'
 import {
   getAllScannedFolders,
   getScannedFolderByPath,
@@ -47,6 +52,17 @@ export async function initDatabase(): Promise<void> {
 
   // Initialize meta database (scanned folders, settings, history)
   initMetaDatabase()
+
+  // Check and perform migration if needed (file-manager.db -> shards)
+  if (needsMigration()) {
+    log.info('[Database] Legacy file-manager.db detected, migrating to shards...')
+    const result = await migrateToShards()
+    if (result.success) {
+      log.info(`[Database] Migration completed: ${result.migrated} files migrated`)
+    } else {
+      log.error(`[Database] Migration failed: ${result.errors.join(', ')}`)
+    }
+  }
 
   // Initialize shard manager and load existing shards
   await initShardManager()
