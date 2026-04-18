@@ -2,10 +2,9 @@ import { app, shell, BrowserWindow, ipcMain, dialog, Tray, Menu, nativeImage, gl
 import { join } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import log from 'electron-log/main'
-import { initMetaDatabase, closeMetaDatabase } from './meta'
-import { initSearchDatabaseAsync, closeSearchDatabase, onSearchDbReady } from './search'
+import { initDatabase, closeDatabase } from './database'
+import { closeAllShards } from './shardManager'
 import { initHotCache, closeHotCache } from './hotCache'
-import { triggerHotCacheWarmup } from './ipc'
 import { registerIpcHandlers } from './ipc'
 import { startUpdater, stopUpdater, handleManualCheck, handleDownloadUpdate, handleQuitAndInstall } from './updater'
 
@@ -52,14 +51,12 @@ function setAutoLaunch(enabled: boolean): void {
 
 function registerGlobalShortcut(hotkey: string): void {
   globalShortcut.unregisterAll()
-  // Validate: must have at least one non-modifier key
   const parts = hotkey.split('+')
   const keyPart = parts[parts.length - 1]
   if (VALID_MODIFIERS.has(keyPart)) {
     log.warn(`Invalid hotkey "${hotkey}": last part "${keyPart}" is a modifier, not a key`)
     return
   }
-  // Convert CommandOrControl -> Ctrl for Windows
   const nativeHotkey = parts.map(p => MODIFIER_REPLACE[p] || p).join('+')
   try {
     globalShortcut.register(nativeHotkey, () => {
@@ -144,7 +141,6 @@ function createTray(): void {
     {
       label: '退出',
       click: () => {
-        // Bypass close confirmation
         ;(app as any).isQuitting = true
         app.quit()
       }
@@ -154,7 +150,6 @@ function createTray(): void {
   tray.setToolTip('DocSeeker')
   tray.setContextMenu(contextMenu)
 
-  // Replace single-click behavior with double-click to show window
   tray.on('double-click', () => {
     if (mainWindow) {
       mainWindow.show()
@@ -182,7 +177,6 @@ function createWindow(): void {
     }
   })
 
-  // Load React app immediately — it shows a loading spinner while DB initializes
   const mainHtml = join(__dirname, '../renderer/index.html')
   mainWindow.loadFile(mainHtml)
 
@@ -215,12 +209,10 @@ function createWindow(): void {
     mainWindow?.webContents.send('window-maximized-changed', false)
   })
 
-  // 最小化到托盘
   mainWindow.on('minimize', () => {
     mainWindow?.hide()
   })
 
-  // 非 IPC 触发的关闭（托盘 X、系统关闭）则隐藏到托盘
   mainWindow.on('close', (event) => {
     if (!(app as any).isQuitting && !isClosingFromIPC) {
       event.preventDefault()
@@ -237,39 +229,30 @@ function createWindow(): void {
 app.whenReady().then(async () => {
   log.info('App ready, initializing...')
 
-  // Set app user model id for windows
   electronApp.setAppUserModelId('com.docseeker.app')
 
-  // Init meta DB immediately — it's tiny (<100KB), loads in <100ms
+  // Init hot cache (loads instantly, <10ms)
+  initHotCache()
+
+  // Init database (meta + shards) — non-blocking
   try {
-    initMetaDatabase()
-    log.info('Meta DB ready')
+    await initDatabase()
+    log.info('Database initialized')
   } catch (error) {
-    log.error('Failed to init meta DB:', error)
-    dialog.showErrorBox('数据库错误', '无法初始化元数据，应用将退出')
+    log.error('Failed to init database:', error)
+    dialog.showErrorBox('数据库错误', '无法初始化数据库，应用将退出')
     app.quit()
     return
   }
-
-  // Init hot cache immediately — small JSON file, loads instantly
-  initHotCache()
-
-  // When search DB finishes loading, warm up the hot cache with recent searches
-  onSearchDbReady(() => {
-    log.info('Search DB ready, warming up hot cache...')
-    triggerHotCacheWarmup()
-  })
 
   // Register IPC handlers
   registerIpcHandlers()
   log.info('IPC handlers registered')
 
-  // IPC handler for hiding floating window
   ipcMain.handle('window-hide-floating', async () => {
     if (floatingWindow) floatingWindow.hide()
   })
 
-  // Default open or close DevTools by F12 in development
   app.on('browser-window-created', (_, window) => {
     optimizer.watchWindowShortcuts(window)
   })
@@ -277,20 +260,13 @@ app.whenReady().then(async () => {
   // Create window immediately — meta DB is ready, UI shows instantly
   createWindow()
 
-  // Start loading search DB in background (via worker thread, non-blocking)
-  // Search DB will be ready by the time user tries to search (~30s warm-up)
-  initSearchDatabaseAsync().catch((err) => {
-    log.error('Search DB background load failed:', err)
-  })
-
-  // Auto updater (checks on 5th and 15th each month)
+  // Auto updater
   try { startUpdater(mainWindow!) } catch (e) { log.error('startUpdater failed:', e) }
   try { createTray() } catch (e) { log.error('createTray failed:', e) }
   try { createFloatingWindow() } catch (e) { log.error('createFloatingWindow failed:', e) }
 
   registerGlobalShortcut('CommandOrControl+Shift+F')
 
-  // Global hotkey IPC handlers
   ipcMain.handle('get-global-hotkey', () => currentHotkey)
 
   ipcMain.handle('set-global-hotkey', (_, hotkey: string) => {
@@ -316,9 +292,9 @@ app.whenReady().then(async () => {
 
 app.on('window-all-closed', () => {
   log.info('All windows closed')
+  closeAllShards()
+  closeDatabase()
   closeHotCache()
-  closeSearchDatabase()
-  closeMetaDatabase()
   if (process.platform !== 'darwin') {
     app.quit()
   }
@@ -329,7 +305,7 @@ app.on('before-quit', () => {
   ;(app as any).isQuitting = true
   globalShortcut.unregisterAll()
   stopUpdater()
+  closeAllShards()
+  closeDatabase()
   closeHotCache()
-  closeSearchDatabase()
-  closeMetaDatabase()
 })

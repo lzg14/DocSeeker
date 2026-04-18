@@ -16,11 +16,11 @@ function FloatingSearch(): JSX.Element {
   const [results, setResults] = useState<FileRecord[]>([])
   const [isSearching, setIsSearching] = useState(false)
   const [selected, setSelected] = useState(0)
-  const [searched, setSearched] = useState(false)
   const [contextMenu, setContextMenu] = useState<ContextMenuState>({ visible: false, x: 0, y: 0, file: null })
   const hasNavigated = useRef(false)
   const inputRef = useRef<HTMLInputElement>(null)
   const contextMenuRef = useRef<HTMLDivElement>(null)
+  const searchVersion = useRef(0) // 追踪搜索版本，过期结果忽略
 
   useEffect(() => {
     inputRef.current?.focus()
@@ -34,19 +34,28 @@ function FloatingSearch(): JSX.Element {
   }, [theme])
 
   const search = async (q: string) => {
-    if (!q.trim()) { setResults([]); setSearched(false); return }
+    if (!q.trim()) { setResults([]); return }
+    searchVersion.current++
+    const thisVersion = searchVersion.current
+    hasNavigated.current = false
     setIsSearching(true)
+    setResults([])
+    setSelected(0)
     try {
       const res = await window.electron.searchFiles(q)
+      if (thisVersion !== searchVersion.current) return // 新搜索已发出，忽略旧结果
       setResults(res.slice(0, 8))
-      setSelected(0)
-      hasNavigated.current = false
+      setIsSearching(false)
+      const first = hasNavigated.current ? res.slice(0, 8)[selected] : res.slice(0, 8)[0]
+      if (first) {
+        window.electron.showInFolder(first.path)
+        window.electron.hideFloatingWindow?.()
+      }
     } catch (err) {
       console.error('Floating search error:', err)
+      if (thisVersion !== searchVersion.current) return
       setResults([])
-    } finally {
       setIsSearching(false)
-      setSearched(true)
     }
   }
 
@@ -54,10 +63,8 @@ function FloatingSearch(): JSX.Element {
     if (e.key === 'Escape') {
       window.electron.hideFloatingWindow?.()
     } else if (e.key === 'Enter') {
-      const target = hasNavigated.current ? results[selected] : results[0]
-      if (target) {
-        window.electron.showInFolder(target.path)
-        window.electron.hideFloatingWindow?.()
+      if (query.trim()) {
+        search(query.trim())
       }
     } else if (e.key === 'ArrowDown') {
       e.preventDefault()
@@ -116,7 +123,7 @@ function FloatingSearch(): JSX.Element {
         <input
           ref={inputRef}
           value={query}
-          onChange={e => { setQuery(e.target.value); search(e.target.value) }}
+          onChange={e => setQuery(e.target.value)}
           onKeyDown={handleKey}
           placeholder={t('search.placeholder')}
           style={{ flex: 1, border: 'none', outline: 'none', fontSize: '14px', background: 'transparent', color: 'var(--text-primary, #333)' }}
@@ -126,7 +133,7 @@ function FloatingSearch(): JSX.Element {
           <span style={{ fontSize: '11px', color: 'var(--text-muted, #999)' }}>{t('search.noResult') || '无结果'}</span>
         )}
         {!isSearching && results.length > 0 && (
-          <span style={{ fontSize: '11px', color: 'var(--accent, #0078d4)', fontWeight: 500 }}>{results.length} {t('search.result') || '个文件'}</span>
+          <span style={{ fontSize: '11px', color: 'var(--accent, #0078d4)', fontWeight: 500 }}>{t('search.result').replace('{count}', results.length.toString())}</span>
         )}
         <button onClick={() => window.electron.hideFloatingWindow?.()} style={{ border: 'none', background: 'none', cursor: 'pointer', color: 'var(--text-muted, #999)', fontSize: '12px', padding: '2px 6px' }}>Esc</button>
       </div>

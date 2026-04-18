@@ -9,7 +9,8 @@ export default defineConfig({
       rollupOptions: {
         input: {
           index: resolve(__dirname, 'electron/main/index.ts'),
-          scanWorker: resolve(__dirname, 'electron/main/scanWorker.ts')
+          scanWorker: resolve(__dirname, 'electron/main/scanWorker.ts'),
+          shardLoader: resolve(__dirname, 'electron/main/shardLoader.ts')
         }
       }
     }

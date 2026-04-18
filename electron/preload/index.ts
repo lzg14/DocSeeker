@@ -10,6 +10,8 @@ export interface FileRecord {
   content: string | null
   created_at?: string
   updated_at?: string
+  is_supported?: boolean
+  match_type?: 'filename' | 'content' | 'both'
 }
 
 export interface ScanProgress {
@@ -85,6 +87,7 @@ export interface ElectronAPI {
   onScanProgress: (callback: (progress: ScanProgress) => void) => () => void
   searchFiles: (query: string) => Promise<FileRecord[]>
   searchFilesAdvanced: (query: string, options?: SearchOptions) => Promise<FileRecord[]>
+  searchByFileName: (query: string, options?: SearchOptions) => Promise<FileRecord[]>
   deleteFile: (filePath: string) => Promise<boolean>
   getFileCount: () => Promise<number>
   showInFolder: (filePath: string) => Promise<void>
@@ -103,7 +106,7 @@ export interface ElectronAPI {
   // Search history & saved searches
   getSearchHistory: () => Promise<SearchHistoryEntry[]>
   clearSearchHistory: () => Promise<void>
-  getSearchSnippets: (query: string, fileIds: number[]) => Promise<Record<number, string>>
+  getSearchSnippets: (query: string, filePaths: string[]) => Promise<Record<string, string>>
   getSavedSearches: () => Promise<SavedSearch[]>
   addSavedSearch: (name: string, query: string) => Promise<number>
   deleteSavedSearch: (id: number) => Promise<void>
@@ -126,6 +129,8 @@ export interface ElectronAPI {
   isSilentStart: () => boolean
   // Window
   minimizeToTray: () => Promise<void>
+  // Shard info (diagnostics)
+  getShardInfo: () => Promise<any>
 }
 
 const electronAPI: ElectronAPI = {
@@ -144,6 +149,8 @@ const electronAPI: ElectronAPI = {
   searchFiles: (query: string) => ipcRenderer.invoke('search-files', query),
 
   searchFilesAdvanced: (query: string, options?: SearchOptions) => ipcRenderer.invoke('search-files-advanced', query, options),
+
+  searchByFileName: (query: string, options?: SearchOptions) => ipcRenderer.invoke('search-by-filename', query, options),
 
   deleteFile: (filePath: string) => ipcRenderer.invoke('delete-file', filePath),
 
@@ -191,7 +198,7 @@ const electronAPI: ElectronAPI = {
 
   clearSearchHistory: () => ipcRenderer.invoke('clear-search-history'),
 
-  getSearchSnippets: (query: string, fileIds: number[]) => ipcRenderer.invoke('get-search-snippets', query, fileIds),
+  getSearchSnippets: (query: string, filePaths: string[]) => ipcRenderer.invoke('get-search-snippets', query, filePaths),
 
   getSavedSearches: () => ipcRenderer.invoke('get-saved-searches'),
 
@@ -232,6 +239,8 @@ const electronAPI: ElectronAPI = {
   minimizeToTray: () => ipcRenderer.invoke('window-minimize-to-tray'),
 
   isSilentStart: () => process.argv.includes('--startup'),
+
+  getShardInfo: () => ipcRenderer.invoke('get-shard-info'),
 }
 
 contextBridge.exposeInMainWorld('electron', electronAPI)

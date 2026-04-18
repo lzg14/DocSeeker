@@ -8,7 +8,7 @@ interface FileListProps {
   onSelectFile: (file: FileRecord) => void
   formatSize: (bytes: number) => string
   hasSearched: boolean
-  snippets?: Record<number, string>
+  snippets?: Record<string, string>
 }
 
 type SortField = 'name' | 'size' | 'updated_at'
@@ -44,6 +44,20 @@ function FileList({ files, selectedFile, onSelectFile, formatSize, hasSearched, 
     return sortOrder === 'asc' ? comparison : -comparison
   })
 
+  const MatchTypeBadge: React.FC<{ matchType?: string }> = ({ matchType }) => {
+    if (!matchType) return null
+    if (matchType === 'filename') {
+      return <span style={{ fontSize: '10px', color: '#888', marginLeft: '4px' }}>📄文件名</span>
+    }
+    if (matchType === 'content') {
+      return <span style={{ fontSize: '10px', color: '#1976d2', marginLeft: '4px' }}>📝内容</span>
+    }
+    if (matchType === 'both') {
+      return <span style={{ fontSize: '10px', color: '#2e7d32', marginLeft: '4px' }}>📄+📝</span>
+    }
+    return null
+  }
+
   const getFileIcon = (fileType: string | null): string => {
     switch (fileType) {
       case 'docx':
@@ -66,6 +80,8 @@ function FileList({ files, selectedFile, onSelectFile, formatSize, hasSearched, 
         return '📧'
       case 'zip':
         return '🗜️'
+      case 'unsupported':
+        return '❓'
       default:
         return '📁'
     }
@@ -104,15 +120,16 @@ function FileList({ files, selectedFile, onSelectFile, formatSize, hasSearched, 
               onClick={() => onSelectFile(file)}
             >
               <div className="file-name-cell">
-                <span>{getFileIcon(file.file_type)}</span>
+                <span>{getFileIcon(file.is_supported === false ? 'unsupported' : file.file_type)}</span>
                 <div className="file-name-info">
                   <span className="file-name-text" title={file.path}>
                     {file.name}
+                    <MatchTypeBadge matchType={file.match_type} />
                   </span>
-                  {snippets[file.id!] && (
+                  {snippets[file.path] && (
                     <span
                       className="file-snippet"
-                      dangerouslySetInnerHTML={{ __html: snippets[file.id!] }}
+                      dangerouslySetInnerHTML={{ __html: snippets[file.path] }}
                     />
                   )}
                 </div>

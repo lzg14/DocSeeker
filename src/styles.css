@@ -2106,7 +2106,7 @@ button, input, select {
   transition: border-color 150ms ease, box-shadow 150ms ease, transform 100ms ease;
   font-family: inherit;
   flex: 1 1 calc(14.28% - 10px);
-  min-width: 80px;
+  min-width: 90px;
 }
 
 .theme-card:hover {

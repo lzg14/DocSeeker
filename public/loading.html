@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>DocSeeker</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 16px;
+      background: #fff;
+      color: #333;
+      font-family: system-ui, -apple-system, sans-serif;
+      transition: background 0.3s, color 0.3s;
+    }
+    @media (prefers-color-scheme: dark) {
+      body { background: #1a1a2e; color: #e0e0e0; }
+    }
+    .title { font-size: 22px; font-weight: 600; }
+    .msg { font-size: 13px; color: #888; }
+    @media (prefers-color-scheme: dark) { .msg { color: #888; } }
+    .bar-wrap {
+      width: 200px; height: 3px;
+      background: #eee;
+      border-radius: 2px;
+      overflow: hidden;
+    }
+    @media (prefers-color-scheme: dark) { .bar-wrap { background: #333; } }
+    .bar {
+      height: 100%;
+      background: #3b82f6;
+      border-radius: 2px;
+      animation: sweep 1.8s ease-in-out infinite;
+    }
+    @keyframes sweep {
+      0% { width: 0%; margin-left: 0; }
+      50% { width: 60%; margin-left: 20%; }
+      100% { width: 0%; margin-left: 100%; }
+    }
+  </style>
+</head>
+<body>
+  <div class="title">DocSeeker</div>
+  <div class="msg" id="msg">正在初始化数据库...</div>
+  <div class="bar-wrap"><div class="bar"></div></div>
+  <script>
+    // Listen for db-ready to switch to the React app
+    window.electron.onDbReady(function() {
+      window.location.hash = '/'
+      window.location.reload()
+    })
+  </script>
+</body>
+</html>
