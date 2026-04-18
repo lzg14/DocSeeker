@@ -377,6 +377,7 @@ searchByFileName: (_query: string, _options?: any) =>
 | 日期 | 问题 | 修复 | 提交 |
 |------|------|------|------|
 | 2026-04-18 | 首次启动时 meta.db 目录不存在导致 "Cannot open database because the directory does not exist" | `initMetaDatabase()` 中添加 `ensureDbDir()` 在打开数据库前先创建目录 | `476a70f` |
+| 2026-04-18 | 迁移功能存在缺陷且不再需要 | 删除 migration.ts，将 meta.ts 合并为 config.ts 统一管理所有配置 | `f5b47b3` |
 
 ---
 
