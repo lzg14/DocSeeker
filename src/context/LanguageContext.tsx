@@ -206,22 +206,6 @@ const translations: Record<Language, Record<string, string>> = {
     // Status bar
     'status.indexed': '已索引 {count} 个文件',
     'status.loading': '正在加载...',
-    // Theme
-    'theme.switch': '切换主题',
-    'theme.light': '浅色',
-    'theme.light.desc': '白天 / 办公环境',
-    'theme.dark': '深色',
-    'theme.dark.desc': '夜间 / 专注场景',
-    'theme.ocean': '蓝调',
-    'theme.ocean.desc': '长时间盯屏 / 冷色偏好',
-    'theme.nord': '北欧',
-    'theme.nord.desc': '清新冷淡风',
-    'theme.warm': '暖色',
-    'theme.warm.desc': '夜间阅读 / 眼睛舒适',
-    'theme.solarized': '太阳升',
-    'theme.solarized.desc': '暖灰 / 专业写作者',
-    'theme.system': '跟随系统',
-    'theme.system.desc': '跟随操作系统深浅色设置',
     // Confirm dialog
     'confirm.cancel': '取消',
     'confirm.ok': '确定',
