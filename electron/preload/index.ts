@@ -120,7 +120,12 @@ export interface ElectronAPI {
   checkForUpdate: () => Promise<string | null>
   downloadUpdate: () => Promise<void>
   quitAndInstall: () => Promise<void>
+  isDatabaseReady: () => Promise<boolean>
   onUpdateStatus: (callback: (info: { status: string; version?: string; error?: string }) => void) => () => void
+  // Silent start
+  isSilentStart: () => boolean
+  // Window
+  minimizeToTray: () => Promise<void>
 }
 
 const electronAPI: ElectronAPI = {
@@ -221,6 +226,12 @@ const electronAPI: ElectronAPI = {
       ipcRenderer.removeListener('update-status', handler)
     }
   },
+
+  isDatabaseReady: () => ipcRenderer.invoke('db-is-ready'),
+
+  minimizeToTray: () => ipcRenderer.invoke('window-minimize-to-tray'),
+
+  isSilentStart: () => process.argv.includes('--startup'),
 }
 
 contextBridge.exposeInMainWorld('electron', electronAPI)

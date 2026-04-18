@@ -6,6 +6,7 @@ interface AppContextValue {
   scanProgress: ScanProgress
   refreshKey: number
   triggerRefresh: () => void
+  isSilentStart: boolean
 }
 
 const AppContext = createContext<AppContextValue | null>(null)
@@ -19,6 +20,7 @@ export function AppProvider({ children }: { children: ReactNode }): JSX.Element 
     phase: 'scanning'
   })
   const [refreshKey, setRefreshKey] = useState(0)
+  const [isSilentStart] = useState(() => window.electron?.isSilentStart?.() ?? false)
   const scanStartedRef = useRef(false)
 
   useEffect(() => {
@@ -44,7 +46,8 @@ export function AppProvider({ children }: { children: ReactNode }): JSX.Element 
     isScanning,
     scanProgress,
     refreshKey,
-    triggerRefresh
+    triggerRefresh,
+    isSilentStart,
   }
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>
