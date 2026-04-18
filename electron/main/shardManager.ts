@@ -1024,7 +1024,12 @@ export function getSearchSnippets(
  * Get total file count across all shards.
  */
 export function getTotalFileCount(): number {
-  return totalFileCount
+  if (totalFileCount > 0) return totalFileCount
+  // Fallback: sum fileCount from loaded shards (avoids showing 0 on restart before first search)
+  if (shardsDiscovered) {
+    return shards.reduce((sum, s) => sum + (s.status === 'ready' ? s.fileCount : 0), 0)
+  }
+  return 0
 }
 
 /**

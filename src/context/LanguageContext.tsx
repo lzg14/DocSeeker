@@ -122,6 +122,7 @@ const translations: Record<Language, Record<string, string>> = {
     'search.dropHint': '松开开始搜索',
     'search.extracting': '正在提取内容...',
     'search.secondaryFilterPlaceholder': '在结果中筛选路径或文件名...',
+    'search.clearSecondaryFilter': '清除筛选',
     // File detail
     'detail.info': '文件信息',
     'detail.size': '大小',
@@ -278,6 +279,7 @@ const translations: Record<Language, Record<string, string>> = {
     'search.dropHint': 'Drop file to search its content',
     'search.extracting': 'Extracting content...',
     'search.secondaryFilterPlaceholder': 'Filter results by path or filename...',
+    'search.clearSecondaryFilter': 'Clear filter',
     // File list table headers
     'filelist.name': 'File Name',
     'filelist.type': 'Type',

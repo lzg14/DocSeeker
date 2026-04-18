@@ -37,6 +37,7 @@ const MAX_CACHED_QUERIES = 100
 
 let cache: HotCache = {}
 let queryStats: Record<string, number> = {}  // query → access count
+let statsDirty = false  // only persist when stats actually change
 
 function getHotCachePath(): string {
   return join(app.getPath('userData'), 'db', 'hot-cache.json')
@@ -50,10 +51,12 @@ function ensureDir(): void {
 }
 
 function persist(): void {
+  if (!statsDirty) return
   try {
     ensureDir()
     const data: PersistedCache = { cache, stats: queryStats }
     writeFileSync(getHotCachePath(), JSON.stringify(data), 'utf-8')
+    statsDirty = false
   } catch (err) {
     log.warn('[HotCache] Failed to write hot cache:', err)
   }
@@ -92,6 +95,7 @@ export function getHotResults(query: string): HotCacheEntry[] | undefined {
   if (results) {
     // Increment access frequency (LFU)
     queryStats[query] = (queryStats[query] ?? 0) + 1
+    statsDirty = true
     // Async persist to avoid blocking
     setImmediate(() => persist())
   }
@@ -123,6 +127,7 @@ export function setHotResults(query: string, results: HotCacheEntry[]): void {
     log.info(`[HotCache] LFU eviction: "${lfuQuery}" (freq=${minFreq})`)
   }
 
+  statsDirty = true
   persist()
 }
 

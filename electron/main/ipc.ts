@@ -78,6 +78,9 @@ export function registerIpcHandlers(): void {
   ipcMain.handle('search-files', async (_, query: string): Promise<FileRecord[]> => {
     if (!query.trim()) return []
 
+    // Always record search history (before cache check to avoid regression)
+    addSearchHistory(query)
+
     // LFU hot cache: check cache first
     const cached = getHotResults(query)
     if (cached !== undefined) {
@@ -93,8 +96,6 @@ export function registerIpcHandlers(): void {
         updated_at: e.updated_at,
       }))
     }
-
-    addSearchHistory(query)
     try {
       const results = await searchAllShards(query)
       const mapped = results.map(r => ({
@@ -370,9 +371,9 @@ export function registerIpcHandlers(): void {
             }
             case 'complete':
               log.info(`Incremental scan complete: ${filesProcessed} files, skipped: ${message.data.skipped}, time: ${message.data.totalTime}ms`)
-              // Update folder metadata with current total file count
+              // Update folder metadata with files processed in this scan
               if (folder && folder.id) {
-                updateFolderScanComplete(folder.id, getTotalFileCount(), totalSize)
+                updateFolderScanComplete(folder.id, filesProcessed, totalSize)
               }
               event.sender.send('scan-progress', {
                 current: filesProcessed,
@@ -480,7 +481,7 @@ export function registerIpcHandlers(): void {
             case 'complete':
               log.info(`Full rescan complete: ${filesProcessed} files, time: ${message.data.totalTime}ms`)
               if (folder && folder.id) {
-                updateFolderFullScanComplete(folder.id, getTotalFileCount(), totalSize)
+                updateFolderFullScanComplete(folder.id, filesProcessed, totalSize)
               }
               event.sender.send('scan-progress', {
                 current: filesProcessed,
