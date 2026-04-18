@@ -195,6 +195,14 @@ const translations: Record<Language, Record<string, string>> = {
     'settings.globalHotkey': '全局搜索快捷键',
     'settings.globalHotkeyDesc': '按 Ctrl+Shift+F 随时唤起搜索浮层',
     'settings.pressKey': '请按键...',
+    'settings.window': '窗口行为',
+    'settings.window.autoLaunch': '开机自启',
+    'settings.window.autoLaunchDesc': '系统启动时自动运行 DocSeeker',
+    'settings.window.minimizeToTray': '关闭时最小化到托盘',
+    'settings.window.minimizeToTrayDesc': '点击关闭按钮时隐藏到系统托盘',
+    // Theme
+    'theme.system': '跟随系统',
+    'theme.system.desc': '自动匹配系统亮色/暗色模式',
     // Status bar
     'status.indexed': '已索引 {count} 个文件',
     'status.loading': '正在加载...',
@@ -345,6 +353,11 @@ const translations: Record<Language, Record<string, string>> = {
     'settings.globalHotkey': 'Global Search Hotkey',
     'settings.globalHotkeyDesc': 'Press Ctrl+Shift+F anywhere to open the search popup',
     'settings.pressKey': 'Press a key...',
+    'settings.window': 'Window Behavior',
+    'settings.window.autoLaunch': 'Start with System',
+    'settings.window.autoLaunchDesc': 'Launch DocSeeker automatically when Windows starts',
+    'settings.window.minimizeToTray': 'Minimize to Tray on Close',
+    'settings.window.minimizeToTrayDesc': 'Hide to system tray instead of closing when clicking the close button',
     // Status bar
     'status.indexed': '{count} files indexed',
     'status.loading': 'Loading...',

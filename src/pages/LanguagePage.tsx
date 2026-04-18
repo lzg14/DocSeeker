@@ -6,11 +6,16 @@ function LanguagePage(): JSX.Element {
   const [currentHotkey, setCurrentHotkey] = useState('Ctrl+Shift+F')
   const [listening, setListening] = useState(false)
   const [hotkeyError, setHotkeyError] = useState('')
-
+  const [autoLaunch, setAutoLaunch] = useState(false)
+  const [minimizeToTray, setMinimizeToTray] = useState(
+    () => localStorage.getItem('minimizeToTray') === 'true'
+  )
 
   useEffect(() => {
     window.electron.getGlobalHotkey().then(h => setCurrentHotkey(formatHotkey(h)))
+    window.electron.getAutoLaunch?.().then(setAutoLaunch)
   }, [])
+
   const formatHotkey = (hk: string) =>
     hk.replace('CommandOrControl', 'Ctrl').replace(/\+/g, ' + ')
 
@@ -27,7 +32,7 @@ function LanguagePage(): JSX.Element {
 
       const key = e.key
       const MODIFIER_KEYS = new Set(['Control', 'Shift', 'Alt', 'Meta', 'OS'])
-      if (MODIFIER_KEYS.has(key)) return // skip pure modifier keys
+      if (MODIFIER_KEYS.has(key)) return
 
       const finalKey = key.length === 1 ? key.toUpperCase() : key
       if (modifiers.length > 0 && finalKey) {
@@ -47,6 +52,26 @@ function LanguagePage(): JSX.Element {
     document.documentElement.setAttribute('lang', newLang)
   }
 
+  const Toggle = ({ checked, onChange }: { checked: boolean; onChange: (v: boolean) => void }) => (
+    <button
+      role="switch"
+      aria-checked={checked}
+      onClick={() => onChange(!checked)}
+      style={{
+        width: '44px', height: '24px', borderRadius: '12px',
+        background: checked ? 'var(--accent)' : 'var(--border)',
+        border: 'none', cursor: 'pointer', position: 'relative',
+        transition: 'background 0.2s', flexShrink: 0,
+      }}
+    >
+      <span style={{
+        display: 'block', width: '20px', height: '20px', borderRadius: '50%',
+        background: '#fff', position: 'absolute', top: '2px',
+        left: checked ? '22px' : '2px', transition: 'left 0.2s',
+      }} />
+    </button>
+  )
+
   return (
     <div className="settings-page">
       <h2 className="page-title">{t('settings.title')}</h2>
@@ -65,7 +90,7 @@ function LanguagePage(): JSX.Element {
                   key={item.id}
                   className={`theme-card ${theme === item.id ? 'active' : ''}`}
                   onClick={() => setTheme(item.id)}
-                  title={item.descKey}
+                  title={t(item.descKey)}
                 >
                   <div className="theme-card-preview">
                     <div
@@ -128,6 +153,33 @@ function LanguagePage(): JSX.Element {
             {hotkeyError && (
               <span style={{ fontSize: '11px', color: '#e74c3c', marginLeft: '8px' }}>{hotkeyError}</span>
             )}
+          </div>
+        </div>
+      </div>
+
+      <div className="settings-section">
+        <div className="settings-section-title">{t('settings.window')}</div>
+        <div className="settings-card">
+          <div className="settings-row">
+            <div className="settings-row-info">
+              <div className="settings-row-label">{t('settings.window.autoLaunch')}</div>
+              <div className="settings-row-desc">{t('settings.window.autoLaunchDesc')}</div>
+            </div>
+            <Toggle checked={autoLaunch} onChange={v => {
+              setAutoLaunch(v)
+              window.electron.setAutoLaunch?.(v)
+            }} />
+          </div>
+          <div className="settings-divider" />
+          <div className="settings-row">
+            <div className="settings-row-info">
+              <div className="settings-row-label">{t('settings.window.minimizeToTray')}</div>
+              <div className="settings-row-desc">{t('settings.window.minimizeToTrayDesc')}</div>
+            </div>
+            <Toggle checked={minimizeToTray} onChange={v => {
+              setMinimizeToTray(v)
+              localStorage.setItem('minimizeToTray', String(v))
+            }} />
           </div>
         </div>
       </div>
