@@ -58,12 +58,22 @@ function SearchPage(): JSX.Element {
   const [isDragging, setIsDragging] = useState(false)
   const [isExtracting, setIsExtracting] = useState(false)
   const [searchScope, setSearchScope] = useState<'all' | 'filename'>('all')
+  const [secondaryFilter, setSecondaryFilter] = useState('')
   const { t } = useLanguage()
 
   const inputRef = useRef<HTMLInputElement>(null)
   const dropdownRef = useRef<HTMLDivElement>(null)
   const filterRef = useRef<HTMLDivElement>(null)
   const searchScopeRef = useRef<'all' | 'filename'>('all')
+  const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  // Derived filtered files based on secondary filter
+  const filteredFiles = secondaryFilter.trim()
+    ? files.filter(f =>
+        f.path?.toLowerCase().includes(secondaryFilter.toLowerCase()) ||
+        f.name?.toLowerCase().includes(secondaryFilter.toLowerCase())
+      )
+    : files
 
   // Load history and saved searches on mount
   useEffect(() => {
@@ -84,6 +94,15 @@ function SearchPage(): JSX.Element {
     }
     document.addEventListener('mousedown', handleClickOutside)
     return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [])
+
+  // Cleanup debounce timer on unmount
+  useEffect(() => {
+    return () => {
+      if (debounceTimerRef.current) {
+        clearTimeout(debounceTimerRef.current)
+      }
+    }
   }, [])
 
   const loadHistory = async () => {
@@ -182,7 +201,14 @@ function SearchPage(): JSX.Element {
     }
   }, [])
 
-  const handleSearch = () => performSearch(searchQuery, filters)
+  const handleSearch = () => {
+    // Clear any pending debounce so immediate search is not delayed
+    if (debounceTimerRef.current) {
+      clearTimeout(debounceTimerRef.current)
+      debounceTimerRef.current = null
+    }
+    performSearch(searchQuery, filters)
+  }
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>): void => {
     if (e.key === 'Enter') {
@@ -291,7 +317,16 @@ function SearchPage(): JSX.Element {
               type="text"
               placeholder={t('search.placeholder')}
               value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
+              onChange={(e) => {
+                setSearchQuery(e.target.value)
+                // Debounce: clear previous timer and schedule a new search
+                if (debounceTimerRef.current) {
+                  clearTimeout(debounceTimerRef.current)
+                }
+                debounceTimerRef.current = setTimeout(() => {
+                  performSearch(e.target.value, filters)
+                }, 300)
+              }}
               onKeyDown={handleKeyDown}
               onFocus={() => { setShowHistory(true); setShowSaved(false) }}
             />
@@ -547,9 +582,32 @@ function SearchPage(): JSX.Element {
       </div>
 
       <div className="search-content">
+        {files.length > 0 && (
+          <div className="secondary-filter-bar">
+            <input
+              type="text"
+              className="secondary-filter-input"
+              placeholder={t('search.secondaryFilterPlaceholder') || '在结果中筛选...'}
+              value={secondaryFilter}
+              onChange={(e) => setSecondaryFilter(e.target.value)}
+            />
+            {secondaryFilter && (
+              <button
+                className="secondary-filter-clear"
+                onClick={() => setSecondaryFilter('')}
+                title={t('search.clearSecondaryFilter') || '清除筛选'}
+              >
+                ×
+              </button>
+            )}
+            <span className="secondary-filter-count">
+              {filteredFiles.length} / {files.length}
+            </span>
+          </div>
+        )}
         <div className="file-list-wrapper">
           <FileList
-            files={files}
+            files={filteredFiles}
             selectedFile={selectedFile}
             onSelectFile={setSelectedFile}
             formatSize={formatSize}
@@ -566,7 +624,7 @@ function SearchPage(): JSX.Element {
 
       <div className="search-footer-bar">
         {hasSearched
-          ? t('search.result').replace('{count}', files.length.toString())
+          ? t('search.result').replace('{count}', filteredFiles.length.toString())
           : t('search.noQueryHint')}
       </div>
     </div>
