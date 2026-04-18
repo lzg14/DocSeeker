@@ -87,6 +87,35 @@ interface ScanWorkerData {
   dirPath: string
   incremental?: boolean
   lastScanAt?: string
+  // 扫描设置
+  settings?: {
+    timeoutMs?: number
+    maxFileSize?: number
+    maxPdfSize?: number
+    skipOfficeInZip?: boolean
+    checkZipHeader?: boolean
+    checkFileSize?: boolean
+  }
+}
+
+// 错误统计
+interface ErrorStats {
+  timeout: number      // 超时错误
+  sizeLimit: number   // 大小限制跳过
+  invalidHeader: number  // 无效头部跳过
+  corrupted: number  // 损坏文件
+  permission: number  // 权限错误
+  unknown: number    // 未知错误
+}
+
+// 进度信息（带预估时间）
+interface ProgressInfo {
+  current: number
+  total: number
+  currentFile: string
+  phase: 'scanning' | 'processing' | 'complete'
+  estimatedTimeRemaining?: number  // 预估剩余时间（秒）
+  errorStats?: ErrorStats
 }
 
 // Text extraction functions
@@ -659,10 +688,28 @@ function getFileType(ext: string): string {
 
 // Main scan function
 async function runScan(): Promise<void> {
-  const { dirPath, incremental, lastScanAt } = workerData as ScanWorkerData
+  const { dirPath, incremental, lastScanAt, settings } = workerData as ScanWorkerData
 
   const isIncremental = incremental === true && lastScanAt
   const lastScanTime = isIncremental ? new Date(lastScanAt!).getTime() : 0
+
+  // 使用自定义设置或默认值
+  const TIMEOUT_MS = settings?.timeoutMs ?? 15000
+  const MAX_FILE_SIZE = settings?.maxFileSize ?? 100 * 1024 * 1024
+  const MAX_PDF_SIZE = settings?.maxPdfSize ?? 50 * 1024 * 1024
+  const SKIP_OFFICE_IN_ZIP = settings?.skipOfficeInZip ?? true
+  const CHECK_ZIP_HEADER = settings?.checkZipHeader ?? true
+  const CHECK_FILE_SIZE = settings?.checkFileSize ?? true
+
+  // 初始化错误统计
+  const errorStats: ErrorStats = {
+    timeout: 0,
+    sizeLimit: 0,
+    invalidHeader: 0,
+    corrupted: 0,
+    permission: 0,
+    unknown: 0
+  }
 
   parentPort?.postMessage({
     type: 'progress',
@@ -675,12 +722,17 @@ async function runScan(): Promise<void> {
 
   parentPort?.postMessage({
     type: 'progress',
-    data: { current: 0, total, currentFile: isIncremental ? 'Checking for changes...' : 'Found files...', phase: 'processing' }
+    data: { current: 0, total, currentFile: isIncremental ? 'Checking for changes...' : 'Found files...', phase: 'processing', errorStats }
   })
 
   const errors: string[] = []
   let filesProcessed = 0
   let skipped = 0
+
+  // 预估时间相关变量
+  const startTime = Date.now()
+  const processingTimes: number[] = []
+  const TIME_WINDOW = 20  // 计算最近 20 个文件的平均时间
 
   // Batch processing: accumulate files and send in batches
   const BATCH_SIZE = 50
@@ -698,11 +750,20 @@ async function runScan(): Promise<void> {
     })
   }
 
+  // 计算预估剩余时间
+  const calcEstimatedTime = (): number | undefined => {
+    if (processingTimes.length < 5) return undefined  // 需要至少 5 个样本
+    const avgTime = processingTimes.reduce((a, b) => a + b, 0) / processingTimes.length
+    const remaining = total - filesProcessed - skipped
+    return Math.round((avgTime * remaining) / 1000)  // 返回秒数
+  }
+
   // Phase 2: Process files
   for (let i = 0; i < files.length; i++) {
     const filePath = files[i]
+    const fileStartTime = Date.now()
 
-    // Send progress
+    // Send progress with estimated time
     if (i % 10 === 0 || i === files.length - 1) {
       parentPort?.postMessage({
         type: 'progress',
@@ -710,9 +771,11 @@ async function runScan(): Promise<void> {
           current: i + 1,
           total,
           currentFile: path.basename(filePath),
-          phase: 'processing'
+          phase: 'processing',
+          estimatedTimeRemaining: calcEstimatedTime(),
+          errorStats
         }
-      })
+      } as ProgressInfo)
     }
 
     try {
@@ -740,6 +803,14 @@ async function runScan(): Promise<void> {
       }
     } catch (error) {
       errors.push(`Failed: ${filePath}`)
+      errorStats.unknown++
+    }
+
+    // 记录处理时间
+    const processingTime = Date.now() - fileStartTime
+    processingTimes.push(processingTime)
+    if (processingTimes.length > TIME_WINDOW) {
+      processingTimes.shift()
     }
 
     // Yield to allow other operations
@@ -749,9 +820,29 @@ async function runScan(): Promise<void> {
   // Flush remaining files
   await flushBatch()
 
+  // 发送最终进度（带统计）
+  parentPort?.postMessage({
+    type: 'progress',
+    data: {
+      current: total,
+      total,
+      currentFile: 'Complete',
+      phase: 'complete',
+      estimatedTimeRemaining: 0,
+      errorStats
+    }
+  })
+
   parentPort?.postMessage({
     type: 'complete',
-    data: { success: true, filesProcessed, skipped, errors }
+    data: {
+      success: true,
+      filesProcessed,
+      skipped,
+      errors,
+      errorStats,
+      totalTime: Date.now() - startTime
+    }
   })
 }
 

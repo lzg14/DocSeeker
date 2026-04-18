@@ -33,6 +33,7 @@ import {
   SavedSearch,
   SearchHistoryEntry
 } from './database'
+import { getScanSettings, updateScanSettings } from './scanSettings'
 
 let handlersRegistered = false
 
@@ -160,8 +161,18 @@ export function registerIpcHandlers(): void {
     }
   })
 
+  // Get scan settings
+  ipcMain.handle('get-scan-settings', async (): Promise<any> => {
+    return getScanSettings()
+  })
+
+  // Update scan settings
+  ipcMain.handle('update-scan-settings', async (_, settings: any): Promise<void> => {
+    updateScanSettings(settings)
+  })
+
   // Run incremental scan on a folder
-  ipcMain.handle('incremental-scan', async (event, folderPath: string): Promise<{ success: boolean; filesProcessed: number; skipped: number; errors: string[] }> => {
+  ipcMain.handle('incremental-scan', async (event, folderPath: string, settings?: any): Promise<{ success: boolean; filesProcessed: number; skipped: number; errors: string[] }> => {
     log.info(`IPC: incremental-scan called for ${folderPath}`)
 
     const folder = getScannedFolderByPath(folderPath)
@@ -174,7 +185,7 @@ export function registerIpcHandlers(): void {
 
       try {
         const worker = new Worker(workerPath, {
-          workerData: { dirPath: folderPath, incremental: true, lastScanAt: folder.last_scan_at }
+          workerData: { dirPath: folderPath, incremental: true, lastScanAt: folder.last_scan_at, settings }
         })
 
         let filesProcessed = 0
@@ -210,7 +221,7 @@ export function registerIpcHandlers(): void {
               break
             }
             case 'complete':
-              log.info(`Incremental scan complete: ${filesProcessed} files updated`)
+              log.info(`Incremental scan complete: ${filesProcessed} files updated, time: ${message.data.totalTime}ms`)
               // Update folder stats
               if (folder && folder.id) {
                 const fileCount = getFileCountByFolder(folderPath)
@@ -221,7 +232,9 @@ export function registerIpcHandlers(): void {
                 current: filesProcessed,
                 total: filesProcessed,
                 currentFile: '扫描完成',
-                phase: 'complete'
+                phase: 'complete',
+                errorStats: message.data.errorStats,
+                totalTime: message.data.totalTime
               })
               resolve({ success: true, filesProcessed, skipped, errors })
               worker.terminate()
@@ -247,7 +260,7 @@ export function registerIpcHandlers(): void {
   })
 
   // Run full rescan on a folder
-  ipcMain.handle('full-rescan', async (event, folderPath: string): Promise<{ success: boolean; filesProcessed: number; errors: string[] }> => {
+  ipcMain.handle('full-rescan', async (event, folderPath: string, settings?: any): Promise<{ success: boolean; filesProcessed: number; errors: string[] }> => {
     log.info(`IPC: full-rescan called for ${folderPath}`)
 
     const folder = getScannedFolderByPath(folderPath)
@@ -260,7 +273,7 @@ export function registerIpcHandlers(): void {
 
       try {
         const worker = new Worker(workerPath, {
-          workerData: { dirPath: folderPath }
+          workerData: { dirPath: folderPath, settings }
         })
 
         let filesProcessed = 0
@@ -295,7 +308,7 @@ export function registerIpcHandlers(): void {
               break
             }
             case 'complete':
-              log.info(`Full rescan complete: ${filesProcessed} files`)
+              log.info(`Full rescan complete: ${filesProcessed} files, time: ${message.data.totalTime}ms`)
               // Update folder stats
               if (folder && folder.id) {
                 const fileCount = getFileCountByFolder(folderPath)
@@ -306,7 +319,9 @@ export function registerIpcHandlers(): void {
                 current: filesProcessed,
                 total: filesProcessed,
                 currentFile: '扫描完成',
-                phase: 'complete'
+                phase: 'complete',
+                errorStats: message.data.errorStats,
+                totalTime: message.data.totalTime
               })
               resolve({ success: true, filesProcessed, errors })
               worker.terminate()

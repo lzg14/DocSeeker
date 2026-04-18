@@ -17,6 +17,17 @@ export interface ScanProgress {
   total: number
   currentFile: string
   phase: 'scanning' | 'processing' | 'complete'
+  estimatedTimeRemaining?: number
+  errorStats?: ErrorStats
+}
+
+export interface ErrorStats {
+  timeout: number
+  sizeLimit: number
+  invalidHeader: number
+  corrupted: number
+  permission: number
+  unknown: number
 }
 
 export interface ScanResult {
@@ -24,6 +35,8 @@ export interface ScanResult {
   filesProcessed: number
   errors: string[]
   skipped?: number
+  errorStats?: ErrorStats
+  totalTime?: number
 }
 
 export interface ScannedFolder {
@@ -100,6 +113,9 @@ export interface ElectronAPI {
   // Global hotkey
   getGlobalHotkey: () => Promise<string>
   setGlobalHotkey: (hotkey: string) => Promise<void>
+  // Scan settings
+  getScanSettings: () => Promise<any>
+  updateScanSettings: (settings: any) => Promise<void>
   // Auto update
   checkForUpdate: () => Promise<string | null>
   downloadUpdate: () => Promise<void>
@@ -185,6 +201,10 @@ const electronAPI: ElectronAPI = {
   getGlobalHotkey: () => ipcRenderer.invoke('get-global-hotkey'),
 
   setGlobalHotkey: (hotkey: string) => ipcRenderer.invoke('set-global-hotkey', hotkey),
+
+  getScanSettings: () => ipcRenderer.invoke('get-scan-settings'),
+
+  updateScanSettings: (settings: any) => ipcRenderer.invoke('update-scan-settings', settings),
 
   checkForUpdate: () => ipcRenderer.invoke('update-check'),
 

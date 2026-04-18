@@ -153,9 +153,41 @@ function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T>
 | extractTextFromZip | - | ✅ | ✅ |
 
 ### 优先级 P1（重要）
-- [ ] 进度报告细化（预估剩余时间）
-- [ ] 错误统计报告
-- [ ] 用户可配置的跳过规则
+- [x] 进度报告细化（预估剩余时间）
+- [x] 错误统计报告
+- [x] 用户可配置的跳过规则
+
+### P1 实现细节
+
+#### 预估剩余时间
+- 计算最近 20 个文件的平均处理时间
+- 根据剩余文件数预估总耗时
+- 需要至少 5 个样本才显示预估时间
+
+#### 错误统计 (ErrorStats)
+```typescript
+interface ErrorStats {
+  timeout: number        // 超时错误
+  sizeLimit: number      // 大小限制跳过
+  invalidHeader: number  // 无效头部跳过
+  corrupted: number      // 损坏文件
+  permission: number     // 权限错误
+  unknown: number        // 未知错误
+}
+```
+
+#### 用户可配置设置 (ScanSettings)
+```typescript
+interface ScanSettings {
+  timeoutMs: number           // 超时设置
+  maxFileSize: number         // 文件大小限制
+  maxPdfSize: number         // PDF 大小限制
+  skipOfficeInZip: boolean    // 跳过 ZIP 内 Office 文件
+  checkZipHeader: boolean     // ZIP 头部检测
+  checkFileSize: boolean      // 大小检查
+  skipRules: SkipRule[]       // 跳过规则
+}
+```
 
 ### 优先级 P2（可选）
 - [ ] 流式处理大文件
