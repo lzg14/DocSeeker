@@ -492,5 +492,13 @@ export function registerIpcHandlers(): void {
     app.setLoginItemSettings({ openAtLogin: enabled, openAsHidden: true, path: process.execPath })
   })
 
+  // Get system paths (Documents, Desktop)
+  ipcMain.handle('get-system-paths', async (): Promise<{ documents: string; desktop: string }> => {
+    return {
+      documents: app.getPath('documents'),
+      desktop: app.getPath('desktop')
+    }
+  })
+
   log.info('[IPC] All handlers registered')
 }

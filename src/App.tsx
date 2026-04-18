@@ -62,7 +62,7 @@ function App(): JSX.Element {
       case 'language':
         return <Suspense fallback={<PageFallback />}><LanguagePage /></Suspense>
       case 'guide':
-        return <Suspense fallback={<PageFallback />}><GuidePage /></Suspense>
+        return <Suspense fallback={<PageFallback />}><GuidePage onNavigate={setActiveTab} /></Suspense>
       case 'search':
       default:
         return <SearchPage />

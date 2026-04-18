@@ -131,6 +131,8 @@ export interface ElectronAPI {
   minimizeToTray: () => Promise<void>
   // Shard info (diagnostics)
   getShardInfo: () => Promise<any>
+  // System paths
+  getSystemPaths: () => Promise<{ documents: string; desktop: string }>
 }
 
 const electronAPI: ElectronAPI = {
@@ -241,6 +243,8 @@ const electronAPI: ElectronAPI = {
   isSilentStart: () => process.argv.includes('--startup'),
 
   getShardInfo: () => ipcRenderer.invoke('get-shard-info'),
+
+  getSystemPaths: () => ipcRenderer.invoke('get-system-paths'),
 }
 
 contextBridge.exposeInMainWorld('electron', electronAPI)
