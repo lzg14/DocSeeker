@@ -75,6 +75,7 @@ interface FileInfo {
   hash: string | null
   fileType: string
   content: string | null
+  is_supported: number  // 1 = supported (content extracted), 0 = not supported
 }
 
 interface ScanResult {
@@ -648,7 +649,8 @@ async function processFile(filePath: string): Promise<FileInfo | null> {
       size: stats.size,
       hash: null,
       fileType,
-      content: null
+      content: null,
+      is_supported: 1  // File passed extension check to reach this point; 1 = searchable
     }
 
     // Calculate hash for files < 100MB

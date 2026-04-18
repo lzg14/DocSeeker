@@ -4,6 +4,7 @@ import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import log from 'electron-log/main'
 import { initDatabase, closeDatabase } from './database'
 import { registerIpcHandlers } from './ipc'
+import { closeAllShards } from './shardManager'
 import { startUpdater, stopUpdater, handleManualCheck, handleDownloadUpdate, handleQuitAndInstall } from './updater'
 
 // Initialize logging
@@ -260,6 +261,7 @@ app.whenReady().then(async () => {
 
 app.on('window-all-closed', () => {
   log.info('All windows closed')
+  closeAllShards()
   closeDatabase()
   if (process.platform !== 'darwin') {
     app.quit()
@@ -271,5 +273,6 @@ app.on('before-quit', () => {
   ;(app as any).isQuitting = true
   globalShortcut.unregisterAll()
   stopUpdater()
+  closeAllShards()
   closeDatabase()
 })

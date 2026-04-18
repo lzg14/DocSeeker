@@ -121,6 +121,8 @@ export interface ElectronAPI {
   downloadUpdate: () => Promise<void>
   quitAndInstall: () => Promise<void>
   onUpdateStatus: (callback: (info: { status: string; version?: string; error?: string }) => void) => () => void
+  // Shard info (diagnostics)
+  getShardInfo: () => Promise<any>
 }
 
 const electronAPI: ElectronAPI = {
@@ -221,6 +223,8 @@ const electronAPI: ElectronAPI = {
       ipcRenderer.removeListener('update-status', handler)
     }
   },
+
+  getShardInfo: () => ipcRenderer.invoke('get-shard-info'),
 }
 
 contextBridge.exposeInMainWorld('electron', electronAPI)
