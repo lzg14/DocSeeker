@@ -42,7 +42,7 @@ import {
   getScanSettings,
   updateScanSettings,
   type ScannedFolder as MetaScannedFolder
-} from './meta'
+} from './config'
 
 let handlersRegistered = false
 

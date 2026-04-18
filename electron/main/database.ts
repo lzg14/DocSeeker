@@ -2,15 +2,14 @@
  * Database Module (shard-compatible)
  *
  * With the shard architecture, file data is stored in db/shards/shard_N.db files.
- * This module provides the old API surface by routing to the shard manager,
- * while also managing the meta database (scanned folders, search history, settings).
+ * All app settings and user data are stored in db/config.db (managed by config.ts).
  *
- * The old file-manager.db is replaced by multiple shard_N.db files.
- * The scanned_folders, search_history, saved_searches, and scan_settings tables
- * are now stored in db/meta.db (managed by meta.ts).
+ * The old file-manager.db is replaced by:
+ *   - db/config.db   — settings, folders, history (all-in-one)
+ *   - db/shards/     — file records split across multiple shard_N.db files
  */
 
-import { initMetaDatabase, closeMetaDatabase } from './meta'
+import { initConfig, closeConfig } from './config'
 import {
   initShardManager,
   searchAllShards,
@@ -22,10 +21,6 @@ import {
   type SearchOptions,
   type SearchResult
 } from './shardManager'
-import {
-  needsMigration,
-  migrateToShards
-} from './migration'
 import {
   getAllScannedFolders,
   getScannedFolderByPath,
@@ -46,25 +41,14 @@ import {
   type ScannedFolder,
   type SavedSearch,
   type SearchHistoryEntry
-} from './meta'
+} from './config'
 import log from 'electron-log/main'
 
 export async function initDatabase(): Promise<void> {
-  log.info('[Database] Initializing shard-compatible database...')
+  log.info('[Database] Initializing...')
 
-  // Initialize meta database (scanned folders, settings, history)
-  initMetaDatabase()
-
-  // Check and perform migration if needed (file-manager.db -> shards)
-  if (needsMigration()) {
-    log.info('[Database] Legacy file-manager.db detected, migrating to shards...')
-    const result = await migrateToShards()
-    if (result.success) {
-      log.info(`[Database] Migration completed: ${result.migrated} files migrated`)
-    } else {
-      log.error(`[Database] Migration failed: ${result.errors.join(', ')}`)
-    }
-  }
+  // Initialize config database (scanned folders, settings, history)
+  initConfig()
 
   // Initialize shard manager and load existing shards
   await initShardManager()
@@ -74,11 +58,11 @@ export async function initDatabase(): Promise<void> {
 
 export function closeDatabase(): void {
   closeAllShards()
-  closeMetaDatabase()
-  log.info('[Database] Database closed')
+  closeConfig()
+  log.info('[Database] Closed')
 }
 
-// ============ Re-export types and functions from meta ============
+// ============ Re-export types and functions from config ============
 
 export type { ScannedFolder, SavedSearch, SearchHistoryEntry, SearchOptions, SearchResult }
 
@@ -86,7 +70,7 @@ export {
   searchByFileName
 } from './shardManager'
 
-// Note: scanned_folders operations are now in meta.ts
+// Note: scanned_folders operations are now in config.ts
 // These are re-exported here for backward compatibility with ipc.ts
 export {
   getAllScannedFolders,
@@ -105,7 +89,7 @@ export {
   deleteSavedSearch,
   getScanSettings,
   updateScanSettings
-} from './meta'
+} from './config'
 
 // ============ File operations (via shard manager) ============
 

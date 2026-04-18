@@ -1,7 +1,7 @@
 /**
  * Scan Settings Module
  *
- * Delegates to meta.ts for persistent storage.
+ * Delegates to config.ts for persistent storage.
  * Kept for backward compatibility with existing imports.
  */
 
@@ -11,4 +11,4 @@ export {
   DEFAULT_SCAN_SETTINGS,
   type ScanSettings,
   type SkipRule
-} from './meta'
+} from './config'

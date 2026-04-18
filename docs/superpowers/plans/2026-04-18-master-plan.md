@@ -30,24 +30,22 @@ DocSeeker 数据库经历了一次架构调整。原设计使用单一 `file-man
 
 ```
 AppData/Roaming/DocSeeker/
-  db/meta.db (~50KB)          → 文件夹列表、搜索历史、保存搜索
+  db/config.db (~50KB)        → 文件夹列表、搜索历史、保存搜索、应用设置
   db/hot-cache.json (~1MB)   → 热点搜索结果缓存
-  db/shards/                  → 分片文件目录（待实现）
+  db/shards/                  → 分片文件目录
     shard_0.db
     shard_1.db
     ...
 ```
 
 **已实现模块：**
-- `meta.ts` — 元数据库（文件夹 + 搜索历史 + 保存搜索）
+- `config.ts` — 统一配置库（文件夹 + 搜索历史 + 保存搜索 + 应用设置）
 - `hotCache.ts` — 热点缓存（LRU ≤1MB）
 - `search.ts` + `searchDbLoader.ts` — 搜索数据库 Worker 懒加载
 - `ipc.ts` — 所有搜索操作 `waitForSearchDb()` 等待后端就绪
 
 **待解决问题：**
-1. file-manager.db 仍然是单一 2.1GB 文件，未分片
-2. 无法提取内容的文件未被索引，无法按文件名搜索
-3. 搜索结果未区分匹配类型
+（以上问题已全部在 Phase 2 中解决）
 
 ---
 
@@ -55,8 +53,8 @@ AppData/Roaming/DocSeeker/
 
 ```
 启动 (< 100ms):
-  db/meta.db (~50KB)           → 文件夹列表、搜索历史、保存搜索
-  db/hot-cache.json (~1MB)    → 热点搜索结果缓存
+  db/config.db (~50KB)         → 文件夹列表、搜索历史、保存搜索、应用设置
+  db/hot-cache.json (~1MB)     → 热点搜索结果缓存
 
 后台并行加载:
   db/shards/{id}_files.db      → 固定大小上限的文件分片
@@ -79,22 +77,21 @@ AppData/Roaming/DocSeeker/
 
 | 文件 | 存储内容 | 大小 | 加载时机 |
 |------|---------|------|---------|
-| `db/meta.db` | 文件夹列表、搜索历史、保存搜索 | ~50KB | 启动同步 (<50ms) |
+| `db/config.db` | 文件夹列表、搜索历史、保存搜索、扫描设置、应用设置（主题/语言/快捷键） | ~50KB | 启动同步 (<50ms) |
 | `db/hot-cache.json` | 热点搜索结果缓存 | ≤1MB | 启动同步 (<10ms) |
-| `db/shards/{id}_files.db` | 文件记录 + FTS5 + is_supported，按固定大小切分 | maxSizeMB/个 | 后台并行加载 |
+| `db/shards/shard_{id}.db` | 文件记录 + FTS5 + is_supported，按固定大小切分 | maxSizeMB/个 | 后台并行加载 |
 
 ---
 
 ## 开发任务总览
 
-| # | 阶段 | 任务 | 状态 |
-|---|------|------|------|
-| 1 | 数据库分片 | 实现 shard 分片架构（拆单库为多 shard） | 待实现 |
-| 2 | 文件索引 | scanWorker 收集所有文件，标记 is_supported | 待实现 |
-| 3 | 文件索引 | searchByFileName 仅按文件名搜索 | 待实现 |
-| 4 | 文件索引 | match_type 字段区分匹配类型 | 待实现 |
-| 5 | 前端 UI | MatchTypeBadge、搜索范围切换 | 待实现 |
-| 6 | 数据迁移 | file-manager.db → shards 迁移 | 待实现 |
+| # | 阶段 | 任务 | 状态 | 提交 |
+|---|------|------|------|------|
+| 1 | 数据库分片 | 实现 shard 分片架构（拆单库为多 shard） | ✅ 已完成 | `6d8fbc0` |
+| 2 | 文件索引 | scanWorker 收集所有文件，标记 is_supported | ✅ 已完成 | `6effe82` |
+| 3 | 文件索引 | searchByFileName 仅按文件名搜索 | ✅ 已完成 | `b4c7f3c` |
+| 4 | 文件索引 | match_type 字段区分匹配类型 | ✅ 已完成 | `b4c7f3c` |
+| 5 | 前端 UI | MatchTypeBadge、搜索范围切换 | ✅ 已完成 | `7ccfb14` |
 
 ---
 
@@ -362,40 +359,30 @@ searchByFileName: (_query: string, _options?: any) =>
 
 ---
 
-## Task 6: 数据迁移（file-manager.db → shards）
-
-**首次启动时执行一次：**
-1. 读取 `file-manager.db` 中的所有文件记录
-2. 按扫描顺序依次写入各 shard，满了自动开新 shard
-3. `db/shards/` 目录下的 shard 文件替代 `file-manager.db`
-4. 迁移完成后删除旧的 `file-manager.db`
-
-**Sharding 拆分逻辑：**
-- 单 shard 大小上限：`maxSizeMB = diskReadSpeedMBps × 2`
-- 文件按扫描顺序依次填入当前 shard，满则自动创建新 shard
-- 与文件夹无关：一个文件夹可能跨越多个 shard
-
-**迁移代码位置：** `electron/main/migration.ts`（新文件）
-
----
-
 ## 模块清单（最终）
 
 | 模块 | 文件 | 职责 |
 |------|------|------|
-| meta | `electron/main/meta.ts` | 元数据库（文件夹、历史） |
-| hotCache | `electron/main/hotCache.ts` | 热点缓存（LRU，≤1MB） |
+| config | `electron/main/config.ts` | 统一配置库（文件夹、历史、设置，全部存储在 `db/config.db`） |
+| hotCache | `electron/main/hotCache.ts` | 热点缓存（LRU，≤1MB，存储在 `db/hot-cache.json`） |
 | shardManager | `electron/main/shardManager.ts` | 分片加载、并行调度、跨 shard 搜索 |
 | shardLoader | `electron/main/shardLoader.ts` | Worker：单 shard 初始化（FTS 建表） |
-| migration | `electron/main/migration.ts` | 旧 DB → shards 迁移 |
 | search | `electron/main/search.ts` | 跨 shard 搜索 API |
 | scanner | `electron/main/scanner.ts` | 文件内容提取 |
 
 ---
 
+## 生产环境 Bug 修复
+
+| 日期 | 问题 | 修复 | 提交 |
+|------|------|------|------|
+| 2026-04-18 | 首次启动时 meta.db 目录不存在导致 "Cannot open database because the directory does not exist" | `initMetaDatabase()` 中添加 `ensureDbDir()` 在打开数据库前先创建目录 | `476a70f` |
+
+---
+
 ## 后续优化方向
 
-1. ~~**search.db 分片**：按文件类型或时间范围分表，减少单文件体积~~ ✅ 已升级为按文件夹分库
+1. ~~**search.db 分片**：按文件类型或时间范围分表，减少单文件体积~~ ✅ 已升级为按大小分库（shards）
 2. **增量 FTS 同步**：改为批量同步，减少 FTS 表膨胀
 3. **热点缓存预热策略**：基于访问频率而非最近搜索，更智能地缓存
 4. **VACUUM 压缩**：定期压缩各 shard 文件，回收已删除记录的空间

@@ -1,29 +1,45 @@
 /**
- * Meta Database (db/meta.db)
+ * Config Database (db/config.db)
  *
- * Stores folder lists, scan history, and saved searches.
- * This is a small SQLite database separate from the shard files.
+ * Stores all app configuration and user data:
+ * - scanned_folders: indexed directories
+ * - search_history: recent searches
+ * - saved_searches: bookmarked searches
+ * - scan_settings: scanning preferences
+ * - app_settings: theme, language, hotkey, window state, etc.
+ *
+ * Design: config + shards are stored under db/ directory.
  */
 
 import { app } from 'electron'
 import { join } from 'path'
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'fs'
 import Database, { Database as BetterSqlite3Database } from 'better-sqlite3'
 import log from 'electron-log/main'
 
-let metaDb: BetterSqlite3Database | null = null
+let configDb: BetterSqlite3Database | null = null
 
-export function getMetaDbPath(): string {
-  return join(app.getPath('userData'), 'db', 'meta.db')
+export function getConfigDbPath(): string {
+  return join(app.getPath('userData'), 'db', 'config.db')
 }
 
-export function initMetaDatabase(): void {
-  const dbPath = getMetaDbPath()
+function ensureDbDir(): void {
+  const dir = join(app.getPath('userData'), 'db')
+  if (!existsSync(dir)) {
+    mkdirSync(dir, { recursive: true })
+    log.info('[Config] Created db directory:', dir)
+  }
+}
 
-  metaDb = new Database(dbPath)
-  metaDb.pragma('journal_mode = WAL')
+export function initConfig(): void {
+  ensureDbDir()
+  const dbPath = getConfigDbPath()
+
+  configDb = new Database(dbPath)
+  configDb.pragma('journal_mode = WAL')
 
   // Scanned folders table
-  metaDb.exec(`
+  configDb.exec(`
     CREATE TABLE IF NOT EXISTS scanned_folders (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       path TEXT UNIQUE NOT NULL,
@@ -37,24 +53,23 @@ export function initMetaDatabase(): void {
       schedule_time TEXT DEFAULT NULL
     )
   `)
-
-  // Migration: add last_full_scan_at if missing
+  // Migration: add last_full_scan_at if missing (for databases created before this column existed)
   try {
-    metaDb.exec(`ALTER TABLE scanned_folders ADD COLUMN last_full_scan_at TEXT DEFAULT NULL`)
+    configDb.exec(`ALTER TABLE scanned_folders ADD COLUMN last_full_scan_at TEXT DEFAULT NULL`)
   } catch {}
 
   // Search history table
-  metaDb.exec(`
+  configDb.exec(`
     CREATE TABLE IF NOT EXISTS search_history (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       query TEXT NOT NULL,
       searched_at TEXT DEFAULT (datetime('now'))
     )
   `)
-  metaDb.exec(`CREATE INDEX IF NOT EXISTS idx_history_query ON search_history(query)`)
+  configDb.exec(`CREATE INDEX IF NOT EXISTS idx_history_query ON search_history(query)`)
 
   // Saved searches table
-  metaDb.exec(`
+  configDb.exec(`
     CREATE TABLE IF NOT EXISTS saved_searches (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       name TEXT NOT NULL,
@@ -64,33 +79,42 @@ export function initMetaDatabase(): void {
   `)
 
   // Scan settings table
-  metaDb.exec(`
+  configDb.exec(`
     CREATE TABLE IF NOT EXISTS scan_settings (
       id INTEGER PRIMARY KEY CHECK (id = 1),
       settings TEXT NOT NULL DEFAULT '{}'
     )
   `)
 
-  // Ensure default settings row exists
-  const row = metaDb.prepare('SELECT id FROM scan_settings WHERE id = 1').get()
+  // App settings table (theme, language, hotkey, window, etc.)
+  configDb.exec(`
+    CREATE TABLE IF NOT EXISTS app_settings (
+      key TEXT PRIMARY KEY,
+      value TEXT NOT NULL,
+      updated_at TEXT DEFAULT (datetime('now'))
+    )
+  `)
+
+  // Ensure default settings rows exist
+  const row = configDb.prepare('SELECT id FROM scan_settings WHERE id = 1').get()
   if (!row) {
-    metaDb.prepare('INSERT INTO scan_settings (id, settings) VALUES (1, ?)').run(['{"timeoutMs":15000,"maxFileSize":104857600,"maxPdfSize":52428800,"skipOfficeInZip":true,"checkZipHeader":true,"checkFileSize":true,"skipRules":[]}'])
+    configDb.prepare('INSERT INTO scan_settings (id, settings) VALUES (1, ?)').run(['{"timeoutMs":15000,"maxFileSize":104857600,"maxPdfSize":52428800,"skipOfficeInZip":true,"checkZipHeader":true,"checkFileSize":true,"skipRules":[]}'])
   }
 
-  log.info(`[MetaDB] Initialized at ${dbPath}`)
+  log.info(`[Config] Initialized at ${dbPath}`)
 }
 
-export function closeMetaDatabase(): void {
-  if (metaDb) {
-    metaDb.close()
-    metaDb = null
-    log.info('[MetaDB] Closed')
+export function closeConfig(): void {
+  if (configDb) {
+    configDb.close()
+    configDb = null
+    log.info('[Config] Closed')
   }
 }
 
 function getDb(): BetterSqlite3Database {
-  if (!metaDb) throw new Error('Meta database not initialized')
-  return metaDb
+  if (!configDb) throw new Error('Config database not initialized')
+  return configDb
 }
 
 // ============ Scanned Folders ============
@@ -284,6 +308,54 @@ export function updateScanSettings(settings: Partial<ScanSettings>): void {
     const stmt = getDb().prepare('UPDATE scan_settings SET settings = ? WHERE id = 1')
     stmt.run([JSON.stringify(currentScanSettings)])
   } catch (err) {
-    log.warn('[MetaDB] Failed to save scan settings:', err)
+    log.warn('[Config] Failed to save scan settings:', err)
   }
+}
+
+// ============ App Settings (theme, language, hotkey, etc.) ============
+
+export interface AppSettings {
+  themeId?: string
+  language?: string
+  hotkey?: string
+  autoLaunch?: boolean
+  windowBounds?: { x: number; y: number; width: number; height: number }
+  minimizeToTray?: boolean
+  [key: string]: unknown
+}
+
+export function getAppSetting<T = unknown>(key: string, defaultValue: T): T {
+  try {
+    const row = getDb().prepare('SELECT value FROM app_settings WHERE key = ?').get() as { value: string } | undefined
+    if (row) {
+      return JSON.parse(row.value) as T
+    }
+  } catch {}
+  return defaultValue
+}
+
+export function setAppSetting(key: string, value: unknown): void {
+  try {
+    const stmt = getDb().prepare(`
+      INSERT INTO app_settings (key, value, updated_at) VALUES (?, ?, datetime('now'))
+      ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = datetime('now')
+    `)
+    stmt.run([key, JSON.stringify(value)])
+  } catch (err) {
+    log.warn('[Config] Failed to save app setting:', err)
+  }
+}
+
+export function getAllAppSettings(): AppSettings {
+  try {
+    const rows = getDb().prepare('SELECT key, value FROM app_settings').all() as { key: string; value: string }[]
+    const settings: AppSettings = {}
+    for (const row of rows) {
+      try {
+        (settings as Record<string, unknown>)[row.key] = JSON.parse(row.value)
+      } catch {}
+    }
+    return settings
+  } catch {}
+  return {}
 }

@@ -177,4 +177,64 @@ docseeker/
 - 应用会在每月 5 日和 15 日自动检查新版本
 - 右下角弹出通知提示新版本可用
 - 点击「下载」下载更新包
+
+---
+
+## 开发指南
+
+详细规范参见 [docs/superpowers/plans/](docs/superpowers/plans/) 下的开发计划文档。
+
+### 技术栈
+
+- **框架**：Electron + React + TypeScript
+- **数据库**：SQLite (better-sqlite3) + FTS5
+- **构建**：electron-vite + electron-builder
+- **搜索**：FTS5 全文索引
+
+### 项目结构
+
+```
+docSeeker/
+├── electron/          # Electron 主进程代码
+│   └── main/          # 主进程入口
+├── src/               # React 渲染进程代码
+├── docs/              # 开发文档
+│   └── superpowers/plans/  # 开发计划文档
+├── public/            # 静态资源
+└── build/             # 应用图标等构建资源
+```
+
+### 数据库架构
+
+所有数据存储在 `AppData/Roaming/DocSeeker/db/` 目录下：
+
+| 文件 | 类型 | 存储内容 | 加载时机 |
+|------|------|---------|---------|
+| `db/config.db` | SQLite | 扫描文件夹列表、搜索历史、保存搜索、扫描设置、应用设置 | 启动同步 (<50ms) |
+| `db/hot-cache.json` | JSON | 热点搜索结果缓存（LRU ≤1MB） | 启动同步 (<10ms) |
+| `db/shards/*.db` | SQLite | 文件记录 + FTS5 全文索引，按固定大小切分 | 后台并行加载 |
+
+**config.db 表结构：**
+- `scanned_folders` — 扫描目录及元数据
+- `search_history` — 搜索历史记录
+- `saved_searches` — 保存的搜索
+- `scan_settings` — 扫描配置（超时、最大文件大小等）
+- `app_settings` — 应用设置（主题、语言、热键、窗口状态等）
+
+**shards 规则：**
+- 单 shard 大小上限 = 磁盘读速(MB/s) × 2（保证 2s 内加载）
+- 文件按扫描顺序依次填入 shard，满则自动创建新 shard
+- 每个 shard 含 `shard_files` 表 + `shard_files_fts` 虚拟 FTS5 表
+
+### 提交规范
+
+- 提交信息使用中文描述
+- 每次提交应包含功能范围标签：`feat:` / `fix:` / `docs:` / `refactor:` / `test:`
+- 示例：`feat(shard): implement shard-based database architecture`
+
+### 开发完成更新文档
+
+1. **计划文档**：在 `docs/superpowers/plans/` 目录下的开发计划中，将对应任务的「状态」列更新为「✅ 已完成」，并填写提交 SHA
+2. **README.md**：如果功能影响用户使用，更新 README 相关描述
+3. **CHANGELOG.md**：在 CHANGELOG 中添加本次更新内容（如果没有则新建）
 - 下载完成后点击「立即重启安装」

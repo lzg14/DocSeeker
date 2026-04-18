@@ -1,6 +1,6 @@
 # DocSeeker 开发路线图
 
-> 更新时间: 2026-04-15（功能补充轮）
+> 更新时间: 2026-04-18（分片架构重构 + 数据库合并）
 
 ---
 
@@ -50,7 +50,7 @@ DocSeeker 是一款基于 Electron + React + TypeScript 的本地文档全文搜
 
 | 功能 | 当前状态 | 目标 | 竞品参考 |
 |------|----------|------|----------|
-| Electron 冷启动 | 慢 | 优化启动速度 | Everything 毫秒级 |
+| Electron 冷启动 | ✅ 分片架构已完成（启动 <100ms，搜索 DB 后台加载） | 继续优化至毫秒级 | Everything 毫秒级 |
 | 跨平台支持 | 仅 Windows | 评估 macOS/Linux 可行性 | DocFetcher / Recoll |
 | 便携版 | ✅ 已完成 | — | Everything / AnyTXT / DocFetcher |
 
@@ -131,7 +131,7 @@ DocSeeker 是一款基于 Electron + React + TypeScript 的本地文档全文搜
 
 - [ ] **M4.1** 搜索结果缩略图预览（图片 / PDF 首帧）
 - [ ] **M4.2** 全局快捷键浮层搜索（类 Listary 双击 Ctrl）
-- [x] **M4.3** Electron 冷启动优化（懒加载、代码分割）
+- [x] **M4.3** Electron 冷启动优化（分片架构：config.db 同步加载 + shards 后台并行加载，UI <100ms 可交互）
 - [ ] **M4.4** 跨平台支持评估（macOS / Linux）
 - [x] **M4.5** 搜索结果命中词高亮增强
 - [ ] **M4.6** 去重功能 UI 集成
