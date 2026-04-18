@@ -16,26 +16,54 @@ import {
   getFileCountByFolder,
   getTotalSizeByFolder,
   FileRecord,
-  addScannedFolder,
-  updateFolderScanComplete,
-  updateFolderFullScanComplete,
-  getScannedFolderByPath,
-  getScannedFolderById,
-  getAllScannedFolders,
-  deleteScannedFolder,
   ScannedFolder,
-  addSearchHistory,
-  getSearchHistory,
-  clearSearchHistory,
-  addSavedSearch,
-  getSavedSearches,
-  deleteSavedSearch,
-  SavedSearch,
-  SearchHistoryEntry
-} from './database'
+  isSearchDbReady,
+  getScannedFolderById,
+  addScannedFolder,
+  waitForSearchDb,
+  onSearchDbReady
+} from './search'
+import {
+  addScannedFolderMeta,
+  getAllScannedFoldersMeta,
+  getScannedFolderByPathMeta,
+  updateFolderScanCompleteMeta,
+  updateFolderFullScanCompleteMeta,
+  deleteScannedFolderMeta,
+  addSearchHistoryMeta,
+  getSearchHistoryMeta,
+  clearSearchHistoryMeta,
+  addSavedSearchMeta,
+  getSavedSearchesMeta,
+  deleteSavedSearchMeta,
+  MetaScannedFolder
+} from './meta'
+import {
+  initHotCache,
+  getHotResults,
+  saveHotResults,
+  warmupHotCache,
+  setRecentQueriesForWarmup,
+  closeHotCache
+} from './hotCache'
 import { getScanSettings, updateScanSettings } from './scanSettings'
 
 let handlersRegistered = false
+
+/** Called by index.ts to trigger hot cache warmup after search DB is ready. */
+export function triggerHotCacheWarmup(): void {
+  const recentHistory = getSearchHistoryMeta(20).map(h => h.query)
+  setRecentQueriesForWarmup(recentHistory)
+  warmupHotCache((query: string) => {
+    try {
+      return searchFiles(query).map(r => ({
+        path: r.path, name: r.name, file_type: r.file_type, size: r.size
+      }))
+    } catch {
+      return []
+    }
+  })
+}
 
 export function registerIpcHandlers(): void {
   if (handlersRegistered) return
@@ -53,56 +81,63 @@ export function registerIpcHandlers(): void {
     return result.filePaths[0]
   })
 
-  // Search files
+  // Search files — waits for search DB to be ready if still loading
   ipcMain.handle('search-files', async (_, query: string): Promise<FileRecord[]> => {
-    if (query.trim()) {
-      addSearchHistory(query)
+    await waitForSearchDb()
+    if (query.trim()) addSearchHistoryMeta(query)
+    const results = searchFiles(query)
+    // Cache top results for instant display next time
+    if (query.trim() && results.length > 0) {
+      saveHotResults(query, results.slice(0, 10).map((r, i) => ({
+        path: r.path, name: r.name, file_type: r.file_type, size: r.size, rank: i
+      })))
     }
-    return searchFiles(query)
+    return results
   })
 
   // Advanced search with filters
   ipcMain.handle('search-files-advanced', async (_, query: string, options?: SearchOptions): Promise<FileRecord[]> => {
-    if (query.trim()) {
-      addSearchHistory(query)
-    }
+    await waitForSearchDb()
+    if (query.trim()) addSearchHistoryMeta(query)
     return searchFilesAdvanced(query, options)
   })
 
-  // Search history
+  // Search history — from meta.db (instant, no search DB needed)
   ipcMain.handle('get-search-history', async (): Promise<SearchHistoryEntry[]> => {
-    return getSearchHistory(20)
+    return getSearchHistoryMeta(20)
   })
 
   ipcMain.handle('clear-search-history', async (): Promise<void> => {
-    clearSearchHistory()
+    clearSearchHistoryMeta()
   })
 
   // Get search snippets for highlighting
   ipcMain.handle('get-search-snippets', async (_, query: string, fileIds: number[]): Promise<Record<number, string>> => {
+    await waitForSearchDb()
     const snippets = getSearchSnippets(query, fileIds)
     const result: Record<number, string> = {}
     snippets.forEach((value, key) => { result[key] = value })
     return result
   })
 
-  // Saved searches
+  // Saved searches — from meta.db (instant, no search DB needed)
   ipcMain.handle('get-saved-searches', async (): Promise<SavedSearch[]> => {
-    return getSavedSearches()
+    return getSavedSearchesMeta()
   })
 
   ipcMain.handle('add-saved-search', async (_, name: string, query: string): Promise<number> => {
-    return addSavedSearch(name, query)
+    return addSavedSearchMeta(name, query)
   })
 
   ipcMain.handle('delete-saved-search', async (_, id: number): Promise<void> => {
-    deleteSavedSearch(id)
+    deleteSavedSearchMeta(id)
   })
 
   // Delete a file (move to trash)
   ipcMain.handle('delete-file', async (_, filePath: string): Promise<boolean> => {
     try {
       await shell.trashItem(filePath)
+      await waitForSearchDb()
       deleteFileByPath(filePath)
       return true
     } catch (error) {
@@ -127,38 +162,43 @@ export function registerIpcHandlers(): void {
   })
 
   // Get all scanned folders
-  ipcMain.handle('get-scanned-folders', async (): Promise<ScannedFolder[]> => {
-    return getAllScannedFolders()
+  ipcMain.handle('get-scanned-folders', async (): Promise<MetaScannedFolder[]> => {
+    return getAllScannedFoldersMeta()
   })
 
   // Add or update a scanned folder
-  ipcMain.handle('add-scanned-folder', async (_, folderPath: string): Promise<ScannedFolder | null> => {
-    const existing = getScannedFolderByPath(folderPath)
+  ipcMain.handle('add-scanned-folder', async (_, folderPath: string): Promise<MetaScannedFolder | null> => {
+    const existing = getScannedFolderByPathMeta(folderPath)
     if (existing) {
       return existing
     }
-
     const name = folderPath.split(/[/\\]/).pop() || folderPath
-    addScannedFolder({
+    const folder = {
       path: folderPath,
       name,
       file_count: 0,
       total_size: 0,
       schedule_enabled: 0
-    })
-
-    return getScannedFolderByPath(folderPath) ?? null
+    }
+    addScannedFolderMeta(folder)
+    // Also add to search DB if ready
+    if (isSearchDbReady()) {
+      addScannedFolder(folder)
+    }
+    return getScannedFolderByPathMeta(folderPath) ?? null
   })
 
   // Delete a scanned folder and its files
   ipcMain.handle('delete-scanned-folder', async (_, id: number): Promise<void> => {
     const folder = getScannedFolderById(id)
     if (folder) {
-      // Remove all files from this folder from database
+      // Remove all files from search DB
       removeFilesByFolderPath(folder.path)
-      // Delete the folder record
+      // Delete from search DB
       deleteScannedFolder(id)
     }
+    // Always delete from meta DB too
+    deleteScannedFolderMeta(id)
   })
 
   // Get scan settings
@@ -171,10 +211,25 @@ export function registerIpcHandlers(): void {
     updateScanSettings(settings)
   })
 
+  // Get auto-launch status
+  ipcMain.handle('get-auto-launch', async (): Promise<boolean> => {
+    return app.getLoginItemSettings().openAtLogin
+  })
+
+  // Set auto-launch
+  ipcMain.handle('set-auto-launch', async (_, enabled: boolean): Promise<void> => {
+    app.setLoginItemSettings({ openAtLogin: enabled, openAsHidden: true, path: process.execPath })
+  })
+
+  // Check if search database is ready (used by renderer for polling)
+  ipcMain.handle('db-is-ready', async (): Promise<boolean> => {
+    return isSearchDbReady()
+  })
+
   // Run incremental scan on a folder
   ipcMain.handle('incremental-scan', async (event, folderPath: string, settings?: any): Promise<{ success: boolean; filesProcessed: number; skipped: number; errors: string[] }> => {
     log.info(`IPC: incremental-scan called for ${folderPath}`)
-
+    await waitForSearchDb()
     const folder = getScannedFolderByPath(folderPath)
     if (!folder) {
       return { success: false, filesProcessed: 0, skipped: 0, errors: ['Folder not found in scan records'] }
@@ -222,11 +277,12 @@ export function registerIpcHandlers(): void {
             }
             case 'complete':
               log.info(`Incremental scan complete: ${filesProcessed} files updated, time: ${message.data.totalTime}ms`)
-              // Update folder stats
+              // Update folder stats in both search DB and meta DB
               if (folder && folder.id) {
                 const fileCount = getFileCountByFolder(folderPath)
                 const totalSize = getTotalSizeByFolder(folderPath)
                 updateFolderScanComplete(folder.id, fileCount, totalSize)
+                updateFolderScanCompleteMeta(folder.id, fileCount, totalSize)
               }
               event.sender.send('scan-progress', {
                 current: filesProcessed,
@@ -262,76 +318,63 @@ export function registerIpcHandlers(): void {
   // Run full rescan on a folder
   ipcMain.handle('full-rescan', async (event, folderPath: string, settings?: any): Promise<{ success: boolean; filesProcessed: number; errors: string[] }> => {
     log.info(`IPC: full-rescan called for ${folderPath}`)
-
-    const folder = getScannedFolderByPath(folderPath)
+    await waitForSearchDb()
+    const folder = getScannedFolderByPathMeta(folderPath)
     if (!folder) {
       return { success: false, filesProcessed: 0, errors: ['Folder not found in scan records'] }
     }
 
+    // Sync folder to search DB if needed
+    const searchFolder = getScannedFolderById(folder.id!)
+    if (!searchFolder) {
+      addScannedFolder({ path: folder.path, name: folder.name, file_count: 0, total_size: 0, schedule_enabled: folder.schedule_enabled ?? 0 })
+    }
+
     return new Promise((resolve) => {
       const workerPath = join(__dirname, 'scanWorker.js')
-
       try {
-        const worker = new Worker(workerPath, {
-          workerData: { dirPath: folderPath, settings }
-        })
-
+        const worker = new Worker(workerPath, { workerData: { dirPath: folderPath, settings } })
         let filesProcessed = 0
         const errors: string[] = []
 
         worker.on('message', (message) => {
-          switch (message.type) {
-            case 'progress':
-              event.sender.send('scan-progress', message.data)
-              break
-            case 'batch': {
-              for (const fileInfo of message.data) {
-                const fileRecord: FileRecord = {
-                  path: fileInfo.path,
-                  name: fileInfo.name,
-                  size: fileInfo.size,
-                  hash: fileInfo.hash,
-                  file_type: fileInfo.fileType,
-                  content: fileInfo.content
-                }
-
-                const existing = getFileByPath(fileInfo.path)
-                if (existing) {
-                  if (existing.hash !== fileRecord.hash || existing.content !== fileRecord.content) {
-                    updateFile(existing.id!, fileRecord)
-                  }
-                } else {
-                  insertFile(fileRecord)
-                }
-                filesProcessed++
+          if (message.type === 'progress') {
+            event.sender.send('scan-progress', message.data)
+          } else if (message.type === 'batch') {
+            for (const fileInfo of message.data) {
+              const fileRecord: FileRecord = {
+                path: fileInfo.path, name: fileInfo.name, size: fileInfo.size,
+                hash: fileInfo.hash, file_type: fileInfo.fileType, content: fileInfo.content
               }
-              break
+              const existing = getFileByPath(fileInfo.path)
+              if (existing) {
+                if (existing.hash !== fileRecord.hash || existing.content !== fileRecord.content) {
+                  updateFile(existing.id!, fileRecord)
+                }
+              } else {
+                insertFile(fileRecord)
+              }
+              filesProcessed++
             }
-            case 'complete':
-              log.info(`Full rescan complete: ${filesProcessed} files, time: ${message.data.totalTime}ms`)
-              // Update folder stats
-              if (folder && folder.id) {
-                const fileCount = getFileCountByFolder(folderPath)
-                const totalSize = getTotalSizeByFolder(folderPath)
-                updateFolderFullScanComplete(folder.id, fileCount, totalSize)
-              }
-              event.sender.send('scan-progress', {
-                current: filesProcessed,
-                total: filesProcessed,
-                currentFile: '扫描完成',
-                phase: 'complete',
-                errorStats: message.data.errorStats,
-                totalTime: message.data.totalTime
-              })
-              resolve({ success: true, filesProcessed, errors })
-              worker.terminate()
-              break
-            case 'error':
-              log.error('Full rescan worker error:', message.data.message)
-              errors.push(message.data.message)
-              resolve({ success: false, filesProcessed, errors })
-              worker.terminate()
-              break
+          } else if (message.type === 'complete') {
+            log.info(`Full rescan complete: ${filesProcessed} files, time: ${message.data.totalTime}ms`)
+            if (folder.id) {
+              const fileCount = getFileCountByFolder(folderPath)
+              const totalSize = getTotalSizeByFolder(folderPath)
+              updateFolderFullScanComplete(folder.id, fileCount, totalSize)
+              updateFolderFullScanCompleteMeta(folder.id, fileCount, totalSize)
+            }
+            event.sender.send('scan-progress', {
+              current: filesProcessed, total: filesProcessed, currentFile: '扫描完成',
+              phase: 'complete', errorStats: message.data.errorStats, totalTime: message.data.totalTime
+            })
+            resolve({ success: true, filesProcessed, errors })
+            worker.terminate()
+          } else if (message.type === 'error') {
+            log.error('Full rescan worker error:', message.data.message)
+            errors.push(message.data.message)
+            resolve({ success: false, filesProcessed, errors })
+            worker.terminate()
           }
         })
 
@@ -378,6 +421,10 @@ export function registerIpcHandlers(): void {
 
   ipcMain.handle('window-is-maximized', () => {
     return BrowserWindow.getFocusedWindow()?.isMaximized() ?? false
+  })
+
+  ipcMain.handle('window-minimize-to-tray', (): void => {
+    BrowserWindow.getFocusedWindow()?.hide()
   })
 
   // Extract text content from a dropped file
