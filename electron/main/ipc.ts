@@ -24,6 +24,7 @@ import {
   getShardConfigInfo,
   deleteFileFromAllShards,
   deleteFilesByFolderPrefixFromAllShards,
+  isShardManagerInitialized,
   type FileRecord as ShardFileRecord
 } from './shardManager'
 import {
@@ -250,8 +251,9 @@ export function registerIpcHandlers(): void {
 
   // Check if shards are ready (used by renderer for polling)
   ipcMain.handle('db-is-ready', async (): Promise<boolean> => {
-    const shards = getShardInfo()
-    return shards.length > 0 && shards.some(s => s.status === 'ready')
+    // Return true once shard manager is initialized (profile/config ready, shards discovered)
+    // Shard DB files are loaded lazily on first search, not at startup
+    return isShardManagerInitialized()
   })
 
   // Run incremental scan on a folder
@@ -318,7 +320,7 @@ export function registerIpcHandlers(): void {
                   const shardInfo = getShardInfo().find(s => s.id === shardId)
                   const shardConfig = getShardConfigInfo()
                   if (shardInfo && shardConfig) {
-                    const maxBytes = Math.min(shardConfig.maxSizeMB, 2000) * 1024 * 1024
+                    const maxBytes = Math.min(shardConfig.maxSizeMB, 1000) * 1024 * 1024
                     if (shardInfo.currentSizeBytes >= maxBytes) {
                       const nextShard = await openNextShard()
                       currentShardId = nextShard?.id ?? -1
@@ -427,7 +429,7 @@ export function registerIpcHandlers(): void {
                   const shardInfo = getShardInfo().find(s => s.id === shardId)
                   const shardConfig = getShardConfigInfo()
                   if (shardInfo && shardConfig) {
-                    const maxBytes = Math.min(shardConfig.maxSizeMB, 2000) * 1024 * 1024
+                    const maxBytes = Math.min(shardConfig.maxSizeMB, 1000) * 1024 * 1024
                     if (shardInfo.currentSizeBytes >= maxBytes) {
                       const nextShard = await openNextShard()
                       currentShardId = nextShard?.id ?? -1

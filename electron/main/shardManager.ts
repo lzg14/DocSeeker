@@ -287,6 +287,14 @@ let pendingWorkerResults: Map<number, WorkerResult> = new Map()
 let initialized = false
 let initPromise: Promise<void> | null = null
 let totalFilesInserted = 0
+let totalFileCount = 0  // running total, updated on insert + lazy-load
+let shardsDiscovered = false  // tracks if we have read the shards directory
+let lazyLoadPromise: Promise<void> | null = null  // tracks in-progress lazy loading
+
+// Exported so ipc.ts can check startup readiness without waiting for lazy shard loading
+export function isShardManagerInitialized(): boolean {
+  return initialized
+}
 
 interface WorkerResult {
   type: 'ready' | 'loaded' | 'batch-complete' | 'closed' | 'error'
@@ -339,9 +347,18 @@ function loadShardWorker(shardId: number, dbPath: string): Promise<WorkerResult>
   })
 }
 
-async function loadExistingShards(): Promise<void> {
+/**
+ * Discover existing shard files in the shards directory.
+ * Fast — only reads the filesystem, does NOT open any DB files.
+ * Called at startup to know which shards exist.
+ */
+function discoverShards(): void {
+  if (shardsDiscovered) return
   const dir = getShardsDir()
-  if (!existsSync(dir)) return
+  if (!existsSync(dir)) {
+    shardsDiscovered = true
+    return
+  }
 
   const { readdirSync } = require('fs')
   const files = readdirSync(dir).filter(f => f.startsWith(SHARD_PREFIX) && f.endsWith(SHARD_EXT))
@@ -350,59 +367,91 @@ async function loadExistingShards(): Promise<void> {
     const match = file.match(/^shard_(\d+)\.db$/)
     if (!match) continue
     const shardId = parseInt(match[1], 10)
-
     const dbPath = join(dir, file)
+
+    // Avoid duplicates if called twice
+    if (shards.some(s => s.id === shardId)) continue
+
     const shardInfo: ShardInfo = {
       id: shardId,
       dbPath,
       status: 'pending',
       fileCount: 0,
-      currentSizeBytes: 0
+      currentSizeBytes: existsSync(dbPath) ? require('fs').statSync(dbPath).size : 0
     }
 
     shards.push(shardInfo)
   }
 
   shards.sort((a, b) => a.id - b.id)
-  log.info(`[ShardManager] Found ${shards.length} existing shards`)
+  shardsDiscovered = true
+  log.info(`[ShardManager] Discovered ${shards.length} existing shards (lazy loading enabled)`)
+}
 
-  // Load shards in parallel up to config.parallelWorkers
-  if (config && shards.length > 0) {
-    const maxParallel = config.parallelWorkers
-    for (let i = 0; i < shards.length; i += maxParallel) {
-      const batch = shards.slice(i, i + maxParallel)
-      const promises = batch.map(s => {
-        s.status = 'loading'
-        return loadShardWorker(s.id, s.dbPath)
-      })
+/**
+ * Lazily load any pending shards whose status is 'pending'.
+ * Loads shards in parallel batches up to config.parallelWorkers.
+ * Uses lazyLoadPromise to avoid duplicate loading calls.
+ */
+async function loadPendingShards(): Promise<void> {
+  if (!config) return
 
-      const results = await Promise.allSettled(promises)
+  const pending = shards.filter(s => s.status === 'pending')
+  if (pending.length === 0) return
 
-      for (let j = 0; j < batch.length; j++) {
-        const s = batch[j]
-        const result = (results[j] as PromiseFulfilledResult<WorkerResult>).value
+  // If loading is already in progress, wait for it instead of starting another
+  if (lazyLoadPromise) {
+    await lazyLoadPromise
+    return
+  }
 
-        if (result.type === 'ready') {
-          s.status = 'ready'
-          s.fileCount = result.fileCount ?? 0
-          s.loadTime = result.loadTime
-          s.currentSizeBytes = require('fs').statSync(s.dbPath).size
-          log.info(`[ShardManager] Loaded existing shard ${s.id}: ${s.fileCount} files`)
-        } else {
-          s.status = 'error'
-          s.error = result.error ?? 'Unknown error'
-          log.error(`[ShardManager] Failed to load shard ${s.id}:`, result.error)
+  lazyLoadPromise = (async () => {
+    log.info(`[ShardManager] Lazy loading ${pending.length} pending shards...`)
+    try {
+      const maxParallel = config!.parallelWorkers
+
+      for (let i = 0; i < pending.length; i += maxParallel) {
+        const batch = pending.slice(i, i + maxParallel)
+        const promises = batch.map(s => {
+          s.status = 'loading'
+          return loadShardWorker(s.id, s.dbPath)
+        })
+
+        const results = await Promise.allSettled(promises)
+
+        for (let j = 0; j < batch.length; j++) {
+          const s = batch[j]
+          const result = (results[j] as PromiseFulfilledResult<WorkerResult>).value
+
+          if (result.type === 'ready') {
+            s.status = 'ready'
+            s.fileCount = result.fileCount ?? 0
+            totalFileCount += s.fileCount
+            s.loadTime = result.loadTime
+            s.currentSizeBytes = require('fs').statSync(s.dbPath).size
+            log.info(`[ShardManager] Lazy-loaded shard ${s.id}: ${s.fileCount} files, totalFileCount=${totalFileCount}`)
+          } else {
+            s.status = 'error'
+            s.error = result.error ?? 'Unknown error'
+            log.error(`[ShardManager] Failed to lazy-load shard ${s.id}:`, result.error)
+          }
         }
       }
+    } finally {
+      lazyLoadPromise = null
     }
-  }
+  })()
+
+  await lazyLoadPromise
 }
 
 /**
  * Initialize the shard manager:
  * 1. Load or detect machine profile (cached in config.db)
  * 2. Load or compute shard config (cached in config.db)
- * 3. Load existing shards in parallel
+ * 3. Discover existing shards (FAST — no DB loading, lazy loading enabled)
+ *
+ * Shard DB files are loaded on-demand during first search via getReadyShards().
  */
 export async function initShardManager(): Promise<void> {
   if (initialized) return
@@ -439,11 +488,11 @@ export async function initShardManager(): Promise<void> {
       saveConfigToCache(config)
     }
 
-    // Load existing shards
-    await loadExistingShards()
+    // Discover existing shards — FAST, no DB loading (lazy loading)
+    discoverShards()
 
     initialized = true
-    log.info(`[ShardManager] Ready. Profile: ${JSON.stringify(profile)}, Config: ${JSON.stringify(config)}`)
+    log.info(`[ShardManager] Ready (lazy loading). Profile: ${JSON.stringify(profile)}, Config: ${JSON.stringify(config)}`)
   })()
 
   return initPromise
@@ -456,6 +505,7 @@ function getShardWorker(shardId: number): Worker | undefined {
 }
 
 export function getReadyShards(): ShardInfo[] {
+  // Return currently ready shards (lazy loading happens via loadPendingShards from searchAllShards)
   return shards.filter(s => s.status === 'ready')
 }
 
@@ -465,7 +515,7 @@ function getCurrentShard(): ShardInfo | undefined {
 
 function isShardFull(shard: ShardInfo): boolean {
   if (!config) return false
-  const maxBytes = Math.min(config.maxSizeMB, 2000) * 1024 * 1024
+  const maxBytes = Math.min(config.maxSizeMB, 1000) * 1024 * 1024
   return shard.currentSizeBytes >= maxBytes
 }
 
@@ -552,6 +602,7 @@ export async function insertFileBatch(
           shard.fileCount = result.fileCount ?? shard.fileCount
           shard.currentSizeBytes = require('fs').statSync(shard.dbPath).size
           totalFilesInserted += files.length
+          totalFileCount += files.length
           resolve({ success: true, fileCount: result.fileCount ?? 0 })
         } else {
           resolve({ success: false, fileCount: 0 })
@@ -693,6 +744,9 @@ export async function searchAllShards(
 
   if (!query.trim()) return []
 
+  // Lazy load any pending shards on first search (deduplicated via lazyLoadPromise)
+  await loadPendingShards()
+
   const readyShards = getReadyShards()
   if (readyShards.length === 0) return []
 
@@ -739,6 +793,9 @@ export async function searchByFileName(
 
   const keywords = query.trim().split(/\s+/).filter(k => k.length > 0)
   if (keywords.length === 0) return []
+
+  // Lazy load any pending shards on first search
+  await loadPendingShards()
 
   // Build filename-only FTS query (restrict to name column)
   const ftsQuery = keywords.map(k => `"${k.replace(/"/g, '""')}"*`).join(' AND ')
@@ -901,6 +958,9 @@ export function closeAllShards(): void {
   shards = []
   initialized = false
   initPromise = null
+  shardsDiscovered = false
+  lazyLoadPromise = null
+  totalFileCount = 0
   log.info('[ShardManager] All shards closed')
 }
 
@@ -964,7 +1024,7 @@ export function getSearchSnippets(
  * Get total file count across all shards.
  */
 export function getTotalFileCount(): number {
-  return shards.reduce((sum, s) => sum + s.fileCount, 0)
+  return totalFileCount
 }
 
 /**
