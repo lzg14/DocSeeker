@@ -2087,24 +2087,25 @@ button, input, select {
 
 /* === 主题卡片选择器 === */
 .theme-cards {
-  display: grid;
-  grid-template-columns: repeat(7, minmax(0, 1fr));
-  gap: 6px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
   margin-top: 8px;
 }
 
 .theme-card {
   display: flex;
-  flex-direction: column;
   align-items: center;
-  gap: 4px;
-  padding: 6px 4px;
+  gap: 8px;
+  padding: 6px 10px;
   background: var(--bg-secondary);
   border: 2px solid var(--border);
-  border-radius: 6px;
+  border-radius: 8px;
   cursor: pointer;
   transition: border-color 150ms ease, box-shadow 150ms ease, transform 100ms ease;
   font-family: inherit;
+  flex: 1 1 calc(14.28% - 10px);
+  min-width: 80px;
 }
 
 .theme-card:hover {
@@ -2119,8 +2120,8 @@ button, input, select {
 }
 
 .theme-card-preview {
-  width: 100%;
-  height: 32px;
+  width: 36px;
+  height: 24px;
   border-radius: 4px;
   overflow: hidden;
   flex-shrink: 0;
@@ -2132,7 +2133,7 @@ button, input, select {
   position: relative;
   display: flex;
   align-items: center;
-  padding-left: 32%;
+  padding-left: 35%;
 }
 
 .theme-preview-sidebar {
@@ -2140,7 +2141,7 @@ button, input, select {
   left: 0;
   top: 0;
   bottom: 0;
-  width: 28%;
+  width: 30%;
 }
 
 .theme-preview-accent {
@@ -2153,10 +2154,9 @@ button, input, select {
 }
 
 .theme-card-label {
-  font-size: 11px;
+  font-size: 12px;
   color: var(--text-secondary);
   font-weight: 500;
-  text-align: center;
   line-height: 1.2;
 }
 
