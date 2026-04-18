@@ -154,17 +154,10 @@ export function registerIpcHandlers(): void {
     clearSearchHistory()
   })
 
-  // Get search snippets
-  ipcMain.handle('get-search-snippets', async (_, query: string, filePaths: string[]): Promise<Record<number, string>> => {
+  // Get search snippets (returns Record<string,string> keyed by file path)
+  ipcMain.handle('get-search-snippets', async (_, query: string, filePaths: string[]): Promise<Record<string, string>> => {
     try {
-      const snippets = await shardGetSearchSnippets(query, filePaths)
-      const result: Record<number, string> = {}
-      for (const [path, snippet] of Object.entries(snippets)) {
-        // Can't map path to id here, so return path as key
-        // Frontend will need to match by path
-        result[path as unknown as number] = snippet
-      }
-      return result
+      return await shardGetSearchSnippets(query, filePaths)
     } catch (err) {
       log.warn('[IPC] get-search-snippets error:', err)
       return {}

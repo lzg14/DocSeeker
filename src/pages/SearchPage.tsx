@@ -52,7 +52,7 @@ function SearchPage(): JSX.Element {
   const [showSaveDialog, setShowSaveDialog] = useState(false)
   const [showFilters, setShowFilters] = useState(false)
   const [showSyntaxHelp, setShowSyntaxHelp] = useState(false)
-  const [snippets, setSnippets] = useState<Record<number, string>>({})
+  const [snippets, setSnippets] = useState<Record<string, string>>({})
   const [saveName, setSaveName] = useState('')
   const [filters, setFilters] = useState<SearchOptions>({})
   const [isDragging, setIsDragging] = useState(false)
@@ -168,8 +168,8 @@ function SearchPage(): JSX.Element {
       setHasSearched(true)
       // Fetch highlighted snippets for the results
       if (result.length > 0 && snippetQuery.trim()) {
-        const fileIds = result.map(f => f.id!).filter(Boolean)
-        const s = await window.electron.getSearchSnippets(snippetQuery, fileIds)
+        const paths = result.filter(f => f.path).map(f => f.path!)
+        const s = await window.electron.getSearchSnippets(snippetQuery, paths)
         setSnippets(s)
       } else {
         setSnippets({})

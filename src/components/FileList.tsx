@@ -8,7 +8,7 @@ interface FileListProps {
   onSelectFile: (file: FileRecord) => void
   formatSize: (bytes: number) => string
   hasSearched: boolean
-  snippets?: Record<number, string>
+  snippets?: Record<string, string>
 }
 
 type SortField = 'name' | 'size' | 'updated_at'
@@ -126,10 +126,10 @@ function FileList({ files, selectedFile, onSelectFile, formatSize, hasSearched, 
                     {file.name}
                     <MatchTypeBadge matchType={file.match_type} />
                   </span>
-                  {snippets[file.id!] && (
+                  {snippets[file.path] && (
                     <span
                       className="file-snippet"
-                      dangerouslySetInnerHTML={{ __html: snippets[file.id!] }}
+                      dangerouslySetInnerHTML={{ __html: snippets[file.path] }}
                     />
                   )}
                 </div>

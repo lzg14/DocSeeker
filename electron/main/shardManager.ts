@@ -882,6 +882,60 @@ export function getTotalFileCount(): number {
 }
 
 /**
+ * Delete a single file from all shards by path.
+ * Returns the number of shards that had and deleted the file.
+ */
+export function deleteFileFromAllShards(filePath: string): number {
+  let deletedCount = 0
+  const readyShards = getReadyShards()
+  for (const shard of readyShards) {
+    try {
+      const db = new Database(shard.dbPath)
+      const stmt = db.prepare('DELETE FROM shard_files WHERE path = ?')
+      const result = stmt.run(filePath)
+      db.close()
+      if (result.changes > 0) {
+        deletedCount++
+        // Update file count for this shard
+        const countRow = db.prepare('SELECT COUNT(*) as count FROM shard_files').get() as { count: number } | undefined
+        shard.fileCount = countRow?.count ?? shard.fileCount
+        log.info(`[ShardManager] Deleted file ${filePath} from shard ${shard.id}`)
+      }
+    } catch (err) {
+      log.warn(`[ShardManager] Failed to delete file ${filePath} from shard ${shard.id}:`, err)
+    }
+  }
+  return deletedCount
+}
+
+/**
+ * Delete all files whose path starts with the given folder path prefix,
+ * from all shards. Returns the total number of files deleted.
+ */
+export function deleteFilesByFolderPrefixFromAllShards(folderPath: string): number {
+  let totalDeleted = 0
+  const prefix = folderPath.endsWith('/') || folderPath.endsWith('\\')
+    ? folderPath
+    : folderPath + (folderPath.includes('\\') ? '\\' : '/')
+  const readyShards = getReadyShards()
+  for (const shard of readyShards) {
+    try {
+      const db = new Database(shard.dbPath)
+      const stmt = db.prepare("DELETE FROM shard_files WHERE path LIKE ? || '%'")
+      const result = stmt.run(prefix)
+      db.close()
+      if (result.changes > 0) {
+        totalDeleted += result.changes
+        log.info(`[ShardManager] Deleted ${result.changes} files under ${folderPath} from shard ${shard.id}`)
+      }
+    } catch (err) {
+      log.warn(`[ShardManager] Failed to delete files under ${folderPath} from shard ${shard.id}:`, err)
+    }
+  }
+  return totalDeleted
+}
+
+/**
  * Get machine profile (for diagnostics).
  */
 export function getMachineProfile(): MachineProfile | null {
