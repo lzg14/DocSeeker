@@ -80,7 +80,7 @@ const META_DB_DIR = 'db'
 const META_DB_NAME = 'meta.db'
 const HOT_CACHE_NAME = 'hot-cache.json'
 const BATCH_SIZE = 100   // Files per insert batch
-const SPEED_TEST_SIZE_MB = 256  // 1GB sequential read test
+const SPEED_TEST_SIZE_MB = 256  // 256MB sequential read test
 
 // ============ Paths ============
 
@@ -368,7 +368,7 @@ function getShardWorker(shardId: number): Worker | undefined {
   return shardWorkers.get(shardId)
 }
 
-function getReadyShards(): ShardInfo[] {
+export function getReadyShards(): ShardInfo[] {
   return shards.filter(s => s.status === 'ready')
 }
 
@@ -612,19 +612,23 @@ export async function searchAllShards(
 
   // Search each shard in parallel using direct SQLite access
   // (Workers are used for inserts; reads are fast enough for synchronous access)
-  const allResults: SearchResult[][] = []
+  const searchPromises = readyShards.map(shard => {
+    return (async () => {
+      try {
+        const db = new Database(shard.dbPath, { readonly: true })
+        db.pragma('journal_mode = WAL')
+        const results = searchShardDb(db, ftsQuery, options, shard.id)
+        db.close()
+        return results
+      } catch (err) {
+        log.warn(`[shardManager] Search failed for shard ${shard.id}:`, err)
+        return []
+      }
+    })()
+  })
 
-  for (const shard of readyShards) {
-    try {
-      const db = new Database(shard.dbPath, { readonly: true })
-      db.pragma('journal_mode = WAL')
-      const results = searchShardDb(db, ftsQuery, options, shard.id)
-      db.close()
-      allResults.push(results)
-    } catch (err) {
-      log.warn(`[ShardManager] Search failed on shard ${shard.id}:`, err)
-    }
-  }
+  const resultsArrays = await Promise.all(searchPromises)
+  const allResults = resultsArrays
 
   // Merge all results, sort by BM25 rank
   const merged = allResults.flat()

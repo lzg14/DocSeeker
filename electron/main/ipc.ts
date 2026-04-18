@@ -33,6 +33,7 @@ import {
   getSearchSnippets as shardGetSearchSnippets,
   getShardInfo,
   getTotalFileCount,
+  getShardConfigInfo,
   type FileRecord as ShardFileRecord
 } from './shardManager'
 import { getScanSettings, updateScanSettings } from './meta'
@@ -368,7 +369,8 @@ export function registerIpcHandlers(): void {
 
                   // Check if shard is full
                   const shardInfo = getShardInfo().find(s => s.id === shardId)
-                  if (shardInfo && shardInfo.currentSizeBytes >= (shardInfo.currentSizeBytes || 0)) {
+                  const config = getShardConfigInfo()
+                  if (shardInfo && config && shardInfo.currentSizeBytes >= (config.maxSizeMB * 1024 * 1024)) {
                     const nextShard = await openNextShard()
                     currentShardId = nextShard?.id ?? -1
                   }
