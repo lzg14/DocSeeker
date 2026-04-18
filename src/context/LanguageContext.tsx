@@ -17,6 +17,12 @@ export interface ThemeMeta {
 
 export const themes: ThemeMeta[] = [
   {
+    id: 'system',
+    labelKey: 'theme.system',
+    descKey: 'theme.system.desc',
+    preview: { bg: '#e8e8e8', bgSecondary: '#d0d0d0', accent: '#888888' },
+  },
+  {
     id: 'light',
     labelKey: 'theme.light',
     descKey: 'theme.light.desc',
@@ -51,12 +57,6 @@ export const themes: ThemeMeta[] = [
     labelKey: 'theme.solarized',
     descKey: 'theme.solarized.desc',
     preview: { bg: '#fdf6e3', bgSecondary: '#eee8d5', accent: '#268bd2' },
-  },
-  {
-    id: 'system',
-    labelKey: 'theme.system',
-    descKey: 'theme.system.desc',
-    preview: { bg: '#ffffff', bgSecondary: '#f6f8fa', accent: '#808080' },
   },
 ]
 
@@ -387,7 +387,7 @@ export function LanguageProvider({ children }: { children: ReactNode }): JSX.Ele
   })
 
   const [theme, setThemeState] = useState<ThemeId>(() => {
-    return (localStorage.getItem('theme') as ThemeId) || 'light'
+    return (localStorage.getItem('theme') as ThemeId) || 'system'
   })
 
   const setLanguage = (lang: Language) => {
