@@ -10,6 +10,8 @@ export interface FileRecord {
   content: string | null
   created_at?: string
   updated_at?: string
+  is_supported?: boolean
+  match_type?: 'filename' | 'content' | 'both'
 }
 
 export interface ScannedFolder {

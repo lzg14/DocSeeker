@@ -57,11 +57,13 @@ function SearchPage(): JSX.Element {
   const [filters, setFilters] = useState<SearchOptions>({})
   const [isDragging, setIsDragging] = useState(false)
   const [isExtracting, setIsExtracting] = useState(false)
+  const [searchScope, setSearchScope] = useState<'all' | 'filename'>('all')
   const { t } = useLanguage()
 
   const inputRef = useRef<HTMLInputElement>(null)
   const dropdownRef = useRef<HTMLDivElement>(null)
   const filterRef = useRef<HTMLDivElement>(null)
+  const searchScopeRef = useRef<'all' | 'filename'>('all')
 
   // Load history and saved searches on mount
   useEffect(() => {
@@ -69,7 +71,10 @@ function SearchPage(): JSX.Element {
     loadSavedSearches()
   }, [])
 
-  // Close dropdown when clicking outside
+  // Sync searchScope to ref so performSearch always reads the latest value
+  useEffect(() => {
+    searchScopeRef.current = searchScope
+  }, [searchScope])
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
       if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
@@ -114,6 +119,7 @@ function SearchPage(): JSX.Element {
       let result: FileRecord[]
       let snippetQuery = query
 
+      const scope = searchScopeRef.current
       if (regexMatch) {
         // Extract regex pattern and bare keywords
         const regexPattern = regexMatch[1]
@@ -136,7 +142,9 @@ function SearchPage(): JSX.Element {
           (opts.fileTypes?.length || opts.sizeMin || opts.sizeMax || opts.dateFrom || opts.dateTo)
 
         const ftsResults = hasFilters
-          ? await window.electron.searchFilesAdvanced(bareQuery, opts)
+          ? (scope === 'filename'
+            ? await window.electron.searchByFileName(bareQuery, opts)
+            : await window.electron.searchFilesAdvanced(bareQuery, opts))
           : bareQuery
             ? await window.electron.searchFiles(bareQuery)
             : hasFilters ? await window.electron.searchFilesAdvanced('', opts) : []
@@ -150,7 +158,9 @@ function SearchPage(): JSX.Element {
           (opts.fileTypes?.length || opts.sizeMin || opts.sizeMax || opts.dateFrom || opts.dateTo)
 
         result = hasFilters
-          ? await window.electron.searchFilesAdvanced(query, opts)
+          ? (scope === 'filename'
+            ? await window.electron.searchByFileName(query, opts)
+            : await window.electron.searchFilesAdvanced(query, opts))
           : await window.electron.searchFiles(query)
       }
 
@@ -404,6 +414,13 @@ function SearchPage(): JSX.Element {
                 filters.sizeMin || filters.sizeMax ? 1 : 0,
                 filters.dateFrom || filters.dateTo ? 1 : 0,
               ].reduce((a, b) => (a ?? 0) + (b ?? 0), 0)}</span>}
+            </button>
+            <button
+              className={`toolbar-btn ${searchScope === 'filename' ? 'active' : ''}`}
+              onClick={() => setSearchScope(searchScope === 'all' ? 'filename' : 'all')}
+              title={searchScope === 'all' ? '切换到仅文件名搜索' : '切换到全部搜索'}
+            >
+              {searchScope === 'all' ? '🔍 全部' : '📄 仅文件名'}
             </button>
             <button
               className={`toolbar-btn ${showSyntaxHelp ? 'active' : ''}`}

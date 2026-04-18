@@ -10,6 +10,8 @@ export interface FileRecord {
   content: string | null
   created_at?: string
   updated_at?: string
+  is_supported?: boolean
+  match_type?: 'filename' | 'content' | 'both'
 }
 
 export interface ScanProgress {
@@ -85,6 +87,7 @@ export interface ElectronAPI {
   onScanProgress: (callback: (progress: ScanProgress) => void) => () => void
   searchFiles: (query: string) => Promise<FileRecord[]>
   searchFilesAdvanced: (query: string, options?: SearchOptions) => Promise<FileRecord[]>
+  searchByFileName: (query: string, options?: SearchOptions) => Promise<FileRecord[]>
   deleteFile: (filePath: string) => Promise<boolean>
   getFileCount: () => Promise<number>
   showInFolder: (filePath: string) => Promise<void>
@@ -141,6 +144,8 @@ const electronAPI: ElectronAPI = {
   searchFiles: (query: string) => ipcRenderer.invoke('search-files', query),
 
   searchFilesAdvanced: (query: string, options?: SearchOptions) => ipcRenderer.invoke('search-files-advanced', query, options),
+
+  searchByFileName: (query: string, options?: SearchOptions) => ipcRenderer.invoke('search-by-filename', query, options),
 
   deleteFile: (filePath: string) => ipcRenderer.invoke('delete-file', filePath),
 
