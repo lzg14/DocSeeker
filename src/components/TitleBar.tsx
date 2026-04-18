@@ -49,7 +49,13 @@ function TitleBar(): JSX.Element {
 
   const handleMinimize = () => window.electron.minimizeWindow()
   const handleMaximize = () => window.electron.maximizeWindow()
-  const handleClose = () => window.electron.closeWindow()
+  const handleClose = () => {
+    if (localStorage.getItem('minimizeToTray') === 'true') {
+      window.electron.minimizeToTray?.()
+    } else {
+      window.electron.closeWindow()
+    }
+  }
 
   return (
     <>
@@ -73,7 +79,14 @@ function TitleBar(): JSX.Element {
         <ConfirmDialog
           title={t('confirm.exitTitle')}
           message={t('confirm.exitMsg')}
-          onConfirm={() => window.electron.closeWindow()}
+          onConfirm={() => {
+            setShowCloseConfirm(false)
+            if (localStorage.getItem('minimizeToTray') === 'true') {
+              window.electron.minimizeToTray?.()
+            } else {
+              window.electron.closeWindow()
+            }
+          }}
           onCancel={() => setShowCloseConfirm(false)}
         />
       )}
