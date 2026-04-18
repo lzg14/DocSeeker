@@ -12,6 +12,7 @@ import FloatingSearch from './pages/FloatingSearch'
 // Lazy load pages that aren't shown immediately
 const ScanPage = lazy(() => import('./pages/ScanPage'))
 const LanguagePage = lazy(() => import('./pages/LanguagePage'))
+const SettingsPage = lazy(() => import('./pages/SettingsPage'))
 const GuidePage = lazy(() => import('./pages/GuidePage'))
 
 class ErrorBoundary extends Component<{ children: ReactNode }, { hasError: boolean }> {
@@ -61,6 +62,8 @@ function App(): JSX.Element {
         return <Suspense fallback={<PageFallback />}><ScanPage /></Suspense>
       case 'language':
         return <Suspense fallback={<PageFallback />}><LanguagePage /></Suspense>
+      case 'settings':
+        return <Suspense fallback={<PageFallback />}><SettingsPage /></Suspense>
       case 'guide':
         return <Suspense fallback={<PageFallback />}><GuidePage /></Suspense>
       case 'search':

@@ -39,6 +39,7 @@ const navItems: { id: PageTab; labelKey: string; icon: JSX.Element; groupKey: st
   { id: 'search', labelKey: 'nav.search', icon: <SearchIcon />, groupKey: 'nav.group.nav' },
   { id: 'scan', labelKey: 'nav.scan', icon: <FolderIcon />, groupKey: 'nav.group.nav' },
   { id: 'language', labelKey: 'nav.language', icon: <SettingsIcon />, groupKey: 'nav.group.settings' },
+  { id: 'settings', labelKey: 'nav.settings', icon: <SettingsIcon />, groupKey: 'nav.group.settings' },
   { id: 'guide', labelKey: 'nav.guide', icon: <HelpIcon />, groupKey: 'nav.group.help' },
 ]
 

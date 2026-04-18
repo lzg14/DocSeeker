@@ -154,6 +154,9 @@ const translations: Record<Language, Record<string, string>> = {
     'config.lastScan': '上次扫描',
     // Settings page
     'settings.title': '设置',
+    'settings.tab.appearance': '外观',
+    'settings.tab.window': '窗口行为',
+    'settings.placeholder': '后续实现...',
     'settings.theme': '主题',
     'settings.themeLabel': '界面主题',
     'settings.themeDesc': '选择浅色或深色主题',
@@ -213,6 +216,7 @@ const translations: Record<Language, Record<string, string>> = {
     // Navigation
     'nav.search': 'Search',
     'nav.scan': 'Scan Directory',
+    'nav.settings': 'Settings',
     'nav.language': 'Language & Theme',
     'nav.guide': 'About',
     // Search page
@@ -297,6 +301,9 @@ const translations: Record<Language, Record<string, string>> = {
     'config.lastScan': 'Last Scan',
     // Settings page
     'settings.title': 'Settings',
+    'settings.tab.appearance': 'Appearance',
+    'settings.tab.window': 'Window Behavior',
+    'settings.placeholder': 'Coming soon...',
     'settings.theme': 'Theme',
     'settings.themeLabel': 'Interface Theme',
     'settings.themeDesc': 'Choose light or dark theme',

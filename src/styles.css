@@ -2344,3 +2344,52 @@ button, input, select {
     transform: rotate(360deg);
   }
 }
+
+/* SettingsPage */
+.settings-page {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  padding: 24px;
+  overflow-y: auto;
+}
+.settings-header {
+  margin-bottom: 24px;
+}
+.settings-header h2 {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 600;
+}
+.settings-tabs {
+  display: flex;
+  gap: 4px;
+  border-bottom: 1px solid var(--border-color);
+  margin-bottom: 24px;
+}
+.settings-tabs button {
+  padding: 8px 16px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 14px;
+  color: var(--text-secondary);
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+  transition: color 0.2s, border-color 0.2s;
+}
+.settings-tabs button:hover {
+  color: var(--text-primary);
+}
+.settings-tabs button.active {
+  color: var(--primary-color);
+  border-bottom-color: var(--primary-color);
+}
+.settings-content {
+  flex: 1;
+}
+.setting-placeholder {
+  color: var(--text-secondary);
+  font-size: 13px;
+  padding: 8px 0;
+}

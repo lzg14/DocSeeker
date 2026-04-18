@@ -29,4 +29,4 @@ export interface ScanProgress {
   phase: 'scanning' | 'processing' | 'complete'
 }
 
-export type PageTab = 'scan' | 'search' | 'language' | 'guide'
+export type PageTab = 'scan' | 'search' | 'language' | 'settings' | 'guide'
