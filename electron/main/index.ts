@@ -29,6 +29,7 @@ let tray: Tray | null = null
 let isClosingFromIPC = false
 let floatingWindow: BrowserWindow | null = null
 let currentHotkey = 'CommandOrControl+Shift+F'
+const isSilentStart = process.argv.includes('--startup')
 
 const VALID_MODIFIERS = new Set(['Ctrl', 'Shift', 'Alt', 'Meta'])
 const MODIFIER_REPLACE: Record<string, string> = {
@@ -120,14 +121,31 @@ function createTray(): void {
     {
       label: '显示窗口',
       click: () => {
-        mainWindow?.show()
-        mainWindow?.focus()
+        if (mainWindow) {
+          mainWindow.show()
+          mainWindow.focus()
+        }
+      }
+    },
+    {
+      label: '全局搜索',
+      accelerator: currentHotkey,
+      click: () => {
+        if (floatingWindow) {
+          floatingWindow.show()
+          floatingWindow.focus()
+        } else {
+          createFloatingWindow()
+          setTimeout(() => floatingWindow?.show(), 100)
+        }
       }
     },
     { type: 'separator' },
     {
       label: '退出',
       click: () => {
+        // Bypass close confirmation
+        ;(app as any).isQuitting = true
         app.quit()
       }
     }
@@ -136,13 +154,11 @@ function createTray(): void {
   tray.setToolTip('DocSeeker')
   tray.setContextMenu(contextMenu)
 
-  tray.on('click', () => {
+  // Replace single-click behavior with double-click to show window
+  tray.on('double-click', () => {
     if (mainWindow) {
-      if (mainWindow.isVisible()) {
-        mainWindow.focus()
-      } else {
-        mainWindow.show()
-      }
+      mainWindow.show()
+      mainWindow.focus()
     }
   })
 
@@ -171,8 +187,12 @@ function createWindow(): void {
   mainWindow.loadFile(mainHtml)
 
   mainWindow.webContents.on('did-finish-load', () => {
-    log.info('React app loaded, showing window')
-    mainWindow?.show()
+    if (!isSilentStart) {
+      log.info('React app loaded, showing window')
+      mainWindow?.show()
+    } else {
+      log.info('React app loaded, silent start — window hidden')
+    }
   })
 
   mainWindow.webContents.on('render-process-gone', (_, details) => {
