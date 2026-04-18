@@ -260,10 +260,18 @@ export function registerIpcHandlers(): void {
 
     return new Promise((resolve) => {
       const workerPath = join(__dirname, 'scanWorker.js')
+      const scanSettings = getScanSettings()
 
       try {
         const worker = new Worker(workerPath, {
-          workerData: { dirPath: folderPath, incremental: true }
+          workerData: {
+            dirPath: folderPath,
+            incremental: true,
+            settings: {
+              includeHidden: scanSettings.includeHidden,
+              includeSystem: scanSettings.includeSystem
+            }
+          }
         })
 
         let filesProcessed = 0
@@ -347,9 +355,16 @@ export function registerIpcHandlers(): void {
 
     return new Promise((resolve) => {
       const workerPath = join(__dirname, 'scanWorker.js')
+      const scanSettings = getScanSettings()
       try {
         const worker = new Worker(workerPath, {
-          workerData: { dirPath: folderPath }
+          workerData: {
+            dirPath: folderPath,
+            settings: {
+              includeHidden: scanSettings.includeHidden,
+              includeSystem: scanSettings.includeSystem
+            }
+          }
         })
 
         let filesProcessed = 0
@@ -400,7 +415,7 @@ export function registerIpcHandlers(): void {
             case 'complete':
               log.info(`Full rescan complete: ${filesProcessed} files, time: ${message.data.totalTime}ms`)
               if (folder && folder.id) {
-                updateFolderScanComplete(folder.id, filesProcessed, 0)
+                updateFolderFullScanComplete(folder.id, filesProcessed, 0)
               }
               event.sender.send('scan-progress', {
                 current: filesProcessed,

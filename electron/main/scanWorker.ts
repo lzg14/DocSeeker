@@ -96,6 +96,8 @@ interface ScanWorkerData {
     skipOfficeInZip?: boolean
     checkZipHeader?: boolean
     checkFileSize?: boolean
+    includeHidden?: boolean
+    includeSystem?: boolean
   }
 }
 
@@ -607,10 +609,12 @@ async function calculateHash(filePath: string): Promise<string | null> {
 // Recursively scan directory - collects ALL files regardless of extension
 type ProgressCallback = (foundCount: number) => void
 
-async function scanDirectory(dirPath: string, onProgress?: ProgressCallback): Promise<string[]> {
+async function scanDirectory(dirPath: string, onProgress?: ProgressCallback, settings?: ScanWorkerData['settings']): Promise<string[]> {
   const files: string[] = []
   let lastReportTime = Date.now()
   const REPORT_INTERVAL_MS = 10_000  // Report progress every 10 seconds
+  const includeHidden = settings?.includeHidden ?? false
+  const includeSystem = settings?.includeSystem ?? false
 
   async function scan(dir: string): Promise<void> {
     try {
@@ -620,10 +624,28 @@ async function scanDirectory(dirPath: string, onProgress?: ProgressCallback): Pr
         const fullPath = path.join(dir, entry.name)
 
         if (entry.isDirectory()) {
-          if (!entry.name.startsWith('.') && entry.name !== 'node_modules') {
-            await scan(fullPath)
+          // Skip hidden directories unless includeHidden is true
+          if (!includeHidden && entry.name.startsWith('.')) {
+            continue
           }
+          // Skip system/protected directories unless includeSystem is true
+          if (!includeSystem && (
+            entry.name === '$RECYCLE.BIN' ||
+            entry.name === 'System Volume Information' ||
+            entry.name === 'RECYCLER'
+          )) {
+            continue
+          }
+          // Always skip node_modules
+          if (entry.name === 'node_modules') {
+            continue
+          }
+          await scan(fullPath)
         } else if (entry.isFile()) {
+          // Skip hidden files unless includeHidden is true
+          if (!includeHidden && entry.name.startsWith('.')) {
+            continue
+          }
           files.push(fullPath)
 
           // Report progress periodically during Phase 1
@@ -715,6 +737,8 @@ async function runScan(): Promise<void> {
   const SKIP_OFFICE_IN_ZIP = settings?.skipOfficeInZip ?? true
   const CHECK_ZIP_HEADER = settings?.checkZipHeader ?? true
   const CHECK_FILE_SIZE = settings?.checkFileSize ?? true
+  const INCLUDE_HIDDEN = settings?.includeHidden ?? false
+  const INCLUDE_SYSTEM = settings?.includeSystem ?? false
 
   // 初始化错误统计
   const errorStats: ErrorStats = {
@@ -737,7 +761,7 @@ async function runScan(): Promise<void> {
       type: 'progress',
       data: { current: 0, total: foundCount, currentFile: 'Scanning directory...', phase: 'scanning', foundCount }
     })
-  })
+  }, settings)
   const total = files.length
 
   parentPort?.postMessage({

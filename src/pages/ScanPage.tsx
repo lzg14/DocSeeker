@@ -16,6 +16,8 @@ function ScanPage(): JSX.Element {
   const [expandedId, setExpandedId] = useState<number | null>(null)
   const [loading, setLoading] = useState(true)
   const [confirmDelete, setConfirmDelete] = useState<ScannedFolder | null>(null)
+  const [includeHidden, setIncludeHidden] = useState(false)
+  const [includeSystem, setIncludeSystem] = useState(false)
 
   const loadFolders = useCallback(async () => {
     try {
@@ -31,6 +33,16 @@ function ScanPage(): JSX.Element {
   useEffect(() => {
     loadFolders()
   }, [loadFolders])
+
+  // Load scan settings (includeHidden, includeSystem)
+  useEffect(() => {
+    window.electron.getScanSettings().then((settings: any) => {
+      if (settings) {
+        setIncludeHidden(settings.includeHidden ?? false)
+        setIncludeSystem(settings.includeSystem ?? false)
+      }
+    })
+  }, [])
 
   const formatDate = (dateStr?: string): string => {
     if (!dateStr) return t('config.never')
@@ -76,6 +88,16 @@ function ScanPage(): JSX.Element {
     setConfirmDelete(folder)
   }
 
+  const handleToggleHidden = async (checked: boolean) => {
+    setIncludeHidden(checked)
+    await window.electron.updateScanSettings({ includeHidden: checked })
+  }
+
+  const handleToggleSystem = async (checked: boolean) => {
+    setIncludeSystem(checked)
+    await window.electron.updateScanSettings({ includeSystem: checked })
+  }
+
   const handleConfirmDelete = async () => {
     if (!confirmDelete) return
     try {
@@ -117,6 +139,28 @@ function ScanPage(): JSX.Element {
               {folders.reduce((sum, f) => sum + (f.file_count || 0), 0).toLocaleString()} {t('config.files')}
             </span>
           )}
+        </div>
+        <div className="scan-header-toggles">
+          <label className="scan-toggle">
+            <span className="scan-toggle-label">{t('scan.includeHidden')}</span>
+            <input
+              type="checkbox"
+              className="scan-toggle-input"
+              checked={includeHidden}
+              onChange={(e) => handleToggleHidden(e.target.checked)}
+            />
+            <span className="scan-toggle-switch" />
+          </label>
+          <label className="scan-toggle">
+            <span className="scan-toggle-label">{t('scan.includeSystem')}</span>
+            <input
+              type="checkbox"
+              className="scan-toggle-input"
+              checked={includeSystem}
+              onChange={(e) => handleToggleSystem(e.target.checked)}
+            />
+            <span className="scan-toggle-switch" />
+          </label>
         </div>
         <div className="config-header-actions">
           <button

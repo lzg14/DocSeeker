@@ -98,7 +98,7 @@ export function initConfig(): void {
   // Ensure default settings rows exist
   const row = configDb.prepare('SELECT id FROM scan_settings WHERE id = 1').get()
   if (!row) {
-    configDb.prepare('INSERT INTO scan_settings (id, settings) VALUES (1, ?)').run(['{"timeoutMs":15000,"maxFileSize":104857600,"maxPdfSize":52428800,"skipOfficeInZip":true,"checkZipHeader":true,"checkFileSize":true,"skipRules":[]}'])
+    configDb.prepare('INSERT INTO scan_settings (id, settings) VALUES (1, ?)').run(['{"timeoutMs":15000,"maxFileSize":104857600,"maxPdfSize":52428800,"skipOfficeInZip":true,"checkZipHeader":true,"checkFileSize":true,"skipRules":[],"includeHidden":false,"includeSystem":false}'])
   }
 
   log.info(`[Config] Initialized at ${dbPath}`)
@@ -270,6 +270,8 @@ export interface ScanSettings {
   checkZipHeader: boolean
   checkFileSize: boolean
   skipRules: SkipRule[]
+  includeHidden: boolean
+  includeSystem: boolean
 }
 
 export interface SkipRule {
@@ -286,7 +288,9 @@ export const DEFAULT_SCAN_SETTINGS: ScanSettings = {
   skipOfficeInZip: true,
   checkZipHeader: true,
   checkFileSize: true,
-  skipRules: []
+  skipRules: [],
+  includeHidden: false,
+  includeSystem: false
 }
 
 let currentScanSettings: ScanSettings = { ...DEFAULT_SCAN_SETTINGS }

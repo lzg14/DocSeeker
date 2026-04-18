@@ -141,6 +141,8 @@ const translations: Record<Language, Record<string, string>> = {
     'scan.phase.processing': '处理中',
     'scan.preparing': '准备中...',
     'scan.startScan': '开始扫描',
+    'scan.includeHidden': '隐藏文件',
+    'scan.includeSystem': '系统文件',
     // Config / Scan page
     'config.title': '扫描设置',
     'config.loading': '加载中...',
@@ -303,6 +305,8 @@ const translations: Record<Language, Record<string, string>> = {
     'scan.phase.processing': 'Processing',
     'scan.preparing': 'Preparing...',
     'scan.startScan': 'Start Scan',
+    'scan.includeHidden': 'Hidden Files',
+    'scan.includeSystem': 'System Files',
     // Config / Scan page
     'config.title': 'Scan Settings',
     'config.loading': 'Loading...',
