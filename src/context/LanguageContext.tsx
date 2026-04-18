@@ -75,7 +75,7 @@ const translations: Record<Language, Record<string, string>> = {
     // Navigation
     'nav.search': '搜索文档',
     'nav.scan': '扫描目录',
-    'nav.settings': '界面设置',
+    'nav.settings': '设置',
     'nav.guide': '关于',
     'nav.language': '语言与主题',
     // Search page
