@@ -378,13 +378,15 @@ searchByFileName: (_query: string, _options?: any) =>
 |------|------|------|------|
 | 2026-04-18 | 首次启动时 meta.db 目录不存在导致 "Cannot open database because the directory does not exist" | `initMetaDatabase()` 中添加 `ensureDbDir()` 在打开数据库前先创建目录 | `476a70f` |
 | 2026-04-18 | 迁移功能存在缺陷且不再需要 | 删除 migration.ts，将 meta.ts 合并为 config.ts 统一管理所有配置 | `f5b47b3` |
+| 2026-04-18 | 每次启动重新测速（浪费 1-2 秒），分片大小未持久化 | 将机器配置和分片配置缓存到 config.db，后续启动直接读取 | `pending` |
 
 ---
 
 ## 后续优化方向
 
 1. ~~**search.db 分片**：按文件类型或时间范围分表，减少单文件体积~~ ✅ 已升级为按大小分库（shards）
-2. **增量 FTS 同步**：改为批量同步，减少 FTS 表膨胀
-3. **热点缓存预热策略**：基于访问频率而非最近搜索，更智能地缓存
-4. **VACUUM 压缩**：定期压缩各 shard 文件，回收已删除记录的空间
+2. **首次运行自动添加**：自动添加用户 Documents 和 Desktop 文件夹到扫描列表
+3. **增量 FTS 同步**：改为批量同步，减少 FTS 表膨胀
+4. **热点缓存预热策略**：基于访问频率而非最近搜索，更智能地缓存
+5. **VACUUM 压缩**：定期压缩各 shard 文件，回收已删除记录的空间
 5. **跨 shard 搜索缓存**：记录跨文件夹搜索结果到热点缓存

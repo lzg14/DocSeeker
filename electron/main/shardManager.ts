@@ -16,6 +16,7 @@ import { existsSync, mkdirSync, unlinkSync, writeFileSync, readFileSync } from '
 import { Worker } from 'worker_threads'
 import log from 'electron-log/main'
 import Database from 'better-sqlite3'
+import { getAppSetting, setAppSetting } from './config'
 
 // ============ Types ============
 
@@ -77,8 +78,7 @@ export interface FileRecord {
 const SHARD_DIR = 'shards'
 const SHARD_PREFIX = 'shard_'
 const SHARD_EXT = '.db'
-const META_DB_DIR = 'db'
-const META_DB_NAME = 'meta.db'
+const DB_DIR = 'db'
 const HOT_CACHE_NAME = 'hot-cache.json'
 const BATCH_SIZE = 100   // Files per insert batch
 const SPEED_TEST_SIZE_MB = 256  // 256MB sequential read test
@@ -86,19 +86,15 @@ const SPEED_TEST_SIZE_MB = 256  // 256MB sequential read test
 // ============ Paths ============
 
 function getShardsDir(): string {
-  return join(app.getPath('userData'), META_DB_DIR, SHARD_DIR)
+  return join(app.getPath('userData'), DB_DIR, SHARD_DIR)
 }
 
 function getShardPath(shardId: number): string {
   return join(getShardsDir(), `${SHARD_PREFIX}${shardId}${SHARD_EXT}`)
 }
 
-function getMetaDbPath(): string {
-  return join(app.getPath('userData'), META_DB_DIR, META_DB_NAME)
-}
-
 function getHotCachePath(): string {
-  return join(app.getPath('userData'), META_DB_DIR, HOT_CACHE_NAME)
+  return join(app.getPath('userData'), DB_DIR, HOT_CACHE_NAME)
 }
 
 // ============ Machine Profile Detection ============
@@ -199,6 +195,77 @@ export function computeShardConfig(profile: MachineProfile): ShardConfig {
   log.info(`[ShardManager] Shard config: maxSize=${maxSizeMB}MB, parallelWorkers=${parallelWorkers}`)
 
   return { maxSizeMB, parallelWorkers }
+}
+
+// ============ Profile Caching (persist to config.db) ============
+
+const PROFILE_KEY = 'shard_profile'
+const CONFIG_KEY = 'shard_config'
+
+interface CachedProfile {
+  cpuCores: number
+  diskReadSpeedMBps: number
+  savedAt: string
+}
+
+interface CachedConfig {
+  maxSizeMB: number
+  parallelWorkers: number
+  savedAt: string
+}
+
+/**
+ * Load cached machine profile from config.db.
+ * Returns null if not cached yet.
+ */
+function loadCachedProfile(): MachineProfile | null {
+  try {
+    const cached = getAppSetting<CachedProfile | null>(PROFILE_KEY, null)
+    if (cached && typeof cached.cpuCores === 'number' && typeof cached.diskReadSpeedMBps === 'number') {
+      log.info(`[ShardManager] Loaded cached profile: ${cached.cpuCores} cores, ${cached.diskReadSpeedMBps} MB/s`)
+      return { cpuCores: cached.cpuCores, diskReadSpeedMBps: cached.diskReadSpeedMBps }
+    }
+  } catch {}
+  return null
+}
+
+/**
+ * Save machine profile to config.db for future sessions.
+ */
+function saveProfileToCache(profile: MachineProfile): void {
+  try {
+    setAppSetting(PROFILE_KEY, { ...profile, savedAt: new Date().toISOString() })
+    log.info(`[ShardManager] Saved profile to cache`)
+  } catch (err) {
+    log.warn('[ShardManager] Failed to save profile cache:', err)
+  }
+}
+
+/**
+ * Load cached shard config from config.db.
+ * Returns null if not cached yet.
+ */
+function loadCachedConfig(): ShardConfig | null {
+  try {
+    const cached = getAppSetting<CachedConfig | null>(CONFIG_KEY, null)
+    if (cached && typeof cached.maxSizeMB === 'number' && typeof cached.parallelWorkers === 'number') {
+      log.info(`[ShardManager] Loaded cached config: maxSize=${cached.maxSizeMB}MB, parallelWorkers=${cached.parallelWorkers}`)
+      return { maxSizeMB: cached.maxSizeMB, parallelWorkers: cached.parallelWorkers }
+    }
+  } catch {}
+  return null
+}
+
+/**
+ * Save shard config to config.db for future sessions.
+ */
+function saveConfigToCache(config: ShardConfig): void {
+  try {
+    setAppSetting(CONFIG_KEY, { ...config, savedAt: new Date().toISOString() })
+    log.info(`[ShardManager] Saved config to cache`)
+  } catch (err) {
+    log.warn('[ShardManager] Failed to save config cache:', err)
+  }
 }
 
 // ============ Shard Manager State ============
@@ -324,8 +391,8 @@ async function loadExistingShards(): Promise<void> {
 
 /**
  * Initialize the shard manager:
- * 1. Detect machine profile
- * 2. Compute shard config
+ * 1. Load or detect machine profile (cached in config.db)
+ * 2. Load or compute shard config (cached in config.db)
  * 3. Load existing shards in parallel
  */
 export async function initShardManager(): Promise<void> {
@@ -342,16 +409,26 @@ export async function initShardManager(): Promise<void> {
     }
 
     // Ensure parent db/ directory exists
-    const dbDir = join(app.getPath('userData'), META_DB_DIR)
+    const dbDir = join(app.getPath('userData'), DB_DIR)
     if (!existsSync(dbDir)) {
       mkdirSync(dbDir, { recursive: true })
     }
 
-    // Detect machine profile
-    profile = detectMachineProfile()
+    // Try to load cached profile and config first
+    const cachedProfile = loadCachedProfile()
+    const cachedConfig = loadCachedConfig()
 
-    // Compute shard config
-    config = computeShardConfig(profile)
+    if (cachedProfile && cachedConfig) {
+      profile = cachedProfile
+      config = cachedConfig
+      log.info(`[ShardManager] Using cached profile/config (no speed test needed)`)
+    } else {
+      // First run or cache cleared — detect and save
+      profile = detectMachineProfile()
+      config = computeShardConfig(profile)
+      saveProfileToCache(profile)
+      saveConfigToCache(config)
+    }
 
     // Load existing shards
     await loadExistingShards()
