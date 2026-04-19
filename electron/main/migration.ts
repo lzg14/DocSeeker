@@ -585,9 +585,47 @@ export async function migrateFtsTokenizer(
 
       const hasPorter = tableInfo.sql.includes('tokenize=porter')
       if (!hasPorter) {
-        log.info(`[Migration] Rebuilding FTS with porter tokenizer for shard ${shardId}`)
-        // 重建 FTS 表（原子操作，索引期间阻塞该 DB 的搜索）
-        db.exec("INSERT INTO shard_files_fts(shard_files_fts) VALUES('rebuild')")
+        log.info(`[Migration] Migrating FTS to porter tokenizer for shard ${shardId}`)
+        // FTS5 不支持 ALTER TABLE 改 tokenizer，必须重建表
+        // 步骤：创建新 FTS 表 → 从内容表重建索引 → 删除旧表/触发器 → 重命名新表 → 重建触发器
+        const tempTable = 'shard_files_fts_new'
+        db.exec(`
+          CREATE VIRTUAL TABLE IF NOT EXISTS ${tempTable} USING fts5(
+            name,
+            content,
+            file_type,
+            content='shard_files',
+            content_rowid='id',
+            tokenize='porter unicode61 remove_diacritics 1'
+          )
+        `)
+        // 从内容表重建（自动用新 tokenizer 处理）
+        db.exec(`INSERT INTO ${tempTable}(${tempTable}) VALUES('rebuild')`)
+        // 删除旧触发器
+        db.exec(`DROP TRIGGER IF EXISTS shard_files_ai`)
+        db.exec(`DROP TRIGGER IF EXISTS shard_files_ad`)
+        db.exec(`DROP TRIGGER IF EXISTS shard_files_au`)
+        // 删除旧 FTS 表
+        db.exec(`DROP TABLE shard_files_fts`)
+        // 重命名新表
+        db.exec(`ALTER TABLE ${tempTable} RENAME TO shard_files_fts`)
+        // 重建触发器
+        db.exec(`
+          CREATE TRIGGER IF NOT EXISTS shard_files_ai AFTER INSERT ON shard_files BEGIN
+            INSERT INTO shard_files_fts(rowid, name, content, file_type)
+            VALUES (new.id, new.name, new.content, new.file_type);
+          END;
+          CREATE TRIGGER IF NOT EXISTS shard_files_ad AFTER DELETE ON shard_files BEGIN
+            INSERT INTO shard_files_fts(shard_files_fts, rowid, name, content, file_type)
+            VALUES ('delete', old.id, old.name, old.content, old.file_type);
+          END;
+          CREATE TRIGGER IF NOT EXISTS shard_files_au AFTER UPDATE ON shard_files BEGIN
+            INSERT INTO shard_files_fts(shard_files_fts, rowid, name, content, file_type)
+            VALUES ('delete', old.id, old.name, old.content, old.file_type);
+            INSERT INTO shard_files_fts(rowid, name, content, file_type)
+            VALUES (new.id, new.name, new.content, new.file_type);
+          END;
+        `)
         rebuilt++
       }
 

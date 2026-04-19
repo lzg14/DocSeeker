@@ -36,6 +36,7 @@ const FILE_TYPE_OPTIONS = [
   { value: 'chm', label: 'CHM' },
   { value: 'odf', label: 'ODF' },
   { value: 'email', label: '邮件' },
+  { value: 'epub', label: 'EPUB' },
   { value: 'zip', label: 'ZIP' },
 ]
 

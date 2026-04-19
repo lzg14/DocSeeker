@@ -74,7 +74,7 @@ CREATE VIRTUAL TABLE IF NOT EXISTS shard_files_fts USING fts5(
   file_type,
   content='shard_files',
   content_rowid='id',
-  tokenize='unicode61 remove_diacritics 1'
+  tokenize='porter unicode61 remove_diacritics 1'
 )
 `
 
