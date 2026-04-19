@@ -186,9 +186,8 @@ export function detectMachineProfile(): MachineProfile {
  * - parallelWorkers: min(cpuCores - 1, 8)
  */
 export function computeShardConfig(profile: MachineProfile): ShardConfig {
-  // Shard size limit: ensure it can be loaded within 2 seconds, cap at 2000MB
-  const maxSizeMB = Math.max(50, Math.min(profile.diskReadSpeedMBps * 2, 1000))
-  log.info(`[ShardManager] computeShardConfig: speed=${profile.diskReadSpeedMBps} MB/s → maxSizeMB=${maxSizeMB}`)
+  // Shard size limit: ensure it can be loaded within 2 seconds
+  const maxSizeMB = Math.max(50, Math.min(profile.diskReadSpeedMBps * 2, 2000))
 
   // Parallel workers: leave 1 core for main thread, cap at 8
   const parallelWorkers = Math.min(Math.max(profile.cpuCores - 1, 1), 8)
@@ -225,12 +224,8 @@ function loadCachedProfile(): MachineProfile | null {
     if (cached && typeof cached.cpuCores === 'number' && typeof cached.diskReadSpeedMBps === 'number') {
       log.info(`[ShardManager] Loaded cached profile: ${cached.cpuCores} cores, ${cached.diskReadSpeedMBps} MB/s`)
       return { cpuCores: cached.cpuCores, diskReadSpeedMBps: cached.diskReadSpeedMBps }
-    } else {
-      log.info(`[ShardManager] Profile cache not found or invalid (cached=${JSON.stringify(cached)}), running speed test`)
     }
-  } catch (e) {
-    log.warn('[ShardManager] loadCachedProfile error:', e)
-  }
+  } catch {}
   return null
 }
 
@@ -256,12 +251,8 @@ function loadCachedConfig(): ShardConfig | null {
     if (cached && typeof cached.maxSizeMB === 'number' && typeof cached.parallelWorkers === 'number') {
       log.info(`[ShardManager] Loaded cached config: maxSize=${cached.maxSizeMB}MB, parallelWorkers=${cached.parallelWorkers}`)
       return { maxSizeMB: cached.maxSizeMB, parallelWorkers: cached.parallelWorkers }
-    } else {
-      log.info(`[ShardManager] Config cache not found or invalid (cached=${JSON.stringify(cached)})`)
     }
-  } catch (e) {
-    log.warn('[ShardManager] loadCachedConfig error:', e)
-  }
+  } catch {}
   return null
 }
 
@@ -287,14 +278,6 @@ let pendingWorkerResults: Map<number, WorkerResult> = new Map()
 let initialized = false
 let initPromise: Promise<void> | null = null
 let totalFilesInserted = 0
-let totalFileCount = 0  // running total, updated on insert + lazy-load
-let shardsDiscovered = false  // tracks if we have read the shards directory
-let lazyLoadPromise: Promise<void> | null = null  // tracks in-progress lazy loading
-
-// Exported so ipc.ts can check startup readiness without waiting for lazy shard loading
-export function isShardManagerInitialized(): boolean {
-  return initialized
-}
 
 interface WorkerResult {
   type: 'ready' | 'loaded' | 'batch-complete' | 'closed' | 'error'
@@ -347,18 +330,9 @@ function loadShardWorker(shardId: number, dbPath: string): Promise<WorkerResult>
   })
 }
 
-/**
- * Discover existing shard files in the shards directory.
- * Fast — only reads the filesystem, does NOT open any DB files.
- * Called at startup to know which shards exist.
- */
-function discoverShards(): void {
-  if (shardsDiscovered) return
+async function loadExistingShards(): Promise<void> {
   const dir = getShardsDir()
-  if (!existsSync(dir)) {
-    shardsDiscovered = true
-    return
-  }
+  if (!existsSync(dir)) return
 
   const { readdirSync } = require('fs')
   const files = readdirSync(dir).filter(f => f.startsWith(SHARD_PREFIX) && f.endsWith(SHARD_EXT))
@@ -367,91 +341,59 @@ function discoverShards(): void {
     const match = file.match(/^shard_(\d+)\.db$/)
     if (!match) continue
     const shardId = parseInt(match[1], 10)
+
     const dbPath = join(dir, file)
-
-    // Avoid duplicates if called twice
-    if (shards.some(s => s.id === shardId)) continue
-
     const shardInfo: ShardInfo = {
       id: shardId,
       dbPath,
       status: 'pending',
       fileCount: 0,
-      currentSizeBytes: existsSync(dbPath) ? require('fs').statSync(dbPath).size : 0
+      currentSizeBytes: 0
     }
 
     shards.push(shardInfo)
   }
 
   shards.sort((a, b) => a.id - b.id)
-  shardsDiscovered = true
-  log.info(`[ShardManager] Discovered ${shards.length} existing shards (lazy loading enabled)`)
-}
+  log.info(`[ShardManager] Found ${shards.length} existing shards`)
 
-/**
- * Lazily load any pending shards whose status is 'pending'.
- * Loads shards in parallel batches up to config.parallelWorkers.
- * Uses lazyLoadPromise to avoid duplicate loading calls.
- */
-async function loadPendingShards(): Promise<void> {
-  if (!config) return
+  // Load shards in parallel up to config.parallelWorkers
+  if (config && shards.length > 0) {
+    const maxParallel = config.parallelWorkers
+    for (let i = 0; i < shards.length; i += maxParallel) {
+      const batch = shards.slice(i, i + maxParallel)
+      const promises = batch.map(s => {
+        s.status = 'loading'
+        return loadShardWorker(s.id, s.dbPath)
+      })
 
-  const pending = shards.filter(s => s.status === 'pending')
-  if (pending.length === 0) return
+      const results = await Promise.allSettled(promises)
 
-  // If loading is already in progress, wait for it instead of starting another
-  if (lazyLoadPromise) {
-    await lazyLoadPromise
-    return
-  }
+      for (let j = 0; j < batch.length; j++) {
+        const s = batch[j]
+        const result = (results[j] as PromiseFulfilledResult<WorkerResult>).value
 
-  lazyLoadPromise = (async () => {
-    log.info(`[ShardManager] Lazy loading ${pending.length} pending shards...`)
-    try {
-      const maxParallel = config!.parallelWorkers
-
-      for (let i = 0; i < pending.length; i += maxParallel) {
-        const batch = pending.slice(i, i + maxParallel)
-        const promises = batch.map(s => {
-          s.status = 'loading'
-          return loadShardWorker(s.id, s.dbPath)
-        })
-
-        const results = await Promise.allSettled(promises)
-
-        for (let j = 0; j < batch.length; j++) {
-          const s = batch[j]
-          const result = (results[j] as PromiseFulfilledResult<WorkerResult>).value
-
-          if (result.type === 'ready') {
-            s.status = 'ready'
-            s.fileCount = result.fileCount ?? 0
-            totalFileCount += s.fileCount
-            s.loadTime = result.loadTime
-            s.currentSizeBytes = require('fs').statSync(s.dbPath).size
-            log.info(`[ShardManager] Lazy-loaded shard ${s.id}: ${s.fileCount} files, totalFileCount=${totalFileCount}`)
-          } else {
-            s.status = 'error'
-            s.error = result.error ?? 'Unknown error'
-            log.error(`[ShardManager] Failed to lazy-load shard ${s.id}:`, result.error)
-          }
+        if (result.type === 'ready') {
+          s.status = 'ready'
+          s.fileCount = result.fileCount ?? 0
+          s.loadTime = result.loadTime
+          s.currentSizeBytes = require('fs').statSync(s.dbPath).size
+          log.info(`[ShardManager] Loaded existing shard ${s.id}: ${s.fileCount} files`)
+        } else {
+          s.status = 'error'
+          s.error = result.error ?? 'Unknown error'
+          log.error(`[ShardManager] Failed to load shard ${s.id}:`, result.error)
         }
       }
-    } finally {
-      lazyLoadPromise = null
     }
-  })()
-
-  await lazyLoadPromise
+  }
 }
 
 /**
  * Initialize the shard manager:
  * 1. Load or detect machine profile (cached in config.db)
  * 2. Load or compute shard config (cached in config.db)
- * 3. Discover existing shards (FAST — no DB loading, lazy loading enabled)
- *
- * Shard DB files are loaded on-demand during first search via getReadyShards().
+ * 3. Load existing shards in parallel
  */
 export async function initShardManager(): Promise<void> {
   if (initialized) return
@@ -488,11 +430,11 @@ export async function initShardManager(): Promise<void> {
       saveConfigToCache(config)
     }
 
-    // Discover existing shards — FAST, no DB loading (lazy loading)
-    discoverShards()
+    // Load existing shards
+    await loadExistingShards()
 
     initialized = true
-    log.info(`[ShardManager] Ready (lazy loading). Profile: ${JSON.stringify(profile)}, Config: ${JSON.stringify(config)}`)
+    log.info(`[ShardManager] Ready. Profile: ${JSON.stringify(profile)}, Config: ${JSON.stringify(config)}`)
   })()
 
   return initPromise
@@ -505,7 +447,6 @@ function getShardWorker(shardId: number): Worker | undefined {
 }
 
 export function getReadyShards(): ShardInfo[] {
-  // Return currently ready shards (lazy loading happens via loadPendingShards from searchAllShards)
   return shards.filter(s => s.status === 'ready')
 }
 
@@ -515,7 +456,7 @@ function getCurrentShard(): ShardInfo | undefined {
 
 function isShardFull(shard: ShardInfo): boolean {
   if (!config) return false
-  const maxBytes = Math.min(config.maxSizeMB, 1000) * 1024 * 1024
+  const maxBytes = config.maxSizeMB * 1024 * 1024
   return shard.currentSizeBytes >= maxBytes
 }
 
@@ -602,7 +543,6 @@ export async function insertFileBatch(
           shard.fileCount = result.fileCount ?? shard.fileCount
           shard.currentSizeBytes = require('fs').statSync(shard.dbPath).size
           totalFilesInserted += files.length
-          totalFileCount += files.length
           resolve({ success: true, fileCount: result.fileCount ?? 0 })
         } else {
           resolve({ success: false, fileCount: 0 })
@@ -744,9 +684,6 @@ export async function searchAllShards(
 
   if (!query.trim()) return []
 
-  // Lazy load any pending shards on first search (deduplicated via lazyLoadPromise)
-  await loadPendingShards()
-
   const readyShards = getReadyShards()
   if (readyShards.length === 0) return []
 
@@ -793,9 +730,6 @@ export async function searchByFileName(
 
   const keywords = query.trim().split(/\s+/).filter(k => k.length > 0)
   if (keywords.length === 0) return []
-
-  // Lazy load any pending shards on first search
-  await loadPendingShards()
 
   // Build filename-only FTS query (restrict to name column)
   const ftsQuery = keywords.map(k => `"${k.replace(/"/g, '""')}"*`).join(' AND ')
@@ -958,9 +892,6 @@ export function closeAllShards(): void {
   shards = []
   initialized = false
   initPromise = null
-  shardsDiscovered = false
-  lazyLoadPromise = null
-  totalFileCount = 0
   log.info('[ShardManager] All shards closed')
 }
 
@@ -1021,52 +952,10 @@ export function getSearchSnippets(
 }
 
 /**
- * Get total file count across all shards (sync version for internal use).
- */
-function getTotalFileCount(): number {
-  if (totalFileCount > 0) return totalFileCount
-  if (shardsDiscovered) {
-    return shards.reduce((sum, s) => sum + (s.status === 'ready' ? s.fileCount : 0), 0)
-  }
-  return 0
-}
-
-/**
  * Get total file count across all shards.
- * Triggers lazy loading of pending shards and waits for completion.
  */
-export async function getTotalFileCountAsync(): Promise<number> {
-  await initShardManager()
-  await loadPendingShards()
-  return getTotalFileCount()
-}
-
-/**
- * Count files for a specific folder across all shards.
- * Returns the total file count for the given folder path.
- */
-export function countFilesInFolder(folderPath: string): number {
-  let count = 0
-  const readyShards = getReadyShards()
-  for (const shard of readyShards) {
-    try {
-      const db = new Database(shard.dbPath)
-      // Paths stored with forward slashes (normalized at write time)
-      // Escape LIKE wildcards (%) and (_) in folder path
-      const normalizedFolder = folderPath.replace(/\\/g, '/')
-      const escapedFolder = normalizedFolder.replace(/%/g, '\\%').replace(/_/g, '\\_')
-      const rows = db.prepare(`
-        SELECT COUNT(*) as cnt FROM shard_files
-        WHERE path LIKE ? || '%' AND (path = ? OR substr(path, length(?) + 1, 1) = '/')
-      `).all(escapedFolder, normalizedFolder, normalizedFolder) as { cnt: number }[]
-      count += rows[0]?.cnt ?? 0
-      count += rows[0]?.cnt ?? 0
-      db.close()
-    } catch (err) {
-      log.error(`[ShardManager] countFilesInFolder: failed on shard ${shard.id}`, err)
-    }
-  }
-  return count
+export function getTotalFileCount(): number {
+  return shards.reduce((sum, s) => sum + s.fileCount, 0)
 }
 
 /**
@@ -1101,20 +990,19 @@ export function deleteFileFromAllShards(filePath: string): number {
  */
 export function deleteFilesByFolderPrefixFromAllShards(folderPath: string): number {
   let totalDeleted = 0
-  // Normalize to forward slashes to match storage format
-  const normalizedFolder = folderPath.replace(/\\/g, '/')
-  const prefix = normalizedFolder.endsWith('/') ? normalizedFolder : normalizedFolder + '/'
+  const prefix = folderPath.endsWith('/') || folderPath.endsWith('\\')
+    ? folderPath
+    : folderPath + (folderPath.includes('\\') ? '\\' : '/')
   const readyShards = getReadyShards()
   for (const shard of readyShards) {
     try {
       const db = new Database(shard.dbPath)
       const stmt = db.prepare("DELETE FROM shard_files WHERE path LIKE ? || '%'")
       const result = stmt.run(prefix)
-      stmt.free()
       db.close()
       if (result.changes > 0) {
         totalDeleted += result.changes
-        log.info(`[ShardManager] Deleted ${result.changes} files from shard ${shard.id}`)
+        log.info(`[ShardManager] Deleted ${result.changes} files under ${folderPath} from shard ${shard.id}`)
       }
     } catch (err) {
       log.warn(`[ShardManager] Failed to delete files under ${folderPath} from shard ${shard.id}:`, err)
@@ -1139,7 +1027,7 @@ export function getShardConfigInfo(): ShardConfig | null {
 
 /**
  * Deduplicate search results by hash.
- * Groups results with the same hash and keeps the one with the latest updated_at.
+ * Groups results by hash and keeps the entry with the latest updated_at.
  * Files without a hash are grouped by path (each path is unique anyway).
  */
 export function deduplicateResults(results: SearchResult[]): SearchResult[] {
@@ -1147,7 +1035,6 @@ export function deduplicateResults(results: SearchResult[]): SearchResult[] {
   for (const r of results) {
     const key = r.hash || r.path
     if (!key) {
-      // No identifier, keep the entry as-is (path is the best we have)
       seen.set(r.path, r)
       continue
     }
@@ -1155,7 +1042,6 @@ export function deduplicateResults(results: SearchResult[]): SearchResult[] {
     if (!existing) {
       seen.set(key, r)
     } else {
-      // Keep the newer one
       const existingTime = existing.updated_at || ''
       const newTime = r.updated_at || ''
       if (newTime > existingTime) {

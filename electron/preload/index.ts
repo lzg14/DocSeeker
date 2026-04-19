@@ -87,6 +87,7 @@ export interface ElectronAPI {
   onScanProgress: (callback: (progress: ScanProgress) => void) => () => void
   searchFiles: (query: string) => Promise<FileRecord[]>
   searchFilesAdvanced: (query: string, options?: SearchOptions) => Promise<FileRecord[]>
+  searchDeduplicate: (query: string, options?: SearchOptions) => Promise<FileRecord[]>
   searchByFileName: (query: string, options?: SearchOptions) => Promise<FileRecord[]>
   searchDeduplicate: (query: string, options?: SearchOptions) => Promise<FileRecord[]>
   deleteFile: (filePath: string) => Promise<boolean>
@@ -135,6 +136,9 @@ export interface ElectronAPI {
   getShardInfo: () => Promise<any>
   // System paths
   getSystemPaths: () => Promise<{ documents: string; desktop: string }>
+  // Image thumbnail
+  thumbnailGet: (filePath: string) => Promise<string | null>
+  thumbnailClear: () => Promise<{ success: boolean }>
 }
 
 const electronAPI: ElectronAPI = {
@@ -153,6 +157,8 @@ const electronAPI: ElectronAPI = {
   searchFiles: (query: string) => ipcRenderer.invoke('search-files', query),
 
   searchFilesAdvanced: (query: string, options?: SearchOptions) => ipcRenderer.invoke('search-files-advanced', query, options),
+
+  searchDeduplicate: (query: string, options?: SearchOptions) => ipcRenderer.invoke('search-deduplicate', query, options),
 
   searchByFileName: (query: string, options?: SearchOptions) => ipcRenderer.invoke('search-by-filename', query, options),
 
@@ -249,6 +255,10 @@ const electronAPI: ElectronAPI = {
   getShardInfo: () => ipcRenderer.invoke('get-shard-info'),
 
   getSystemPaths: () => ipcRenderer.invoke('get-system-paths'),
+
+  thumbnailGet: (filePath: string) => ipcRenderer.invoke('thumbnail-get', filePath),
+
+  thumbnailClear: () => ipcRenderer.invoke('thumbnail-clear'),
 }
 
 contextBridge.exposeInMainWorld('electron', electronAPI)

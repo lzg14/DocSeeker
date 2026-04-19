@@ -70,12 +70,14 @@
     "jszip": "^3.10.1",
     "mammoth": "^1.8.0",
     "pdf-parse": "^1.1.1",
+    "pdfjs-dist": "^4.10.38",
     "xlsx": "^0.18.5"
   },
   "devDependencies": {
     "@electron-toolkit/preload": "^3.0.1",
     "@electron-toolkit/utils": "^3.0.0",
     "@types/better-sqlite3": "^7.6.11",
+    "@types/jest": "^29.5.0",
     "@types/jszip": "^3.4.1",
     "@types/node": "^22.10.0",
     "@types/react": "^18.3.12",
@@ -85,12 +87,14 @@
     "electron-builder": "^25.1.8",
     "electron-vite": "^2.3.0",
     "icon-gen": "^5.0.0",
+    "jest": "^29.7.0",
     "jimp": "^1.6.1",
     "png-to-ico": "^3.0.1",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "sharp": "^0.34.5",
     "to-ico": "^1.1.5",
+    "ts-jest": "^29.2.0",
     "typescript": "^5.7.2",
     "vite": "^5.4.0"
   }

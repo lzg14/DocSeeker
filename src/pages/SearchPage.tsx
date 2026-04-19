@@ -58,7 +58,6 @@ function SearchPage(): JSX.Element {
   const [isDragging, setIsDragging] = useState(false)
   const [isExtracting, setIsExtracting] = useState(false)
   const [searchScope, setSearchScope] = useState<'all' | 'filename'>('all')
-  const [secondaryFilter, setSecondaryFilter] = useState('')
   const [dedupEnabled, setDedupEnabled] = useState(false)
   const { t } = useLanguage()
 
@@ -66,15 +65,12 @@ function SearchPage(): JSX.Element {
   const dropdownRef = useRef<HTMLDivElement>(null)
   const filterRef = useRef<HTMLDivElement>(null)
   const searchScopeRef = useRef<'all' | 'filename'>('all')
-  const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const dedupEnabledRef = useRef(false)
 
-  // Derived filtered files based on secondary filter
-  const filteredFiles = secondaryFilter.trim()
-    ? files.filter(f =>
-        f.path?.toLowerCase().includes(secondaryFilter.toLowerCase()) ||
-        f.name?.toLowerCase().includes(secondaryFilter.toLowerCase())
-      )
-    : files
+  // Sync dedupEnabled to ref so performSearch always reads the latest value
+  useEffect(() => {
+    dedupEnabledRef.current = dedupEnabled
+  }, [dedupEnabled])
 
   // Load history and saved searches on mount
   useEffect(() => {
@@ -95,15 +91,6 @@ function SearchPage(): JSX.Element {
     }
     document.addEventListener('mousedown', handleClickOutside)
     return () => document.removeEventListener('mousedown', handleClickOutside)
-  }, [])
-
-  // Cleanup debounce timer on unmount
-  useEffect(() => {
-    return () => {
-      if (debounceTimerRef.current) {
-        clearTimeout(debounceTimerRef.current)
-      }
-    }
   }, [])
 
   const loadHistory = async () => {
@@ -161,15 +148,15 @@ function SearchPage(): JSX.Element {
         const hasFilters = opts &&
           (opts.fileTypes?.length || opts.sizeMin || opts.sizeMax || opts.dateFrom || opts.dateTo)
 
-        const ftsResults = dedupEnabled
-          ? await window.electron.searchDeduplicate(bareQuery, opts)
-          : (hasFilters
-            ? (scope === 'filename'
-              ? await window.electron.searchByFileName(bareQuery, opts)
+        const ftsResults = hasFilters
+          ? (scope === 'filename'
+            ? await window.electron.searchByFileName(bareQuery, opts)
+            : dedupEnabledRef.current
+              ? await window.electron.searchDeduplicate(bareQuery, opts)
               : await window.electron.searchFilesAdvanced(bareQuery, opts))
-            : bareQuery
-              ? await window.electron.searchFiles(bareQuery)
-              : hasFilters ? await window.electron.searchFilesAdvanced('', opts) : [])
+          : bareQuery
+            ? await window.electron.searchFiles(bareQuery)
+            : hasFilters ? await window.electron.searchFilesAdvanced('', opts) : []
 
         // Filter results by regex against path and content
         const re = new RegExp(regexPattern, 'i')
@@ -179,15 +166,13 @@ function SearchPage(): JSX.Element {
         const hasFilters = opts &&
           (opts.fileTypes?.length || opts.sizeMin || opts.sizeMax || opts.dateFrom || opts.dateTo)
 
-        if (dedupEnabled) {
-          result = await window.electron.searchDeduplicate(query, opts)
-        } else {
-          result = hasFilters
-            ? (scope === 'filename'
-              ? await window.electron.searchByFileName(query, opts)
+        result = hasFilters
+          ? (scope === 'filename'
+            ? await window.electron.searchByFileName(query, opts)
+            : dedupEnabledRef.current
+              ? await window.electron.searchDeduplicate(query, opts)
               : await window.electron.searchFilesAdvanced(query, opts))
-            : await window.electron.searchFiles(query)
-        }
+          : await window.electron.searchFiles(query)
       }
 
       setFiles(result)
@@ -206,16 +191,9 @@ function SearchPage(): JSX.Element {
     } finally {
       setIsSearching(false)
     }
-  }, [dedupEnabled, searchScope])
+  }, [])
 
-  const handleSearch = () => {
-    // Clear any pending debounce so immediate search is not delayed
-    if (debounceTimerRef.current) {
-      clearTimeout(debounceTimerRef.current)
-      debounceTimerRef.current = null
-    }
-    performSearch(searchQuery, filters)
-  }
+  const handleSearch = () => performSearch(searchQuery, filters)
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>): void => {
     if (e.key === 'Enter') {
@@ -324,16 +302,7 @@ function SearchPage(): JSX.Element {
               type="text"
               placeholder={t('search.placeholder')}
               value={searchQuery}
-              onChange={(e) => {
-                setSearchQuery(e.target.value)
-                // Debounce: clear previous timer and schedule a new search
-                if (debounceTimerRef.current) {
-                  clearTimeout(debounceTimerRef.current)
-                }
-                debounceTimerRef.current = setTimeout(() => {
-                  performSearch(e.target.value, filters)
-                }, 300)
-              }}
+              onChange={(e) => setSearchQuery(e.target.value)}
               onKeyDown={handleKeyDown}
               onFocus={() => { setShowHistory(true); setShowSaved(false) }}
             />
@@ -467,9 +436,9 @@ function SearchPage(): JSX.Element {
             <button
               className={`toolbar-btn ${dedupEnabled ? 'active' : ''}`}
               onClick={() => setDedupEnabled(d => !d)}
-              title={t('search.dedup')}
+              title={t('search.dedup') || '隐藏重复文件'}
             >
-              🔗 {t('search.dedup')}
+              🔗 {t('search.dedup') || '去重'}
             </button>
             <button
               className={`toolbar-btn ${showSyntaxHelp ? 'active' : ''}`}
@@ -595,35 +564,10 @@ function SearchPage(): JSX.Element {
 
       </div>
 
-      {/* 二次筛选栏 - 在搜索框下方独立一行 */}
-      {files.length > 0 && (
-        <div className="secondary-filter-bar">
-          <input
-            type="text"
-            className="secondary-filter-input"
-            placeholder={t('search.secondaryFilterPlaceholder') || '在结果中筛选...'}
-            value={secondaryFilter}
-            onChange={(e) => setSecondaryFilter(e.target.value)}
-          />
-          {secondaryFilter && (
-            <button
-              className="secondary-filter-clear"
-              onClick={() => setSecondaryFilter('')}
-              title={t('search.clearSecondaryFilter') || '清除筛选'}
-            >
-              ×
-            </button>
-          )}
-          <span className="secondary-filter-count">
-            {filteredFiles.length} / {files.length}
-          </span>
-        </div>
-      )}
-
       <div className="search-content">
         <div className="file-list-wrapper">
           <FileList
-            files={filteredFiles}
+            files={files}
             selectedFile={selectedFile}
             onSelectFile={setSelectedFile}
             formatSize={formatSize}
@@ -640,7 +584,7 @@ function SearchPage(): JSX.Element {
 
       <div className="search-footer-bar">
         {hasSearched
-          ? t('search.result').replace('{count}', filteredFiles.length.toString())
+          ? t('search.result').replace('{count}', files.length.toString())
           : t('search.noQueryHint')}
       </div>
     </div>

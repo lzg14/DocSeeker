@@ -2,7 +2,6 @@ import { app, ipcMain, dialog, shell, BrowserWindow } from 'electron'
 import log from 'electron-log/main'
 import { Worker } from 'worker_threads'
 import { join, extname } from 'path'
-import { getHotResults, setHotResults } from './hotCache'
 import {
   deleteFileByPath,
   removeFilesByFolderPath,
@@ -18,16 +17,14 @@ import {
   openNextShard,
   insertFileBatch,
   searchAllShards,
+  deduplicateResults,
   searchByFileName as shardSearchByFileName,
   getSearchSnippets as shardGetSearchSnippets,
   getShardInfo,
-  getTotalFileCountAsync,
-  countFilesInFolder,
+  getTotalFileCount,
   getShardConfigInfo,
   deleteFileFromAllShards,
   deleteFilesByFolderPrefixFromAllShards,
-  isShardManagerInitialized,
-  deduplicateResults,
   type FileRecord as ShardFileRecord
 } from './shardManager'
 import {
@@ -47,6 +44,8 @@ import {
   updateScanSettings,
   type ScannedFolder as MetaScannedFolder
 } from './config'
+import { getImageThumbnail, isImageFile, THUMB_CACHE } from './thumbnail'
+import { getPdfThumbnail } from './pdfThumbnail'
 
 let handlersRegistered = false
 
@@ -78,29 +77,10 @@ export function registerIpcHandlers(): void {
 
   // Search files (via shard manager)
   ipcMain.handle('search-files', async (_, query: string): Promise<FileRecord[]> => {
-    if (!query.trim()) return []
-
-    // Always record search history (before cache check to avoid regression)
-    addSearchHistory(query)
-
-    // LFU hot cache: check cache first
-    const cached = getHotResults(query)
-    if (cached !== undefined) {
-      log.info(`[IPC] search-files: cache hit for "${query}" (${cached.length} results)`)
-      return cached.map(e => ({
-        path: e.path,
-        name: e.name,
-        size: e.size,
-        hash: e.hash,
-        file_type: e.file_type,
-        content: e.content,
-        created_at: e.created_at,
-        updated_at: e.updated_at,
-      }))
-    }
+    if (query.trim()) addSearchHistory(query)
     try {
       const results = await searchAllShards(query)
-      const mapped = results.map(r => ({
+      return results.map(r => ({
         id: r.id,
         path: r.path,
         name: r.name,
@@ -113,22 +93,6 @@ export function registerIpcHandlers(): void {
         is_supported: r.is_supported === 1 ? true : r.is_supported === 0 ? false : undefined,
         match_type: r.match_type ?? 'content'
       }))
-
-      // Cache non-empty results with LFU strategy
-      if (results.length > 0) {
-        setHotResults(query, results.map(r => ({
-          path: r.path,
-          name: r.name,
-          size: r.size,
-          hash: r.hash,
-          file_type: r.file_type,
-          content: r.content,
-          created_at: r.created_at,
-          updated_at: r.updated_at,
-        })))
-      }
-
-      return mapped
     } catch (err) {
       log.error('[IPC] search-files error:', err)
       return []
@@ -183,7 +147,7 @@ export function registerIpcHandlers(): void {
     }
   })
 
-  // Search with deduplication
+  // Deduplicated search — same as advanced but removes duplicates by hash
   ipcMain.handle('search-deduplicate', async (_, query: string, options?: SearchOptions): Promise<FileRecord[]> => {
     if (query.trim()) addSearchHistory(query)
     try {
@@ -252,9 +216,9 @@ export function registerIpcHandlers(): void {
     }
   })
 
-  // Get file count (triggers lazy loading if needed)
+  // Get file count
   ipcMain.handle('get-file-count', async (): Promise<number> => {
-    return getTotalFileCountAsync()
+    return getTotalFileCount()
   })
 
   // Get shard info (diagnostics)
@@ -314,38 +278,24 @@ export function registerIpcHandlers(): void {
 
   // Check if shards are ready (used by renderer for polling)
   ipcMain.handle('db-is-ready', async (): Promise<boolean> => {
-    // Return true once shard manager is initialized (profile/config ready, shards discovered)
-    // Shard DB files are loaded lazily on first search, not at startup
-    return isShardManagerInitialized()
+    const shards = getShardInfo()
+    return shards.length > 0 && shards.some(s => s.status === 'ready')
   })
 
   // Run incremental scan on a folder
   ipcMain.handle('incremental-scan', async (event, folderPath: string): Promise<{ success: boolean; filesProcessed: number; skipped: number; errors: string[] }> => {
     log.info(`IPC: incremental-scan called for ${folderPath}`)
 
-    const folder = getScannedFolderByPath(folderPath)
-    const lastScanAt = folder?.last_scan_at ?? folder?.last_full_scan_at ?? undefined
-
     return new Promise((resolve) => {
       const workerPath = join(__dirname, 'scanWorker.js')
-      const scanSettings = getScanSettings()
 
       try {
         const worker = new Worker(workerPath, {
-          workerData: {
-            dirPath: folderPath,
-            incremental: true,
-            lastScanAt,
-            settings: {
-              includeHidden: scanSettings.includeHidden,
-              includeSystem: scanSettings.includeSystem
-            }
-          }
+          workerData: { dirPath: folderPath, incremental: true }
         })
 
         let filesProcessed = 0
         let skipped = 0
-        let totalSize = 0
         const errors: string[] = []
         let shardId = -1
 
@@ -375,20 +325,6 @@ export function registerIpcHandlers(): void {
 
                   const result = await insertFileBatch(shardId, records)
                   filesProcessed += result.fileCount
-
-                  // Track total size of processed files for metadata update
-                  totalSize += records.reduce((sum, r) => sum + (r.size || 0), 0)
-
-                  // Check if current shard is full; open next shard if so
-                  const shardInfo = getShardInfo().find(s => s.id === shardId)
-                  const shardConfig = getShardConfigInfo()
-                  if (shardInfo && shardConfig) {
-                    const maxBytes = Math.min(shardConfig.maxSizeMB, 1000) * 1024 * 1024
-                    if (shardInfo.currentSizeBytes >= maxBytes) {
-                      const nextShard = await openNextShard()
-                      currentShardId = nextShard?.id ?? -1
-                    }
-                  }
                 } catch (err) {
                   log.error('[IPC] Batch insert error:', err)
                   errors.push((err as Error).message)
@@ -397,13 +333,7 @@ export function registerIpcHandlers(): void {
               break
             }
             case 'complete':
-              log.info(`Incremental scan complete: ${filesProcessed} files, skipped: ${message.data.skipped}, time: ${message.data.totalTime}ms`)
-              // Update folder metadata with files processed in this scan
-              if (folder && folder.id) {
-                // Count total files in folder from shards and store
-                const totalInFolder = countFilesInFolder(folderPath)
-                updateFolderScanComplete(folder.id, totalInFolder, totalSize)
-              }
+              log.info(`Incremental scan complete: ${filesProcessed} files, time: ${message.data.totalTime}ms`)
               event.sender.send('scan-progress', {
                 current: filesProcessed,
                 total: filesProcessed,
@@ -445,20 +375,12 @@ export function registerIpcHandlers(): void {
 
     return new Promise((resolve) => {
       const workerPath = join(__dirname, 'scanWorker.js')
-      const scanSettings = getScanSettings()
       try {
         const worker = new Worker(workerPath, {
-          workerData: {
-            dirPath: folderPath,
-            settings: {
-              includeHidden: scanSettings.includeHidden,
-              includeSystem: scanSettings.includeSystem
-            }
-          }
+          workerData: { dirPath: folderPath }
         })
 
         let filesProcessed = 0
-        let totalSize = 0
         const errors: string[] = []
         let shardId = -1
 
@@ -488,17 +410,13 @@ export function registerIpcHandlers(): void {
 
                   const result = await insertFileBatch(shardId, records)
                   filesProcessed += result.fileCount
-                  totalSize += records.reduce((sum, r) => sum + (r.size || 0), 0)
 
-                  // Check if shard is full (apply 2000MB cap regardless of config)
+                  // Check if shard is full
                   const shardInfo = getShardInfo().find(s => s.id === shardId)
-                  const shardConfig = getShardConfigInfo()
-                  if (shardInfo && shardConfig) {
-                    const maxBytes = Math.min(shardConfig.maxSizeMB, 1000) * 1024 * 1024
-                    if (shardInfo.currentSizeBytes >= maxBytes) {
-                      const nextShard = await openNextShard()
-                      currentShardId = nextShard?.id ?? -1
-                    }
+                  const config = getShardConfigInfo()
+                  if (shardInfo && config && shardInfo.currentSizeBytes >= (config.maxSizeMB * 1024 * 1024)) {
+                    const nextShard = await openNextShard()
+                    currentShardId = nextShard?.id ?? -1
                   }
                 } catch (err) {
                   log.error('[IPC] Batch insert error:', err)
@@ -510,9 +428,7 @@ export function registerIpcHandlers(): void {
             case 'complete':
               log.info(`Full rescan complete: ${filesProcessed} files, time: ${message.data.totalTime}ms`)
               if (folder && folder.id) {
-                // Count total files in folder from shards and store
-                const totalInFolder = countFilesInFolder(folderPath)
-                updateFolderFullScanComplete(folder.id, totalInFolder, totalSize)
+                updateFolderScanComplete(folder.id, filesProcessed, 0)
               }
               event.sender.send('scan-progress', {
                 current: filesProcessed,
@@ -610,6 +526,24 @@ export function registerIpcHandlers(): void {
       documents: app.getPath('documents'),
       desktop: app.getPath('desktop')
     }
+  })
+
+  // Get image thumbnail
+  ipcMain.handle('thumbnail-get', async (_, filePath: string) => {
+    const ext = extname(filePath).toLowerCase()
+    if (isImageFile(ext)) {
+      return getImageThumbnail(filePath)
+    }
+    if (ext === '.pdf') {
+      return await getPdfThumbnail(filePath)
+    }
+    return null
+  })
+
+  // Clear thumbnail cache
+  ipcMain.handle('thumbnail-clear', async () => {
+    THUMB_CACHE.clear()
+    return { success: true }
   })
 
   log.info('[IPC] All handlers registered')

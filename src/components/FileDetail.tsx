@@ -1,3 +1,4 @@
+import { useState, useEffect } from 'react'
 import { FileRecord } from '../types'
 import { useLanguage } from '../context/LanguageContext'
 
@@ -8,6 +9,7 @@ interface FileDetailProps {
 
 function FileDetail({ file, formatSize }: FileDetailProps): JSX.Element {
   const { t } = useLanguage()
+  const [thumbnail, setThumbnail] = useState<string | null>(null)
 
   const handleShowInFolder = () => window.electron.showInFolder(file.path)
   const handleOpenFile = () => window.electron.openFile(file.path)
@@ -17,8 +19,24 @@ function FileDetail({ file, formatSize }: FileDetailProps): JSX.Element {
     return new Date(dateStr).toLocaleString('zh-CN')
   }
 
+  // Load thumbnail when file path changes (main process filters by file type)
+  useEffect(() => {
+    setThumbnail(null)
+    if (!file?.path) return
+
+    window.electron.thumbnailGet(file.path).then(data => {
+      if (data) setThumbnail(data)
+    })
+  }, [file?.path])
+
   return (
     <div className="file-detail">
+      {thumbnail && (
+        <div className="file-thumbnail-container">
+          <img src={thumbnail} alt="preview" className="file-thumbnail-img" />
+        </div>
+      )}
+
       <div className="file-detail-name">
         <span>{file.name}</span>
       </div>
