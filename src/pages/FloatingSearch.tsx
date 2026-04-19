@@ -43,7 +43,34 @@ function FloatingSearch(): JSX.Element {
     setResults([])
     setSelected(0)
     try {
-      const res = await window.electron.searchFiles(q)
+      // Detect /pattern/ regex syntax (same logic as SearchPage)
+      const regexMatch = q.match(/^\/(.+?)\//)
+      let res: FileRecord[]
+
+      if (regexMatch) {
+        const regexPattern = regexMatch[1]
+        const bareQuery = q.replace(/^\/.+?\/[\s]*/, '').trim()
+
+        // Validate regex
+        try { new RegExp(regexPattern) } catch {
+          setResults([])
+          setSearched(true)
+          setIsSearching(false)
+          return
+        }
+
+        // Search with bare query
+        const ftsResults = bareQuery
+          ? await window.electron.searchFiles(bareQuery)
+          : []
+
+        // Filter with JS regex against path and content
+        const re = new RegExp(regexPattern, 'i')
+        res = ftsResults.filter(f => re.test(f.path || '') || re.test(f.content || ''))
+      } else {
+        res = await window.electron.searchFiles(q)
+      }
+
       if (thisVersion !== searchVersion.current) return // 新搜索已发出，忽略旧结果
       setResults(res)
       setSearched(true)
