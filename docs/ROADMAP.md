@@ -30,7 +30,7 @@ DocSeeker 是一款基于 Electron + React + TypeScript 的本地文档全文搜
 | 功能 | 当前状态 | 目标 | 竞品参考 |
 |------|----------|------|----------|
 | 新增文件格式 | ✅ 19 种格式（RTF/CHM/ODF/EPUB/WPS/RAR 已完成） | 继续增加 WPD、图片、音视频元数据 | AnyTXT 60+ |
-| 实时文件监控 | ❌ **已移除**（chokidar 在大目录架构层面无法优化） | 重新启用需改用 NTFS USN Journal API | Everything / AnyTXT |
+| 实时文件监控 | ✅ **已实现**（NTFS USN Journal API + Go 独立进程） | 重新启用需改用 NTFS USN Journal API | Everything / AnyTXT |
 | 正则搜索 | ✅ 已支持 `/pattern/` 语法 | 词干提取和字段搜索均已完成 | Everything / AnyTXT |
 | 文件过滤器 | ✅ 已支持类型/大小/日期三重过滤 | — | 所有主流竞品 |
 
@@ -68,7 +68,7 @@ DocSeeker 是一款基于 Electron + React + TypeScript 的本地文档全文搜
 - [x] **M1.1** 新增 RTF 文件格式支持
 - [x] **M1.2** 新增 CHM 帮助文档格式支持
 - [x] **M1.3** 新增 ODF 系列格式支持（ODT / ODS / ODP）
-- [x] **M1.4** 重新启用实时文件监控（优化 chokidar 或迁移至 NTFS USN） — _已移除（架构问题，大目录下 chokidar 无法优化，需改用 NTFS USN Journal）_
+- [x] **M1.4** 实时文件监控（NTFS USN Journal API + Go 独立进程，跨卷监控，动态目录配置） — ✅ 已实现
 - [x] **M1.5** 搜索历史功能（记录与快速复用）
 - [x] **M1.6** 保存的搜索（收藏夹与命名搜索）
 - [x] **M1.7** 移除 / 大幅提高结果上限（200 条限制）

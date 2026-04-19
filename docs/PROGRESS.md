@@ -33,7 +33,7 @@
 | M1.1 新增 RTF 格式 | ✅ | |
 | M1.2 新增 CHM 格式 | ✅ | |
 | M1.3 新增 ODF 系列（ODT/ODS/ODP） | ✅ | |
-| M1.4 实时文件监控 | ❌ 已移除 | 大目录下 chokidar 性能瓶颈，需 NTFS USN Journal API 重写 |
+| M1.4 实时文件监控 | ✅ | NTFS USN Journal + Go 独立进程，跨卷监控，动态目录配置 |
 | M1.5 搜索历史 | ✅ | |
 | M1.6 保存的搜索 | ✅ | |
 | M1.7 搜索结果上限 | ✅ | 已移除 200 条限制 |
@@ -79,5 +79,5 @@
 | 功能 | 优先级 | 备注 |
 |------|--------|------|
 | 文件夹名称索引 | P1 | 搜索 `folder:Desktop` 可返回文件夹 |
-| 实时文件监控 | P2 | NTFS USN Journal API 实现中 |
+| 实时文件监控 | ✅ 已实现 | NTFS USN Journal API + Go 独立进程 |
 | macOS/Linux 打包 | P3 | 评估文档已完成 |
