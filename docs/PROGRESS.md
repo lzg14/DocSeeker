@@ -4,7 +4,7 @@
 
 ---
 
-## 已支持文件格式（22 种）
+## 已支持文件格式（28 种）
 
 | 格式 | 扩展名 | 全文索引 | UI 过滤器 |
 |------|--------|----------|-----------|
@@ -23,6 +23,8 @@
 | RAR | .rar（内部文档） | ✅ | ✅ RAR |
 | 邮件 | .mbox .eml | ✅ | ✅ 邮件 |
 | WPS | .wps .wpp .et .dps | ✅ | —（映射到 Word/PPT/Excel） |
+| 图片元数据 | .jpg .jpeg .png .gif .webp .bmp .tiff .tif | ✅ | ✅ 图片元数据 |
+| 音视频元数据 | .mp3 .flac .ogg .wav .aac .m4a .mp4 .avi .mkv .mov .wmv .flv .webm | ✅ | ✅ 音视频 |
 
 ---
 

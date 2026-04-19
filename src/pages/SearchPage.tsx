@@ -41,6 +41,8 @@ const FILE_TYPE_OPTIONS = [
   { value: 'epub', label: 'EPUB' },
   { value: 'zip', label: 'ZIP' },
   { value: 'rar', label: 'RAR' },
+  { value: 'image', label: '图片元数据' },
+  { value: 'media', label: '音视频' },
 ]
 
 function SearchPage(): JSX.Element {
