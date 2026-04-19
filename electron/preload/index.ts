@@ -141,6 +141,8 @@ export interface ElectronAPI {
   // Thumbnail cache
   thumbCacheGet: (filePath: string) => Promise<string | null>
   thumbCacheSet: (filePath: string, dataUrl: string) => Promise<void>
+  // Clipboard
+  clipboardWriteText: (text: string) => Promise<{ success: boolean }>
 }
 
 const electronAPI: ElectronAPI = {
@@ -263,6 +265,8 @@ const electronAPI: ElectronAPI = {
   thumbCacheGet: (filePath: string) => ipcRenderer.invoke('thumb-cache-get', filePath),
 
   thumbCacheSet: (filePath: string, dataUrl: string) => ipcRenderer.invoke('thumb-cache-set', filePath, dataUrl),
+
+  clipboardWriteText: (text: string) => ipcRenderer.invoke('clipboard-write-text', text),
 }
 
 contextBridge.exposeInMainWorld('electron', electronAPI)

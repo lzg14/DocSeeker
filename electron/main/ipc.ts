@@ -595,6 +595,13 @@ export function registerIpcHandlers(): void {
     return { success: true }
   })
 
+  // Clipboard operations
+  ipcMain.handle('clipboard-write-text', async (_, text: string) => {
+    const { clipboard } = await import('electron')
+    clipboard.writeText(text)
+    return { success: true }
+  })
+
   // Read thumbnail from disk cache (supports both images and PDF)
   ipcMain.handle('thumb-cache-get', async (_, filePath: string): Promise<string | null> => {
     try {

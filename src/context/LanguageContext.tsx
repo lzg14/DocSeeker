@@ -139,6 +139,9 @@ const translations: Record<Language, Record<string, string>> = {
     'detail.noContent': '无内容',
     'detail.showInFolder': '在文件夹中显示',
     'detail.openFile': '打开文件',
+    // Context menu
+    'contextMenu.copyPath': '复制路径',
+    'contextMenu.copyName': '复制文件名',
     // Scan page
     'scan.title': '扫描目录',
     'scan.scanning': '扫描中...',
@@ -312,6 +315,9 @@ const translations: Record<Language, Record<string, string>> = {
     'detail.noContent': 'No content',
     'detail.showInFolder': 'Show in Folder',
     'detail.openFile': 'Open File',
+    // Context menu
+    'contextMenu.copyPath': 'Copy Path',
+    'contextMenu.copyName': 'Copy Filename',
     // Scan page
     'scan.title': 'Scan Directory',
     'scan.scanning': 'Scanning...',

@@ -1,6 +1,13 @@
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { FileRecord } from '../types'
 import { useLanguage } from '../context/LanguageContext'
+
+interface ContextMenuState {
+  visible: boolean
+  x: number
+  y: number
+  file: FileRecord | null
+}
 
 interface FileListProps {
   files: FileRecord[]
@@ -18,6 +25,46 @@ function FileList({ files, selectedFile, onSelectFile, formatSize, hasSearched, 
   const { t } = useLanguage()
   const [sortField, setSortField] = useState<SortField>('relevance')
   const [sortOrder, setSortOrder] = useState<SortOrder>('asc')
+  const [contextMenu, setContextMenu] = useState<ContextMenuState>({ visible: false, x: 0, y: 0, file: null })
+  const menuRef = useRef<HTMLDivElement>(null)
+
+  // 关闭右键菜单（点击其他区域或滚动时）
+  useEffect(() => {
+    const handleClick = () => setContextMenu(prev => ({ ...prev, visible: false }))
+    const handleScroll = () => setContextMenu(prev => ({ ...prev, visible: false }))
+    document.addEventListener('click', handleClick)
+    document.addEventListener('scroll', handleScroll, true)
+    return () => {
+      document.removeEventListener('click', handleClick)
+      document.removeEventListener('scroll', handleScroll, true)
+    }
+  }, [])
+
+  const handleContextMenu = (e: React.MouseEvent, file: FileRecord) => {
+    e.preventDefault()
+    e.stopPropagation()
+    setContextMenu({ visible: true, x: e.clientX, y: e.clientY, file })
+  }
+
+  const handleShowInFolder = () => {
+    if (contextMenu.file) window.electron.showInFolder(contextMenu.file.path)
+    setContextMenu(prev => ({ ...prev, visible: false }))
+  }
+
+  const handleOpenFile = () => {
+    if (contextMenu.file) window.electron.openFile(contextMenu.file.path)
+    setContextMenu(prev => ({ ...prev, visible: false }))
+  }
+
+  const handleCopyPath = () => {
+    if (contextMenu.file) window.electron.clipboardWriteText(contextMenu.file.path)
+    setContextMenu(prev => ({ ...prev, visible: false }))
+  }
+
+  const handleCopyName = () => {
+    if (contextMenu.file) window.electron.clipboardWriteText(contextMenu.file.name)
+    setContextMenu(prev => ({ ...prev, visible: false }))
+  }
 
   const handleSort = (field: SortField): void => {
     if (field === 'relevance') return // relevance 不允许排序
@@ -120,6 +167,7 @@ function FileList({ files, selectedFile, onSelectFile, formatSize, hasSearched, 
               key={file.id}
               className={`file-row ${selectedFile?.id === file.id ? 'selected' : ''}`}
               onClick={() => onSelectFile(file)}
+              onContextMenu={(e) => handleContextMenu(e, file)}
             >
               <div className="file-name-cell">
                 <span>{getFileIcon(file.is_supported === false ? 'unsupported' : file.file_type)}</span>
@@ -142,6 +190,29 @@ function FileList({ files, selectedFile, onSelectFile, formatSize, hasSearched, 
             </div>
           ))}
         </>
+      )}
+
+      {contextMenu.visible && contextMenu.file && (
+        <div
+          ref={menuRef}
+          className="context-menu"
+          style={{ left: contextMenu.x, top: contextMenu.y }}
+          onClick={e => e.stopPropagation()}
+        >
+          <div className="context-menu-item" onClick={handleShowInFolder}>
+            <span>📁</span> {t('detail.showInFolder')}
+          </div>
+          <div className="context-menu-item" onClick={handleOpenFile}>
+            <span>📂</span> {t('detail.openFile')}
+          </div>
+          <div className="context-menu-separator" />
+          <div className="context-menu-item" onClick={handleCopyPath}>
+            <span>📋</span> {t('contextMenu.copyPath')}
+          </div>
+          <div className="context-menu-item" onClick={handleCopyName}>
+            <span>📝</span> {t('contextMenu.copyName')}
+          </div>
+        </div>
       )}
     </div>
   )
