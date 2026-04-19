@@ -2,6 +2,7 @@ import fs from 'fs'
 import path from 'path'
 import crypto from 'crypto'
 import log from 'electron-log/main'
+import { createExtractorFromData } from 'node-unrar-js'
 import {
   insertFile,
   getFileByPath,
@@ -21,7 +22,7 @@ const SUPPORTED_EXTENSIONS = new Set([
   '.chm',
   '.odt', '.ods', '.odp',
   '.epub',
-  '.zip',
+  '.zip', '.rar',
   '.mbox', '.eml',
   '.wps', '.wpp', '.et', '.dps'
 ])
@@ -46,7 +47,7 @@ const FILE_TYPE_MAP: Record<string, string> = {
   '.ods': 'odf',
   '.odp': 'odf',
   '.epub': 'epub',
-  '.zip': 'zip',
+  '.zip': 'zip', '.rar': 'rar',
   '.mbox': 'email',
   '.eml': 'email',
   '.wps': 'docx', '.wpp': 'pptx', '.et': 'xlsx', '.dps': 'pptx'
@@ -389,6 +390,14 @@ async function extractTextFromEpub(filePath: string): Promise<string> {
 // Extract text from ZIP archives (recursively scanning embedded documents)
 const MAX_ZIP_DEPTH = 3
 
+// RAR 文件头魔数（RAR 4.x / 5.x 签名相同）
+const RAR_MAGIC = Buffer.from([0x52, 0x61, 0x72, 0x21, 0x1a, 0x07, 0x01, 0x00])
+
+// 检测文件是否为有效 RAR
+function isValidRar(buffer: Buffer): boolean {
+  return buffer.length >= 7 && buffer.slice(0, 7).equals(RAR_MAGIC)
+}
+
 async function extractTextFromZip(filePath: string, depth = 0): Promise<string> {
   if (depth >= MAX_ZIP_DEPTH) return ''
 
@@ -465,6 +474,108 @@ async function extractTextFromZip(filePath: string, depth = 0): Promise<string> 
   }
 }
 
+// Extract plain text from RAR archives (supports nested RAR/ZIP)
+async function extractTextFromRar(filePath: string, depth = 0): Promise<string> {
+  if (depth >= MAX_ZIP_DEPTH) return ''
+  try {
+    const data = fs.readFileSync(filePath)
+
+    // RAR 头部检测
+    if (!isValidRar(data)) {
+      log.warn(`[RAR] Skip invalid RAR signature: ${filePath}`)
+      return ''
+    }
+
+    // 解压 RAR
+    const extractor = await createExtractorFromData(data)
+    const list = extractor.getFileList()
+    const files = [...list.fileHeaders]
+    const texts: string[] = []
+
+    for (const header of files) {
+      if (header.flags.dir) continue  // 跳过目录
+      const name = header.name
+      const baseName = name.split('/').pop() || name
+      if (baseName.startsWith('.')) continue
+      const ext = path.extname(baseName).toLowerCase()
+
+      // 递归处理嵌套 RAR
+      if (ext === '.rar') {
+        try {
+          const extracted = extractor.extract({ files: [name] })
+          if (extracted.files[0]) {
+            const uint8 = new Uint8Array(extracted.files[0].stream)
+            const tmpPath = filePath + '.nested.' + baseName
+            fs.writeFileSync(tmpPath, Buffer.from(uint8))
+            try {
+              const nestedText = await extractTextFromRar(tmpPath, depth + 1)
+              if (nestedText.trim()) texts.push(`[${baseName}]\n${nestedText}`)
+            } finally {
+              try { fs.unlinkSync(tmpPath) } catch {}
+            }
+          }
+        } catch (e) {
+          // 嵌套 RAR 处理失败，跳过
+        }
+        continue
+      }
+
+      // 递归处理嵌套 ZIP
+      if (ext === '.zip') {
+        try {
+          const extracted = extractor.extract({ files: [name] })
+          if (extracted.files[0]) {
+            const uint8 = new Uint8Array(extracted.files[0].stream)
+            const tmpPath = filePath + '.nested.' + baseName
+            fs.writeFileSync(tmpPath, Buffer.from(uint8))
+            try {
+              const nestedText = await extractTextFromZip(tmpPath, depth + 1)
+              if (nestedText.trim()) texts.push(`[${baseName}]\n${nestedText}`)
+            } finally {
+              try { fs.unlinkSync(tmpPath) } catch {}
+            }
+          }
+        } catch (e) {
+          // 嵌套 ZIP 处理失败，跳过
+        }
+        continue
+      }
+
+      // 只处理支持的嵌套扩展名
+      if (!ARCHIVE_NESTED_EXTENSIONS.has(ext)) continue
+
+      // Office 文件在 RAR 内跳过（容易损坏）
+      if (ext === '.docx' || ext === '.xlsx' || ext === '.pptx' || ext === '.odt' || ext === '.ods' || ext === '.odp') {
+        continue
+      }
+
+      try {
+        const extracted = extractor.extract({ files: [name] })
+        if (extracted.files[0]) {
+          const uint8 = new Uint8Array(extracted.files[0].stream)
+          const buf = Buffer.from(uint8)
+          const tmpPath = filePath + '.extracted.' + baseName.replace(/[^a-zA-Z0-9.]/, '_')
+          fs.writeFileSync(tmpPath, buf)
+          try {
+            const content = await extractText(tmpPath, ext)
+            if (content.trim()) texts.push(`[${baseName}]\n${content}`)
+          } finally {
+            try { fs.unlinkSync(tmpPath) } catch {}
+          }
+        }
+      } catch (e) {
+        // 单文件解压失败，跳过
+      }
+    }
+
+    log.info(`[RAR] Extracted from: ${filePath}, ${texts.length} texts`)
+    return texts.join('\n---\n')
+  } catch (error) {
+    log.warn(`[RAR] Failed to extract text from rar: ${filePath}`, error)
+    return ''
+  }
+}
+
 async function extractText(filePath: string, ext: string): Promise<string> {
   const lowerExt = ext.toLowerCase()
 
@@ -502,6 +613,8 @@ async function extractText(filePath: string, ext: string): Promise<string> {
       return extractTextFromXlsx(filePath)
     case '.zip':
       return extractTextFromZip(filePath)
+    case '.rar':
+      return extractTextFromRar(filePath)
     case '.txt':
     case '.md':
     case '.json':

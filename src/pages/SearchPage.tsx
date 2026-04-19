@@ -38,6 +38,7 @@ const FILE_TYPE_OPTIONS = [
   { value: 'email', label: '邮件' },
   { value: 'epub', label: 'EPUB' },
   { value: 'zip', label: 'ZIP' },
+  { value: 'rar', label: 'RAR' },
 ]
 
 function SearchPage(): JSX.Element {

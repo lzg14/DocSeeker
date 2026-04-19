@@ -2,9 +2,9 @@
 
 > 维护人：lizhgb
 > 更新日期：2026-04-19
-> 状态：已完成（图片 + PDF 缩略图、去重功能）
+> 状态：已完成（图片 + PDF 缩略图、去重功能、RAR 支持）
 >
-> **说明：** 图片缩略图、去重功能、PDF 缩略图均已在集成阶段实现完成。
+> **说明：** 图片缩略图、去重功能、PDF 缩略图、RAR 支持均已在集成阶段实现完成。
 
 ---
 
@@ -204,6 +204,7 @@ CREATE VIRTUAL TABLE IF NOT EXISTS shard_folders_fts USING fts5(name, parent_pat
 | 7 | 文件夹搜索 IPC | ❌ 待实施 |
 | 8 | 文件夹搜索前端支持 | ❌ 待实施 |
 | 9 | 跨平台评估报告（docs/CROSSPLATFORM.md） | ❌ 待实施 |
+| 10 | RAR 压缩包支持（node-unrar-js） | ✅ 已完成 |
 
 ---
 
