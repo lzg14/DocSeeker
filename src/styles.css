@@ -1125,6 +1125,7 @@ textarea:focus:not(:focus-visible) {
   gap: 12px;
   flex: 1;
   overflow-y: auto;
+  min-height: 0;
 }
 
 .file-detail-name {
@@ -1214,7 +1215,7 @@ textarea:focus:not(:focus-visible) {
   flex-direction: row;
   gap: 8px;
   flex-shrink: 0;
-  padding-top: 12px;
+  margin-top: 12px;
 }
 
 .detail-actions .btn {

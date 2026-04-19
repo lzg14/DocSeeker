@@ -40,7 +40,8 @@ function FileDetail({ file, formatSize }: FileDetailProps): JSX.Element {
   }, [file?.path])
 
   return (
-    <div className="file-detail">
+    <>
+      <div className="file-detail">
       {thumbnail && (
         <div className="file-thumbnail-container">
           <img src={thumbnail} alt="preview" className="file-thumbnail-img" />
@@ -85,15 +86,16 @@ function FileDetail({ file, formatSize }: FileDetailProps): JSX.Element {
         </div>
       </div>
 
-      <div className="detail-actions">
-        <button className="btn btn-primary" onClick={handleShowInFolder}>
-          {t('detail.showInFolder')}
-        </button>
-        <button className="btn btn-secondary" onClick={handleOpenFile}>
-          {t('detail.openFile')}
-        </button>
-      </div>
     </div>
+    <div className="detail-actions">
+      <button className="btn btn-primary" onClick={handleShowInFolder}>
+        {t('detail.showInFolder')}
+      </button>
+      <button className="btn btn-secondary" onClick={handleOpenFile}>
+        {t('detail.openFile')}
+      </button>
+    </div>
+    </>
   )
 }
 
