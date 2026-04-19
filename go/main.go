@@ -15,7 +15,7 @@ import (
 	"github.com/docseeker/usn-monitor/usn"
 )
 
-var vm *usn.VolumeManager
+var watcher usn.FileWatcher
 var notifyCh chan usn.UsnEvent
 var idleTimer *time.Timer
 var idleTimeout = 5 * time.Minute
@@ -28,7 +28,7 @@ type Command struct {
 
 func main() {
 	notifyCh = make(chan usn.UsnEvent, 1024)
-	vm = usn.NewVolumeManager(notifyCh)
+	watcher = usn.NewUsnWatcher(notifyCh)
 
 	idleTimer = time.NewTimer(idleTimeout)
 	lastActivity = time.Now()
@@ -89,7 +89,7 @@ func handleConn(conn net.Conn) {
 
 		switch cmd.Type {
 		case "init", "update_dirs":
-			vm.UpdateDirs(cmd.Dirs)
+			watcher.UpdateDirs(cmd.Dirs)
 			jsonAck(conn, cmd.Type)
 		case "ping":
 			jsonAck(conn, "pong")

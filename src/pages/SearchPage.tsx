@@ -512,9 +512,9 @@ function SearchPage(): JSX.Element {
             <button
               className={`toolbar-btn ${searchScope === 'filename' ? 'active' : ''}`}
               onClick={() => setSearchScope(searchScope === 'all' ? 'filename' : 'all')}
-              title={searchScope === 'all' ? '切换到仅文件名搜索' : '切换到全部搜索'}
+              title={searchScope === 'all' ? t('search.scopeTitleAll') : t('search.scopeTitleFilename')}
             >
-              {searchScope === 'all' ? '🔍 全部' : '📄 仅文件名'}
+              {searchScope === 'all' ? `🔍 ${t('search.scopeAll')}` : `📄 ${t('search.scopeFilename')}`}
             </button>
             <button
               className={`toolbar-btn ${dedupEnabled ? 'active' : ''}`}

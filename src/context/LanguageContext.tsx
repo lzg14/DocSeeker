@@ -135,6 +135,10 @@ const translations: Record<Language, Record<string, string>> = {
     'search.exportCsv': 'CSV 表格',
     'search.exportHtml': 'HTML 网页',
     'search.exportTxt': 'TXT 文本',
+    'search.scopeAll': '全部',
+    'search.scopeFilename': '仅文件名',
+    'search.scopeTitleAll': '切换到仅文件名搜索',
+    'search.scopeTitleFilename': '切换到全部搜索',
     // File detail
     'detail.info': '文件信息',
     'detail.size': '大小',
@@ -316,6 +320,10 @@ const translations: Record<Language, Record<string, string>> = {
     'search.exportCsv': 'CSV Spreadsheet',
     'search.exportHtml': 'HTML Page',
     'search.exportTxt': 'TXT Text',
+    'search.scopeAll': 'All',
+    'search.scopeFilename': 'Filename only',
+    'search.scopeTitleAll': 'Switch to filename only search',
+    'search.scopeTitleFilename': 'Switch to full search',
     // File list table headers
     'filelist.name': 'File Name',
     'filelist.type': 'Type',
