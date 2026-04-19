@@ -41,10 +41,9 @@ import {
   addSavedSearch,
   getSavedSearches,
   deleteSavedSearch,
-  getScanSettings,
-  updateScanSettings,
   type ScannedFolder as MetaScannedFolder
-} from './config'
+} from './meta'
+import { getScanSettings, updateScanSettings } from './config'
 import { getImageThumbnail, isImageFile, THUMB_CACHE } from './thumbnail'
 import { getPdfThumbnail } from './pdfThumbnail'
 

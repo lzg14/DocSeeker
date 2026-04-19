@@ -2,14 +2,17 @@
  * Database Module (shard-compatible)
  *
  * With the shard architecture, file data is stored in db/shards/shard_N.db files.
- * All app settings and user data are stored in db/config.db (managed by config.ts).
+ * App settings are stored in db/config.db (config.ts).
+ * Folder metadata and search history are stored in db/meta.db (meta.ts).
  *
  * The old file-manager.db is replaced by:
- *   - db/config.db   — settings, folders, history (all-in-one)
+ *   - db/config.db   — scan settings, app settings (theme, language, hotkey, etc.)
+ *   - db/meta.db     — scanned folders, search history, saved searches
  *   - db/shards/     — file records split across multiple shard_N.db files
  */
 
 import { initConfig, closeConfig } from './config'
+import { initMeta, closeMeta } from './meta'
 import {
   initShardManager,
   searchAllShards,
@@ -37,18 +40,20 @@ import {
   addSavedSearch,
   getSavedSearches,
   deleteSavedSearch,
-  getScanSettings,
-  updateScanSettings,
   type ScannedFolder,
   type SavedSearch,
   type SearchHistoryEntry
-} from './config'
+} from './meta'
+import { getScanSettings, updateScanSettings } from './config'
 import log from 'electron-log/main'
 
 export async function initDatabase(): Promise<void> {
   log.info('[Database] Initializing...')
 
-  // Initialize config database (scanned folders, settings, history)
+  // Initialize meta database (scanned folders, search history, saved searches)
+  initMeta()
+
+  // Initialize config database (scan settings, app settings)
   initConfig()
 
   // Initialize shard manager and load existing shards
@@ -60,6 +65,7 @@ export async function initDatabase(): Promise<void> {
 export function closeDatabase(): void {
   closeAllShards()
   closeConfig()
+  closeMeta()
   log.info('[Database] Closed')
 }
 
@@ -71,7 +77,7 @@ export {
   searchByFileName
 } from './shardManager'
 
-// Note: scanned_folders operations are now in config.ts
+// Note: scanned_folders operations are in meta.ts
 // These are re-exported here for backward compatibility with ipc.ts
 export {
   getAllScannedFolders,
@@ -87,10 +93,10 @@ export {
   clearSearchHistory,
   addSavedSearch,
   getSavedSearches,
-  deleteSavedSearch,
-  getScanSettings,
-  updateScanSettings
-} from './config'
+  deleteSavedSearch
+} from './meta'
+
+export { getScanSettings, updateScanSettings } from './config'
 
 // ============ File operations (via shard manager) ============
 
