@@ -223,6 +223,10 @@ const translations: Record<Language, Record<string, string>> = {
     'settings.window.autoLaunchDesc': '系统启动时自动运行 DocSeeker',
     'settings.window.minimizeToTray': '关闭时最小化到托盘',
     'settings.window.minimizeToTrayDesc': '点击关闭按钮时隐藏到系统托盘',
+    'settings.realtimeMonitor': '实时文件监控',
+    'settings.enableRealtimeMonitor': '启用实时监控',
+    'settings.enableRealtimeMonitorDesc': '监控目录下文件变更，实时更新搜索索引。开启后，删除文件夹会同步删除其下所有文件的索引。',
+    'settings.realtimeMonitorWarning': '删除文件夹将同步删除该目录下所有文件的搜索索引，如需恢复需手动重新扫描。',
     // Theme
     'theme.light': '浅色',
     'theme.light.desc': '白天 / 办公环境',
@@ -241,6 +245,8 @@ const translations: Record<Language, Record<string, string>> = {
     // Status bar
     'status.indexed': '已索引 {count} 个文件',
     'status.loading': '正在加载...',
+    'status.monitoring': '监控中',
+    'status.monitorOff': '监控已停止',
     // Confirm dialog
     'confirm.cancel': '取消',
     'confirm.ok': '确定',
@@ -403,6 +409,8 @@ const translations: Record<Language, Record<string, string>> = {
     // Status bar
     'status.indexed': '{count} files indexed',
     'status.loading': 'Loading...',
+    'status.monitoring': 'Monitoring',
+    'status.monitorOff': 'Monitor off',
     // Theme
     'theme.switch': 'Switch theme',
     'theme.light': 'Light',

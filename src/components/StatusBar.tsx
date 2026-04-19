@@ -6,6 +6,7 @@ import type { ThemeId } from '../context/LanguageContext'
 
 function StatusBar(): JSX.Element {
   const [fileCount, setFileCount] = useState<number | null>(null)
+  const [monitorStatus, setMonitorStatus] = useState<{ enabled: boolean; dirs: string[] }>({ enabled: false, dirs: [] })
   const { t: translate, theme, setTheme } = useLanguage()
   const { isScanning, scanProgress, refreshKey } = useAppContext()
   const [themeMenuOpen, setThemeMenuOpen] = useState(false)
@@ -26,6 +27,17 @@ function StatusBar(): JSX.Element {
   useEffect(() => {
     const timer = setInterval(loadStats, 5000)
     return () => clearInterval(timer)
+  }, [])
+
+  useEffect(() => {
+    window.electron.usnGetConfig().then(cfg => setMonitorStatus(cfg))
+  }, [])
+
+  useEffect(() => {
+    const unsub = window.electron.onUsnUpdate(() => {
+      window.electron.usnGetConfig().then(cfg => setMonitorStatus(cfg))
+    })
+    return unsub
   }, [])
 
   useEffect(() => {
@@ -66,6 +78,15 @@ function StatusBar(): JSX.Element {
             ? translate('status.indexed').replace('{count}', fileCount.toLocaleString())
             : ''}
         </span>
+        {monitorStatus.enabled && (
+          <span className="status-monitor" title={monitorStatus.dirs.join(', ')}>
+            🔴 {translate('status.monitoring')}: {monitorStatus.dirs.length > 0 ? monitorStatus.dirs[0] : ''}
+            {monitorStatus.dirs.length > 1 && ` +${monitorStatus.dirs.length - 1}`}
+          </span>
+        )}
+        {!monitorStatus.enabled && (
+          <span className="status-monitor-off">⚫ {translate('status.monitorOff')}</span>
+        )}
         {/* 主题快捷切换 */}
         <div className="statusbar-theme-switcher" ref={menuRef}>
           <button

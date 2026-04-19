@@ -769,6 +769,9 @@ textarea:focus:not(:focus-visible) {
   min-width: 0;
 }
 
+.status-monitor { color: var(--error-color, #d32f2f); margin-left: 12px; cursor: default; }
+.status-monitor-off { color: var(--text-secondary); margin-left: 12px; }
+
 /* === 搜索框 === */
 .search-header {
   padding: 16px 20px;
