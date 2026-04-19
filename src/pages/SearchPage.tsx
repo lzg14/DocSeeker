@@ -60,6 +60,7 @@ function SearchPage(): JSX.Element {
   const [isExtracting, setIsExtracting] = useState(false)
   const [searchScope, setSearchScope] = useState<'all' | 'filename'>('all')
   const [dedupEnabled, setDedupEnabled] = useState(false)
+  const [secondaryFilter, setSecondaryFilter] = useState('')
   const { t } = useLanguage()
 
   const inputRef = useRef<HTMLInputElement>(null)
@@ -67,11 +68,29 @@ function SearchPage(): JSX.Element {
   const filterRef = useRef<HTMLDivElement>(null)
   const searchScopeRef = useRef<'all' | 'filename'>('all')
   const dedupEnabledRef = useRef(false)
+  const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  // Derived filtered files based on secondary filter
+  const filteredFiles = secondaryFilter.trim()
+    ? files.filter(f =>
+        f.path?.toLowerCase().includes(secondaryFilter.toLowerCase()) ||
+        f.name?.toLowerCase().includes(secondaryFilter.toLowerCase())
+      )
+    : files
 
   // Sync dedupEnabled to ref so performSearch always reads the latest value
   useEffect(() => {
     dedupEnabledRef.current = dedupEnabled
   }, [dedupEnabled])
+
+  // Cleanup debounce timer on unmount
+  useEffect(() => {
+    return () => {
+      if (debounceTimerRef.current) {
+        clearTimeout(debounceTimerRef.current)
+      }
+    }
+  }, [])
 
   // Load history and saved searches on mount
   useEffect(() => {
@@ -194,7 +213,14 @@ function SearchPage(): JSX.Element {
     }
   }, [])
 
-  const handleSearch = () => performSearch(searchQuery, filters)
+  const handleSearch = () => {
+    // Clear any pending debounce so immediate search is not delayed
+    if (debounceTimerRef.current) {
+      clearTimeout(debounceTimerRef.current)
+      debounceTimerRef.current = null
+    }
+    performSearch(searchQuery, filters)
+  }
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>): void => {
     if (e.key === 'Enter') {
@@ -303,7 +329,16 @@ function SearchPage(): JSX.Element {
               type="text"
               placeholder={t('search.placeholder')}
               value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
+              onChange={(e) => {
+                setSearchQuery(e.target.value)
+                // Debounce: clear previous timer and schedule a new search
+                if (debounceTimerRef.current) {
+                  clearTimeout(debounceTimerRef.current)
+                }
+                debounceTimerRef.current = setTimeout(() => {
+                  performSearch(e.target.value, filters)
+                }, 300)
+              }}
               onKeyDown={handleKeyDown}
               onFocus={() => { setShowHistory(true); setShowSaved(false) }}
             />
@@ -451,6 +486,31 @@ function SearchPage(): JSX.Element {
           </div>
         </div>
 
+        {/* Secondary filter bar — below search box, pushes content down */}
+        {files.length > 0 && (
+          <div className="secondary-filter-bar">
+            <input
+              type="text"
+              className="secondary-filter-input"
+              placeholder={t('search.secondaryFilterPlaceholder') || '在结果中筛选...'}
+              value={secondaryFilter}
+              onChange={(e) => setSecondaryFilter(e.target.value)}
+            />
+            {secondaryFilter && (
+              <button
+                className="secondary-filter-clear"
+                onClick={() => setSecondaryFilter('')}
+                title={t('search.clearSecondaryFilter') || '清除筛选'}
+              >
+                ×
+              </button>
+            )}
+            <span className="secondary-filter-count">
+              {filteredFiles.length} / {files.length}
+            </span>
+          </div>
+        )}
+
         {/* Advanced syntax help panel */}
         {showSyntaxHelp && (
           <div className="syntax-help-panel">
@@ -582,7 +642,7 @@ function SearchPage(): JSX.Element {
       <div className="search-content">
         <div className="file-list-wrapper">
           <FileList
-            files={files}
+            files={filteredFiles}
             selectedFile={selectedFile}
             onSelectFile={setSelectedFile}
             formatSize={formatSize}
