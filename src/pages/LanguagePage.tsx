@@ -20,13 +20,21 @@ function LanguagePage(): JSX.Element {
     })
   }, [])
 
+  const handleToggleMonitor = async (checked: boolean) => {
+    setMonitorEnabled(checked)
+    if (checked) {
+      // Fetch scanned folders and pass as monitored dirs
+      const folders = await window.electron.getScannedFolders?.()
+      const dirs = folders ? folders.map((f: { path: string }) => f.path) : []
+      await window.electron.usnSetConfig?.({ enabled: true, dirs })
+    } else {
+      await window.electron.usnSetConfig?.({ enabled: false })
+    }
+  }
+
   const formatHotkey = (hk: string) =>
     hk.replace('CommandOrControl', 'Ctrl').replace(/\+/g, ' + ')
 
-  const handleToggleMonitor = async (checked: boolean) => {
-    setMonitorEnabled(checked)
-    await window.electron.usnSetConfig?.({ enabled: checked })
-  }
 
   const listenForHotkey = async () => {
     setListening(true)

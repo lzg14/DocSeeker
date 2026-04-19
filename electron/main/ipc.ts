@@ -621,12 +621,7 @@ export function registerIpcHandlers(): void {
       enabled: false,
       dirs: [],
     })
-    let dirs = config.dirs ?? current.dirs
-
-    // If enabling without explicit dirs, default to all scanned folders
-    if (config.enabled === true && !config.dirs && dirs.length === 0) {
-      dirs = getAllScannedFolders().map(f => f.path)
-    }
+    const dirs = config.dirs ?? current.dirs
 
     const updated = { ...current, ...config, dirs }
     setAppSetting('realtimeMonitor', updated)
