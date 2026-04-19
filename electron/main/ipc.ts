@@ -571,6 +571,11 @@ export function registerIpcHandlers(): void {
     }
   })
 
+  // Get platform (for renderer to decide PDF thumbnail strategy)
+  ipcMain.handle('get-platform', async (): Promise<string> => {
+    return process.platform
+  })
+
   // Get image thumbnail
   ipcMain.handle('thumbnail-get', async (_, filePath: string) => {
     const ext = extname(filePath).toLowerCase()

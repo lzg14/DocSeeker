@@ -155,6 +155,8 @@ export interface ElectronAPI {
   usnGetConfig: () => Promise<{ enabled: boolean; dirs: string[] }>
   usnSetConfig: (config: { enabled?: boolean; dirs?: string[] }) => Promise<void>
   onUsnUpdate: (callback: (ev: UsnEvent) => void) => () => void
+  // Platform (for renderer to choose PDF thumbnail strategy)
+  getPlatform: () => Promise<string>
 }
 
 const electronAPI: ElectronAPI = {
@@ -289,6 +291,8 @@ const electronAPI: ElectronAPI = {
     ipcRenderer.on('usn-update', handler)
     return () => ipcRenderer.removeListener('usn-update', handler)
   },
+
+  getPlatform: () => ipcRenderer.invoke('get-platform'),
 }
 
 contextBridge.exposeInMainWorld('electron', electronAPI)

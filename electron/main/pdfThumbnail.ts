@@ -51,12 +51,8 @@ try {
 /**
  * PDF 缩略图生成
  *
- * Windows Electron 主进程暂不支持，原因：
- * - pdfjs-dist 的 node12.18+ 分发包依赖 canvas native addon
- * - 跨平台方案：使用 sharp + 外部 LibreOffice 转换，或 @pdfme/pdfjs-browser
- *
- * 方案一：Windows Shell 原生缩略图 (System.Drawing)
- * 方案二：pdfjs-dist 回退（由 renderer 进程执行）
+ * 方案一：Windows Shell 原生缩略图 (System.Drawing) — 主进程调用
+ * 方案二：macOS / Linux — 渲染进程 pdfjs-dist Canvas（见 pdfRender.ts）
  */
 
 export async function getPdfThumbnail(filePath: string): Promise<string | null> {
@@ -64,6 +60,6 @@ export async function getPdfThumbnail(filePath: string): Promise<string | null> 
   const shellThumb = await tryShellThumbnail(filePath)
   if (shellThumb) return shellThumb
 
-  // 方案二：pdfjs-dist 回退（由 renderer 进程执行）
+  // macOS / Linux 由渲染进程 pdfRender.ts 处理
   return null
 }

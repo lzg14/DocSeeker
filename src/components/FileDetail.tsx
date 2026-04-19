@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { FileRecord } from '../types'
 import { useLanguage } from '../context/LanguageContext'
+import { renderPdfPage } from '../utils/pdfRender'
 
 interface FileDetailProps {
   file: FileRecord
@@ -19,7 +20,7 @@ function FileDetail({ file, formatSize }: FileDetailProps): JSX.Element {
     return new Date(dateStr).toLocaleString('zh-CN')
   }
 
-  // Load thumbnail when file path changes (image via main, PDF via renderer)
+  // Load thumbnail when file path changes
   useEffect(() => {
     setThumbnail(null)
     if (!file?.path) return
@@ -27,12 +28,21 @@ function FileDetail({ file, formatSize }: FileDetailProps): JSX.Element {
     const ext = file.path.split('.').pop()?.toLowerCase()
 
     if (ext === 'pdf') {
-      // PDF: go through main process (Windows Shell thumbnail via System.Drawing)
-      window.electron.thumbnailGet(file.path).then(data => {
-        if (data) setThumbnail(data)
+      // PDF thumbnail: Windows uses Shell (main process), macOS/Linux use pdfjs-dist Canvas (renderer)
+      window.electron.getPlatform().then(platform => {
+        if (platform === 'win32') {
+          window.electron.thumbnailGet(file.path).then(data => {
+            if (data) setThumbnail(data)
+          })
+        } else {
+          // macOS / Linux: pdfjs-dist Canvas in renderer
+          renderPdfPage(file.path).then(dataUrl => {
+            if (dataUrl) setThumbnail(dataUrl)
+          })
+        }
       })
     } else {
-      // Images and other: go through main process
+      // Images and other: always through main process
       window.electron.thumbnailGet(file.path).then(data => {
         if (data) setThumbnail(data)
       })
