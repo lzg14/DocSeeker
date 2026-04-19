@@ -3,7 +3,7 @@ import { join } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import log from 'electron-log/main'
 import { initDatabase, closeDatabase } from './database'
-import { closeAllShards } from './shardManager'
+import { closeAllShards, initShardManager } from './shardManager'
 import { initHotCache, closeHotCache } from './hotCache'
 import { registerIpcHandlers } from './ipc'
 import { startUpdater, stopUpdater, handleManualCheck, handleDownloadUpdate, handleQuitAndInstall } from './updater'
@@ -259,6 +259,9 @@ app.whenReady().then(async () => {
 
   // Create window immediately — meta DB is ready, UI shows instantly
   createWindow()
+
+  // Load shards in background while UI is already showing
+  initShardManager().then(() => log.info('Shards loaded in background'))
 
   // Auto updater
   try { startUpdater(mainWindow!) } catch (e) { log.error('startUpdater failed:', e) }

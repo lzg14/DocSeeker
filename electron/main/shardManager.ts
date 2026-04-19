@@ -17,7 +17,6 @@ import { Worker } from 'worker_threads'
 import log from 'electron-log/main'
 import Database from 'better-sqlite3'
 import { getAppSetting, setAppSetting } from './config'
-import { migrateFtsTokenizer } from './migration'
 
 // ============ Types ============
 
@@ -440,17 +439,6 @@ export async function initShardManager(): Promise<void> {
 
     initialized = true
     log.info(`[ShardManager] Ready. Profile: ${JSON.stringify(profile)}, Config: ${JSON.stringify(config)}`)
-
-    // 启动后异步重建 FTS（不阻塞搜索）
-    setTimeout(() => {
-      migrateFtsTokenizer().then(({ rebuilt }) => {
-        if (rebuilt > 0) {
-          log.info(`[ShardManager] FTS tokenizer migrated: ${rebuilt} shards rebuilt`)
-        }
-      }).catch(err => {
-        log.warn('[ShardManager] FTS tokenizer migration skipped:', err)
-      })
-    }, 5000) // 等待 5 秒让初始搜索就绪
   })()
 
   return initPromise

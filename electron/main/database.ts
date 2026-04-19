@@ -56,8 +56,8 @@ export async function initDatabase(): Promise<void> {
   // Initialize config database (scan settings, app settings)
   initConfig()
 
-  // Initialize shard manager and load existing shards
-  await initShardManager()
+  // NOTE: do NOT await initShardManager() here — shard loading is lazy,
+  // it happens on first search in searchAllShards() to keep UI responsive.
 
   log.info('[Database] Database initialized')
 }
