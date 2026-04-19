@@ -18,6 +18,17 @@
 - 监控目录可跨多个卷（`D:\`、`E:\` 等）
 - 用户可配置开关，不占用非监控用户的资源
 - 前端搜索结果实时追加，无需手动刷新
+- 文件夹变更同步更新（与"文件夹名称索引"功能联动）
+
+### 1.3 与其他功能的关联
+
+本功能与以下功能共享 `usnHandler.ts` 事件处理逻辑，**实施时需同步规划**：
+
+| 关联功能 | 共享逻辑 |
+|---------|---------|
+| 文件夹名称索引（`shard_folders` 表） | USN 检测到目录变更时，同步写入 `shard_folders` 表 |
+| 不支持格式文件名索引 | `shard_files.is_supported` 字段，`false` 时仅索引文件名 |
+| 文件夹重命名路径更新 | `shard_files` / `shard_folders` 表的路径前缀批量替换（见 4.2） |
 
 ---
 
@@ -112,6 +123,15 @@
   "timestamp": 1745068800000
 }
 
+// 目录创建事件
+{
+  "type": "event",
+  "event": "folder_created",
+  "path": "D:\\Work\\NewFolder",
+  "volume": "D:\\",
+  "timestamp": 1745068800000
+}
+
 // 重命名事件（含原路径）
 {
   "type": "event",
@@ -120,6 +140,16 @@
   "volume": "D:\\",
   "timestamp": 1745068800000,
   "oldPath": "D:\\Work\\old.txt"
+}
+
+// 目录重命名事件（需批量更新子路径）
+{
+  "type": "event",
+  "event": "folder_renamed",
+  "path": "D:\\Work2",
+  "volume": "D:\\",
+  "timestamp": 1745068800000,
+  "oldPath": "D:\\Work"
 }
 
 // 命令响应
@@ -134,6 +164,8 @@
   "message": "volume D:\\ not found"
 }
 ```
+
+> 注：`event` 字段取值：`created | modified | deleted | renamed | folder_created | folder_deleted | folder_renamed`
 
 ### 3.3 按卷分组与路径过滤
 
@@ -166,11 +198,13 @@ for {
 ```
 
 **需要处理的 USN Reason：**
-- `FILE_CREATE` → `created`
-- `FILE_DELETE` → `deleted`
-- `DATA_OVERWRITE` / `DATA_TRUNCATION` → `modified`
-- `FILE_RENAME_OLD_NAME` + `FILE_RENAME_NEW_NAME` → `renamed`
+- `FILE_CREATE` → `created`（文件或目录）
+- `FILE_DELETE` → `deleted`（文件或目录）
+- `DATA_OVERWRITE` / `DATA_TRUNCATION` → `modified`（仅文件）
+- `FILE_RENAME_OLD_NAME` + `FILE_RENAME_NEW_NAME` → `renamed`（文件或目录）
 - `SECURITY_CHANGE` / `ATTRIBUTE_CHANGE` 等 → 忽略（不推事件）
+
+**区分文件与目录：** 通过 USN Record 的 `FileAttributes` 字段的 `FILE_ATTRIBUTE_DIRECTORY` 位判断。文件推送 `created/modified/deleted/renamed`，目录推送 `folder_created/folder_deleted/folder_renamed`。
 
 ### 3.5 进程生命周期
 
@@ -239,9 +273,13 @@ class UsnWatcher {
 ```typescript
 // electron/main/usnHandler.ts
 
+type UsnEventType =
+  | 'created' | 'modified' | 'deleted' | 'renamed'   // 文件
+  | 'folder_created' | 'folder_deleted' | 'folder_renamed'  // 目录
+
 interface UsnEvent {
   type: 'event'
-  event: 'created' | 'modified' | 'deleted' | 'renamed'
+  event: UsnEventType
   path: string
   volume: string
   timestamp: number
@@ -262,6 +300,15 @@ export async function handleUsnEvent(ev: UsnEvent): Promise<void> {
     case 'renamed':
       await renameFile(ev.oldPath!, ev.path)
       break
+    case 'folder_created':
+      await addFolder(ev.path)
+      break
+    case 'folder_deleted':
+      await removeFolderAndContents(ev.path)    // 目录删除 → 级联删除子文件索引
+      break
+    case 'folder_renamed':
+      await renameFolderAndContents(ev.oldPath!, ev.path)  // 批量更新子文件路径
+      break
   }
 
   // 通知前端
@@ -269,21 +316,35 @@ export async function handleUsnEvent(ev: UsnEvent): Promise<void> {
 }
 ```
 
-**快速路径 + 慢速路径：**
+**各事件处理逻辑：**
+
+| 事件 | shard_files 操作 | shard_folders 操作 |
+|------|-----------------|-------------------|
+| `created` | INSERT（或 UPDATE 若已存在） | — |
+| `modified` | UPDATE content（异步重新提取） | — |
+| `deleted` | DELETE record | — |
+| `renamed` | UPDATE path, name | — |
+| `folder_created` | — | INSERT |
+| `folder_deleted` | DELETE 所有 path 以该目录为前缀的记录 | DELETE 该目录及所有子目录 |
+| `folder_renamed` | `REPLACE(path, oldPath, newPath)` 批量更新 | 同上批量更新 + 递归子目录 |
+
+**文件夹重命名路径批量替换：**
 
 ```typescript
-async function addFile(filePath: string): Promise<void> {
-  const fileInfo = await processFile(filePath)   // 同步获取基本信息（路径/大小/hash）
-  await shardManager.insertFile(fileInfo)        // 立即写入 shard
-
-  if (fileInfo.isSupported) {
-    // 已支持格式：异步提取内容
-    extractContentAsync(filePath).then(content => {
-      shardManager.updateContent(fileInfo.path, content)
-    })
-  }
+// shardManager.renameFolderContents(oldPath, newPath)
+// SQLite REPLACE 函数单条 SQL 完成路径前缀替换
+async function renameFolderAndContents(oldPath: string, newPath: string): Promise<void> {
+  await db.exec(`
+    UPDATE shard_files
+    SET path = REPLACE(path, '${escapeSql(oldPath)}\\', '${escapeSql(newPath)}\\'),
+        name = '${escapeSql(path.basename(newPath))}' || SUBSTR(name, ${oldPath.length + 1})
+    WHERE path LIKE '${escapeSql(oldPath)}\\%'
+  `)
+  // shard_folders 同理，递归处理所有子目录
 }
 ```
+
+> ⚠️ **用户知情权**：开启实时监控后，**删除文件夹会导致该文件夹下所有文件的搜索索引同步被删除**（不可恢复，直到下次全量扫描补充）。此行为需在配置界面明确告知用户。
 
 ### 4.3 搜索结果实时追加
 
@@ -309,6 +370,11 @@ async function addFile(filePath: string): Promise<void> {
 | `realtimeMonitor.dirs` | string[] | `[]`（取自当前扫描目录） |
 
 UI：开关 toggle + 目录列表管理（添加/移除监控目录）。
+
+> ⚠️ **注意（配置提示）**：
+> - 开启后，**删除文件夹会同步删除该目录下所有文件的搜索索引**
+> - 如需恢复，需手动触发重新扫描该目录
+> - 监控目录变更后，旧路径下的索引不会自动清理
 
 ### 5.2 搜索结果实时追加
 
@@ -413,3 +479,20 @@ UI：开关 toggle + 目录列表管理（添加/移除监控目录）。
 2. **跨卷重命名**：若文件从监控卷移动到非监控卷，只会收到 `deleted` 事件（来源卷可见），`created` 不会出现在监控目标中
 3. **USN Journal 删除**：USN Journal 有大小上限（默认 32MB），超过后旧记录被覆盖，监控可能丢失。此问题需要定期 `FSCTL_DELETE_USN_JOURNAL` + 重建来缓解
 4. **Go 进程首次拉起延迟**：Go 冷启动约 50-200ms，监控不会立即生效（可忽略，用户感知不到）
+5. **文件夹删除级联擦除索引**：开启监控后，删除任意文件夹会导致该目录下所有文件的索引记录被物理删除。用户需充分知悉此行为，建议在配置 UI 中明确提示
+
+## 十、与文件夹名称索引的联动
+
+文件夹名称索引（`shard_folders` 表）依赖 USN 监控保持同步：
+
+```
+文件夹创建 → USN: folder_created → addFolder()
+文件夹删除 → USN: folder_deleted → removeFolderAndContents()（级联删除子文件）
+文件夹重命名 → USN: folder_renamed → renameFolderAndContents()（批量更新路径前缀）
+```
+
+**实施顺序建议：**
+1. 先实现文件夹名称索引（`shard_folders` 表 + 相关任务）
+2. 再实现 USN 监控，两个功能共用 `usnHandler.ts`，互为依赖
+
+若 USN 监控先于文件夹名称索引上线，`folder_created/deleted/renamed` 事件可暂时忽略，后续无缝接入。
