@@ -11,15 +11,16 @@ interface FileListProps {
   snippets?: Record<string, string>
 }
 
-type SortField = 'name' | 'size' | 'updated_at'
+type SortField = 'name' | 'size' | 'updated_at' | 'relevance'
 type SortOrder = 'asc' | 'desc'
 
 function FileList({ files, selectedFile, onSelectFile, formatSize, hasSearched, snippets = {} }: FileListProps): JSX.Element {
   const { t } = useLanguage()
-  const [sortField, setSortField] = useState<SortField>('updated_at')
-  const [sortOrder, setSortOrder] = useState<SortOrder>('desc')
+  const [sortField, setSortField] = useState<SortField>('relevance')
+  const [sortOrder, setSortOrder] = useState<SortOrder>('asc')
 
   const handleSort = (field: SortField): void => {
+    if (field === 'relevance') return // relevance 不允许排序
     if (sortField === field) {
       setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')
     } else {
@@ -29,6 +30,7 @@ function FileList({ files, selectedFile, onSelectFile, formatSize, hasSearched, 
   }
 
   const sortedFiles = [...files].sort((a, b) => {
+    if (sortField === 'relevance') return 0 // 保持原始顺序（BM25 相关性排序）
     let comparison = 0
     switch (sortField) {
       case 'name':
