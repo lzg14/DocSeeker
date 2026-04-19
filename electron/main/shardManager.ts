@@ -699,7 +699,7 @@ function searchShardDb(
 
   // path: 字段 → SQL LIKE（路径不在 FTS5 中）
   if (options?.pathQuery) {
-    const escaped = options.pathQuery.replace(/[%_\\]/g, '\\$&')
+    const escaped = options.pathQuery.replace(/[%_\[\]\\\\]/g, '\\\\$&')
     whereClauses.push('f.path LIKE ?')
     params.push(`%${escaped}%`)
   }
@@ -765,7 +765,9 @@ export async function searchAllShards(
       fileTypes: [...(options?.fileTypes ?? []), ...fieldInfo.extFilters]
     })
     if (fieldInfo.pathQuery) {
-      return nameOnlyResults.filter(r => r.path.includes(fieldInfo.pathQuery!))
+      const lowerPath = r.path.toLowerCase()
+      const lowerQuery = fieldInfo.pathQuery!.toLowerCase()
+      return lowerPath.includes(lowerQuery)
     }
     return nameOnlyResults
   }
