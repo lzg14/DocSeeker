@@ -78,6 +78,6 @@
 
 | 功能 | 优先级 | 备注 |
 |------|--------|------|
-| PDF 缩略图预览 | P1 | 图片缩略图已完成 |
-| 实时文件监控 | P2 | 需 NTFS USN Journal API |
+| 文件夹名称索引 | P1 | 搜索 `folder:Desktop` 可返回文件夹 |
+| 实时文件监控 | P2 | NTFS USN Journal API 实现中 |
 | macOS/Linux 打包 | P3 | 评估文档已完成 |
