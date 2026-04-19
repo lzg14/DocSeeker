@@ -1057,3 +1057,31 @@ export function deduplicateResults(results: SearchResult[]): SearchResult[] {
 
 // Export types for use by other modules
 export type { Database }
+
+/**
+ * Get file count and total size for a specific folder path across all shards.
+ * Used to sync shard stats back to config.db after a scan completes.
+ */
+export function getFolderStatsFromShards(folderPath: string): { fileCount: number; totalSize: number } {
+  const prefix = folderPath.endsWith('/') || folderPath.endsWith('\\')
+    ? folderPath
+    : folderPath + (folderPath.includes('\\') ? '\\' : '/')
+  let totalCount = 0
+  let totalSize = 0
+  const readyShards = getReadyShards()
+  for (const shard of readyShards) {
+    try {
+      const db = new Database(shard.dbPath, { readonly: true })
+      const stmt = db.prepare("SELECT COUNT(*) as count, COALESCE(SUM(size), 0) as total_size FROM shard_files WHERE path LIKE ? || '%'")
+      const row = stmt.get(prefix) as { count: number; total_size: number } | undefined
+      if (row) {
+        totalCount += row.count
+        totalSize += row.total_size
+      }
+      db.close()
+    } catch (err) {
+      log.warn(`[ShardManager] getFolderStatsFromShards failed on shard ${shard.id}:`, err)
+    }
+  }
+  return { fileCount: totalCount, totalSize }
+}

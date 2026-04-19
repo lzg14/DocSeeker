@@ -7,6 +7,7 @@ import {
   removeFilesByFolderPath,
   getFileCountByFolder,
   getTotalSizeByFolder,
+  getTotalFileCountFromConfig,
   FileRecord,
   ScannedFolder,
   SavedSearch,
@@ -21,19 +22,19 @@ import {
   searchByFileName as shardSearchByFileName,
   getSearchSnippets as shardGetSearchSnippets,
   getShardInfo,
-  getTotalFileCount,
   getShardConfigInfo,
   deleteFileFromAllShards,
   deleteFilesByFolderPrefixFromAllShards,
+  getFolderStatsFromShards,
   type FileRecord as ShardFileRecord
 } from './shardManager'
 import {
   addScannedFolder,
   getAllScannedFolders,
   getScannedFolderByPath,
-  updateFolderScanComplete,
-  updateFolderFullScanComplete,
   deleteScannedFolder,
+  syncFolderStatsFromShards,
+  syncFolderStatsFromShardsFull,
   addSearchHistory,
   getSearchHistory,
   clearSearchHistory,
@@ -216,9 +217,9 @@ export function registerIpcHandlers(): void {
     }
   })
 
-  // Get file count
+  // Get file count — sum from config.db (the single source of truth)
   ipcMain.handle('get-file-count', async (): Promise<number> => {
-    return getTotalFileCount()
+    return getTotalFileCountFromConfig()
   })
 
   // Get shard info (diagnostics)
@@ -332,8 +333,14 @@ export function registerIpcHandlers(): void {
               })()
               break
             }
-            case 'complete':
+            case 'complete': {
               log.info(`Incremental scan complete: ${filesProcessed} files, time: ${message.data.totalTime}ms`)
+              // Sync shard stats back to config.db (the single source of truth)
+              const folder = getScannedFolderByPath(folderPath)
+              if (folder && folder.id) {
+                const shardStats = getFolderStatsFromShards(folderPath)
+                syncFolderStatsFromShards(folder.id, folderPath, shardStats)
+              }
               event.sender.send('scan-progress', {
                 current: filesProcessed,
                 total: filesProcessed,
@@ -345,6 +352,7 @@ export function registerIpcHandlers(): void {
               resolve({ success: true, filesProcessed, skipped, errors })
               worker.terminate()
               break
+            }
             case 'error':
               log.error('Incremental scan worker error:', message.data.message)
               errors.push(message.data.message)
@@ -428,7 +436,9 @@ export function registerIpcHandlers(): void {
             case 'complete':
               log.info(`Full rescan complete: ${filesProcessed} files, time: ${message.data.totalTime}ms`)
               if (folder && folder.id) {
-                updateFolderScanComplete(folder.id, filesProcessed, 0)
+                // Sync shard stats back to config.db after full scan
+                const shardStats = getFolderStatsFromShards(folderPath)
+                syncFolderStatsFromShardsFull(folder.id, folderPath, shardStats)
               }
               event.sender.send('scan-progress', {
                 current: filesProcessed,

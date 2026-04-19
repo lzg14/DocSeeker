@@ -185,6 +185,29 @@ export function updateFolderFullScanComplete(id: number, fileCount: number, tota
   stmt.run([fileCount, totalSize, id])
 }
 
+/**
+ * Sync folder stats from shards into config.db after an incremental scan completes.
+ * Queries shards directly to get the authoritative count/size for this folder.
+ */
+export function syncFolderStatsFromShards(id: number, folderPath: string, stats: { fileCount: number; totalSize: number }): void {
+  const stmt = getDb().prepare(`
+    UPDATE scanned_folders SET last_scan_at = datetime('now'), file_count = ?, total_size = ? WHERE id = ?
+  `)
+  stmt.run([stats.fileCount, stats.totalSize, id])
+  log.info(`[Config] Synced (incremental) ${folderPath}: ${stats.fileCount} files`)
+}
+
+/**
+ * Sync folder stats from shards into config.db after a full scan completes.
+ */
+export function syncFolderStatsFromShardsFull(id: number, folderPath: string, stats: { fileCount: number; totalSize: number }): void {
+  const stmt = getDb().prepare(`
+    UPDATE scanned_folders SET last_scan_at = datetime('now'), last_full_scan_at = datetime('now'), file_count = ?, total_size = ? WHERE id = ?
+  `)
+  stmt.run([stats.fileCount, stats.totalSize, id])
+  log.info(`[Config] Synced (full) ${folderPath}: ${stats.fileCount} files`)
+}
+
 export function updateScannedFolder(id: number, updates: Partial<ScannedFolder>): void {
   const fields: string[] = []
   const values: unknown[] = []

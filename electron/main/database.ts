@@ -18,6 +18,7 @@ import {
   deleteFileFromAllShards,
   deleteFilesByFolderPrefixFromAllShards,
   closeAllShards,
+  getFolderStatsFromShards,
   type SearchOptions,
   type SearchResult
 } from './shardManager'
@@ -220,3 +221,17 @@ export function getFileCountByFolder(folderPath: string): number {
 export function getTotalSizeByFolder(folderPath: string): number {
   return 0
 }
+
+/**
+ * Sum file_count from all scanned folders in config.db — the single source of truth
+ * for the total file count shown in the UI.
+ */
+export function getTotalFileCountFromConfig(): number {
+  const folders = getAllScannedFolders()
+  return folders.reduce((sum, f) => sum + (f.file_count ?? 0), 0)
+}
+
+/**
+ * Re-export getFolderStatsFromShards for use by ipc.ts without circular imports.
+ */
+export { getFolderStatsFromShards }

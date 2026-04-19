@@ -135,6 +135,7 @@ DocSeeker 是一款基于 Electron + React + TypeScript 的本地文档全文搜
 - [x] **M4.4** 跨平台支持评估（macOS / Linux）
 - [x] **M4.5** 搜索结果命中词高亮增强
 - [x] **M4.6** 去重功能 UI 集成
+- [x] **M4.7** 文件计数数据源统一（界面数据全部来自 config.db，shard 仅作索引存储）
 
 **技术要点:**
 - 缩略图：Windows 可调用 ShellThumbnail API，跨平台考虑 thumbbar 或自绘
