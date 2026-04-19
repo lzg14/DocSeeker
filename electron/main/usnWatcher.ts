@@ -3,8 +3,9 @@ import * as net from 'net'
 import * as path from 'path'
 import log from 'electron-log/main'
 import { app } from 'electron'
-import { getAppSetting } from './config'
+import { getAppSetting, setAppSetting } from './config'
 import { handleUsnEvent } from './usnHandler'
+import { getAllScannedFolders } from './meta'
 
 interface UsnCommand {
   type: 'init' | 'update_dirs' | 'ping'
@@ -29,7 +30,7 @@ export class UsnWatcher {
   private isRunning = false
 
   async start(): Promise<void> {
-    const config = getAppSetting<{ enabled: boolean; dirs: string[] }>('realtimeMonitor', {
+    let config = getAppSetting<{ enabled: boolean; dirs: string[] }>('realtimeMonitor', {
       enabled: false,
       dirs: [],
     })
@@ -37,8 +38,22 @@ export class UsnWatcher {
       log.info('[UsnWatcher] realtime monitor disabled, not starting')
       return
     }
+
+    // Fallback: if dirs empty at startup, fetch from meta and save
     if (config.dirs.length === 0) {
-      log.info('[UsnWatcher] no dirs configured, not starting')
+      log.info('[UsnWatcher] dirs empty, fetching from scanned folders...')
+      try {
+        const folders = getAllScannedFolders()
+        config = { enabled: true, dirs: folders.map(f => f.path) }
+        setAppSetting('realtimeMonitor', config)
+        log.info(`[UsnWatcher] loaded ${config.dirs.length} dirs from meta`)
+      } catch (e) {
+        log.error('[UsnWatcher] failed to get scanned folders:', e)
+      }
+    }
+
+    if (config.dirs.length === 0) {
+      log.warn('[UsnWatcher] still no dirs after fallback, not starting')
       return
     }
 
@@ -46,6 +61,7 @@ export class UsnWatcher {
     await this.connect()
     this.send({ type: 'init', dirs: config.dirs })
     this.isRunning = true
+    log.info(`[UsnWatcher] started, monitoring ${config.dirs.length} dirs`)
   }
 
   stop(): void {
