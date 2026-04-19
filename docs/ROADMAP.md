@@ -31,7 +31,7 @@ DocSeeker 是一款基于 Electron + React + TypeScript 的本地文档全文搜
 |------|----------|------|----------|
 | 新增文件格式 | ✅ 18 种格式（RTF/CHM/ODF/EPUB/WPS 已完成） | 继续增加 WPD、图片、音视频元数据 | AnyTXT 60+ |
 | 实时文件监控 | ❌ **已移除**（chokidar 在大目录架构层面无法优化） | 重新启用需改用 NTFS USN Journal API | Everything / AnyTXT |
-| 正则搜索 | ✅ 已支持 `/pattern/` 语法 | 持续完善 | Everything / AnyTXT |
+| 正则搜索 | ✅ 已支持 `/pattern/` 语法 | 支持词干提取和字段搜索 | Everything / AnyTXT |
 | 文件过滤器 | ✅ 已支持类型/大小/日期三重过滤 | — | 所有主流竞品 |
 
 ### P1 — 体验缺失（尽快补全）
@@ -94,6 +94,8 @@ DocSeeker 是一款基于 Electron + React + TypeScript 的本地文档全文搜
 - [x] **M2.4** 文件大小过滤器（范围选择器）
 - [x] **M2.5** 日期范围过滤器（修改时间 / 创建时间）
 - [x] **M2.6** 高级查询语法 UI 提示面板（类 Recoll 查询语言界面）
+- [x] **M2.7** 词干提取（Porter Stemmer）：搜索词自动还原为词干
+- [x] **M2.8** 字段限定搜索（name:/path:/ext: 语法）
 
 **技术要点:**
 - SQLite FTS5 原生支持布尔操作符（AND / OR / NOT）和正则（通过 MATCH 扩展）
