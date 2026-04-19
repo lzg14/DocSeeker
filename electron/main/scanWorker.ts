@@ -50,7 +50,7 @@ function formatSize(bytes: number): string {
 
 // Supported file extensions
 const SUPPORTED_EXTENSIONS = new Set([
-  '.txt', '.md', '.json', '.xml', '.csv',
+  '.txt', '.md', '.markdown', '.mdown', '.json', '.xml', '.csv', '.html', '.htm', '.svg',
   '.doc', '.docx',
   '.xls', '.xlsx',
   '.ppt', '.pptx',
@@ -66,7 +66,7 @@ const SUPPORTED_EXTENSIONS = new Set([
 
 // Extensions supported inside ZIP archives
 const ARCHIVE_NESTED_EXTENSIONS = new Set([
-  '.txt', '.md', '.json', '.xml', '.csv',
+  '.txt', '.md', '.markdown', '.mdown', '.json', '.xml', '.csv', '.html', '.htm', '.svg',
   '.doc', '.docx',
   '.xls', '.xlsx',
   '.ppt', '.pptx',
@@ -654,6 +654,51 @@ async function extractTextFromRar(filePath: string, depth = 0): Promise<string> 
   }
 }
 
+// Extract plain text from HTML files (strip tags, preserve body text)
+async function extractTextFromHtml(filePath: string): Promise<string> {
+  try {
+    const content = await fs.readFile(filePath, 'utf-8')
+    // Remove script and style blocks entirely
+    let text = content.replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '')
+    text = text.replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
+    // Remove HTML comments
+    text = text.replace(/<!--[\s\S]*?-->/g, '')
+    // Remove all HTML tags
+    text = text.replace(/<[^>]+>/g, ' ')
+    // Decode common HTML entities
+    text = text.replace(/&nbsp;/gi, ' ')
+    text = text.replace(/&lt;/gi, '<').replace(/&gt;/gi, '>')
+    text = text.replace(/&amp;/gi, '&').replace(/&quot;/gi, '"')
+    text = text.replace(/&#39;/gi, "'")
+    // Collapse whitespace
+    text = text.replace(/\s+/g, ' ').trim()
+    return text
+  } catch {
+    return ''
+  }
+}
+
+// Extract text from SVG files (SVG is XML with graphic elements)
+async function extractTextFromSvg(filePath: string): Promise<string> {
+  try {
+    const content = await fs.readFile(filePath, 'utf-8')
+    // Remove SVG namespace noise and extract text elements
+    let text = content.replace(/<svg[^>]*>/gi, '')
+    const textMatches = text.match(/<text[^>]*>([^<]*)<\/text>/gi) || []
+    const texts = textMatches.map(m => m.replace(/<[^>]+>/g, '').trim()).filter(t => t)
+    const tspanMatches = content.match(/<tspan[^>]*>([^<]*)<\/tspan>/gi) || []
+    tspanMatches.forEach(m => {
+      const t = m.replace(/<[^>]+>/g, '').trim()
+      if (t) texts.push(t)
+    })
+    const titleMatch = content.match(/<title[^>]*>([^<]*)<\/title>/i)
+    if (titleMatch && titleMatch[1]) texts.unshift(titleMatch[1].trim())
+    return texts.join(' ')
+  } catch {
+    return ''
+  }
+}
+
 async function extractText(filePath: string, ext: string, fileSize?: number): Promise<string> {
   const lowerExt = ext.toLowerCase()
 
@@ -695,6 +740,8 @@ async function extractText(filePath: string, ext: string, fileSize?: number): Pr
       return extractTextFromRar(filePath)
     case '.txt':
     case '.md':
+    case '.markdown':
+    case '.mdown':
     case '.json':
     case '.xml':
     case '.csv':
@@ -703,6 +750,11 @@ async function extractText(filePath: string, ext: string, fileSize?: number): Pr
       } catch {
         return ''
       }
+    case '.html':
+    case '.htm':
+      return extractTextFromHtml(filePath)
+    case '.svg':
+      return extractTextFromSvg(filePath)
     default:
       return ''
   }
@@ -820,7 +872,8 @@ async function processFile(filePath: string): Promise<FileInfo | null> {
 
 function getFileType(ext: string): string {
   const map: Record<string, string> = {
-    '.txt': 'text', '.md': 'text', '.json': 'text', '.xml': 'text', '.csv': 'text',
+    '.txt': 'text', '.md': 'text', '.markdown': 'text', '.mdown': 'text', '.json': 'text', '.xml': 'text', '.csv': 'text',
+    '.html': 'html', '.htm': 'html', '.svg': 'svg',
     '.doc': 'docx', '.docx': 'docx',
     '.xls': 'xlsx', '.xlsx': 'xlsx',
     '.ppt': 'pptx', '.pptx': 'pptx',

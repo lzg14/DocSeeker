@@ -32,6 +32,8 @@ const FILE_TYPE_OPTIONS = [
   { value: 'pptx', label: 'PPT' },
   { value: 'pdf', label: 'PDF' },
   { value: 'text', label: '文本' },
+  { value: 'html', label: 'HTML' },
+  { value: 'svg', label: 'SVG' },
   { value: 'rtf', label: 'RTF' },
   { value: 'chm', label: 'CHM' },
   { value: 'odf', label: 'ODF' },

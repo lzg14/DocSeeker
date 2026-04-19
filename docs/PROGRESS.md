@@ -4,11 +4,13 @@
 
 ---
 
-## 已支持文件格式（19 种）
+## 已支持文件格式（22 种）
 
 | 格式 | 扩展名 | 全文索引 | UI 过滤器 |
 |------|--------|----------|-----------|
-| 纯文本 | .txt .md .json .xml .csv | ✅ | ✅ 文本 |
+| 纯文本 | .txt .md .markdown .mdown .json .xml .csv | ✅ | ✅ 文本 |
+| HTML | .html .htm | ✅ | ✅ HTML |
+| SVG | .svg | ✅ | ✅ SVG |
 | Word | .doc .docx | ✅ | ✅ Word |
 | Excel | .xls .xlsx | ✅ | ✅ Excel |
 | PowerPoint | .ppt .pptx | ✅ | ✅ PPT |

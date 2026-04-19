@@ -29,7 +29,7 @@ DocSeeker 是一款基于 Electron + React + TypeScript 的本地文档全文搜
 
 | 功能 | 当前状态 | 目标 | 竞品参考 |
 |------|----------|------|----------|
-| 新增文件格式 | ✅ 19 种格式（RTF/CHM/ODF/EPUB/WPS/RAR 已完成） | 继续增加 WPD、图片、音视频元数据 | AnyTXT 60+ |
+| 新增文件格式 | ✅ 22 种格式（RTF/CHM/ODF/EPUB/WPS/RAR/HTML/SVG/Markdown 已完成） | 继续增加 WPD、图片/音视频元数据 | AnyTXT 60+ |
 | 实时文件监控 | ✅ **已实现**（NTFS USN Journal API + Go 独立进程） | 重新启用需改用 NTFS USN Journal API | Everything / AnyTXT |
 | 正则搜索 | ✅ 已支持 `/pattern/` 语法 | 词干提取和字段搜索均已完成 | Everything / AnyTXT |
 | 文件过滤器 | ✅ 已支持类型/大小/日期三重过滤 | — | 所有主流竞品 |

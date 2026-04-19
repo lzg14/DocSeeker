@@ -13,7 +13,7 @@ import {
 
 // Supported file extensions
 const SUPPORTED_EXTENSIONS = new Set([
-  '.txt', '.md', '.json', '.xml', '.csv',
+  '.txt', '.md', '.markdown', '.mdown', '.json', '.xml', '.csv', '.html', '.htm', '.svg',
   '.doc', '.docx',
   '.xls', '.xlsx',
   '.ppt', '.pptx',
@@ -31,9 +31,14 @@ const SUPPORTED_EXTENSIONS = new Set([
 const FILE_TYPE_MAP: Record<string, string> = {
   '.txt': 'text',
   '.md': 'text',
+  '.markdown': 'text',
+  '.mdown': 'text',
   '.json': 'text',
   '.xml': 'text',
   '.csv': 'text',
+  '.html': 'html',
+  '.htm': 'html',
+  '.svg': 'svg',
   '.doc': 'docx',
   '.docx': 'docx',
   '.xls': 'xlsx',
@@ -576,6 +581,53 @@ async function extractTextFromRar(filePath: string, depth = 0): Promise<string> 
   }
 }
 
+// Extract plain text from HTML files (strip tags, preserve body text)
+async function extractTextFromHtml(filePath: string): Promise<string> {
+  try {
+    const content = fs.readFileSync(filePath, 'utf-8')
+    // Remove script and style blocks entirely
+    let text = content.replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '')
+    text = text.replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
+    // Remove HTML comments
+    text = text.replace(/<!--[\s\S]*?-->/g, '')
+    // Remove all HTML tags
+    text = text.replace(/<[^>]+>/g, ' ')
+    // Decode common HTML entities
+    text = text.replace(/&nbsp;/gi, ' ')
+    text = text.replace(/&lt;/gi, '<').replace(/&gt;/gi, '>')
+    text = text.replace(/&amp;/gi, '&').replace(/&quot;/gi, '"')
+    text = text.replace(/&#39;/gi, "'")
+    // Collapse whitespace
+    text = text.replace(/\s+/g, ' ').trim()
+    return text
+  } catch {
+    return ''
+  }
+}
+
+// Extract text from SVG files (SVG is XML with graphic elements)
+async function extractTextFromSvg(filePath: string): Promise<string> {
+  try {
+    const content = fs.readFileSync(filePath, 'utf-8')
+    // Remove SVG namespace noise and extract text elements
+    let text = content.replace(/<svg[^>]*>/gi, '')
+    // Extract text between <text> tags (with optional attributes)
+    const textMatches = text.match(/<text[^>]*>([^<]*)<\/text>/gi) || []
+    const texts = textMatches.map(m => m.replace(/<[^>]+>/g, '').trim()).filter(t => t)
+    // Also extract <tspan> and <title> content
+    const tspanMatches = content.match(/<tspan[^>]*>([^<]*)<\/tspan>/gi) || []
+    tspanMatches.forEach(m => {
+      const t = m.replace(/<[^>]+>/g, '').trim()
+      if (t) texts.push(t)
+    })
+    const titleMatch = content.match(/<title[^>]*>([^<]*)<\/title>/i)
+    if (titleMatch && titleMatch[1]) texts.unshift(titleMatch[1].trim())
+    return texts.join(' ')
+  } catch {
+    return ''
+  }
+}
+
 async function extractText(filePath: string, ext: string): Promise<string> {
   const lowerExt = ext.toLowerCase()
 
@@ -617,6 +669,8 @@ async function extractText(filePath: string, ext: string): Promise<string> {
       return extractTextFromRar(filePath)
     case '.txt':
     case '.md':
+    case '.markdown':
+    case '.mdown':
     case '.json':
     case '.xml':
     case '.csv':
@@ -625,6 +679,11 @@ async function extractText(filePath: string, ext: string): Promise<string> {
       } catch {
         return ''
       }
+    case '.html':
+    case '.htm':
+      return extractTextFromHtml(filePath)
+    case '.svg':
+      return extractTextFromSvg(filePath)
     default:
       return ''
   }
