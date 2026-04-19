@@ -62,6 +62,8 @@ shards/shard_files 写入数据（insertFileBatch）
 export function getFolderStatsFromShards(folderPath: string): { fileCount: number; totalSize: number }
 ```
 
+**路径格式注意**：shards 里路径统一为正斜杠（`D:/path/...`），传入的 Windows 路径先通过 `.replace(/\\/g, '/')` 转换后再匹配。
+
 ### meta.ts
 
 ```typescript
