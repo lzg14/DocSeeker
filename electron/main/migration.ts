@@ -89,7 +89,7 @@ CREATE VIRTUAL TABLE IF NOT EXISTS shard_files_fts USING fts5(
   file_type,
   content='shard_files',
   content_rowid='id',
-  tokenize='unicode61 remove_diacritics 1'
+  tokenize='unicode61 remove_diacritics 1 tokenize=porter'
 )
 `
 
@@ -546,4 +546,60 @@ export function markMigrationDone(): void {
  */
 export function isMigrationDone(): boolean {
   return migrationDone
+}
+
+/**
+ * 迁移 FTS5 tokenizer 到 porter stemmer 版本。
+ * 对于已存在的 shard DB，更新其 FTS 表 tokenizer 配置。
+ * Porter stemmer 使搜索 "running" 匹配 "run/runs/running"。
+ */
+export async function migrateFtsTokenizer(
+  onProgress?: (shardId: number, total: number) => void
+): Promise<{ rebuilt: number; errors: string[] }> {
+  const shardsDir = getShardsDir()
+  const errors: string[] = []
+  let rebuilt = 0
+
+  if (!existsSync(shardsDir)) {
+    return { rebuilt: 0, errors: [] }
+  }
+
+  const shardFiles = readdirSync(shardsDir).filter(f => f.startsWith('shard_') && f.endsWith('.db'))
+  const total = shardFiles.length
+
+  for (let i = 0; i < shardFiles.length; i++) {
+    const shardFile = shardFiles[i]
+    const shardPath = join(shardsDir, shardFile)
+    const shardId = parseInt(shardFile.match(/shard_(\d+)\.db/)?.[1] ?? '-1', 10)
+
+    try {
+      const db = new Database(shardPath)
+      db.pragma('journal_mode = WAL')
+
+      // 检查当前 tokenizer 配置
+      const tableInfo = db.prepare("SELECT sql FROM sqlite_master WHERE type='table' AND name='shard_files_fts'").get() as { sql: string } | undefined
+      if (!tableInfo) {
+        db.close()
+        continue
+      }
+
+      const hasPorter = tableInfo.sql.includes('tokenize=porter')
+      if (!hasPorter) {
+        log.info(`[Migration] Rebuilding FTS with porter tokenizer for shard ${shardId}`)
+        // 重建 FTS 表（原子操作，索引期间阻塞该 DB 的搜索）
+        db.exec("INSERT INTO shard_files_fts(shard_files_fts) VALUES('rebuild')")
+        rebuilt++
+      }
+
+      db.close()
+      onProgress?.(shardId, total)
+    } catch (err) {
+      const error = err instanceof Error ? err.message : String(err)
+      errors.push(`Shard ${shardId}: ${error}`)
+      log.warn(`[Migration] FTS tokenizer migration failed for shard ${shardId}: ${error}`)
+    }
+  }
+
+  log.info(`[Migration] FTS tokenizer migration complete: ${rebuilt} shards rebuilt`)
+  return { rebuilt, errors }
 }

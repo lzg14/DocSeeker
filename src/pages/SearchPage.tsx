@@ -482,6 +482,20 @@ function SearchPage(): JSX.Element {
               <div className="syntax-item regex-desc">
                 <span>{t('search.regexDesc')}</span>
               </div>
+              {/* 新增：字段限定搜索 */}
+              <div className="syntax-help-section-title">{t('search.fieldSearch')}</div>
+              <div className="syntax-item">
+                <code>name:report</code>
+                <span>{t('search.syntaxName')}</span>
+              </div>
+              <div className="syntax-item">
+                <code>path:documents</code>
+                <span>{t('search.syntaxPath')}</span>
+              </div>
+              <div className="syntax-item">
+                <code>ext:pdf</code>
+                <span>{t('search.syntaxExt')}</span>
+              </div>
             </div>
           </div>
         )}

@@ -17,6 +17,7 @@ import { Worker } from 'worker_threads'
 import log from 'electron-log/main'
 import Database from 'better-sqlite3'
 import { getAppSetting, setAppSetting } from './config'
+import { migrateFtsTokenizer } from './migration'
 
 // ============ Types ============
 
@@ -62,6 +63,9 @@ export interface SearchOptions {
   sizeMax?: number
   dateFrom?: string
   dateTo?: string
+  // 由 extractFieldPrefixes 填充
+  pathQuery?: string      // path: 前缀后的关键词 → SQL LIKE
+  extFilters?: string[]   // ext: 前缀后的扩展名 → 合并到 fileTypes
 }
 
 export interface FileRecord {
@@ -436,6 +440,17 @@ export async function initShardManager(): Promise<void> {
 
     initialized = true
     log.info(`[ShardManager] Ready. Profile: ${JSON.stringify(profile)}, Config: ${JSON.stringify(config)}`)
+
+    // 启动后异步重建 FTS（不阻塞搜索）
+    setTimeout(() => {
+      migrateFtsTokenizer().then(({ rebuilt }) => {
+        if (rebuilt > 0) {
+          log.info(`[ShardManager] FTS tokenizer migrated: ${rebuilt} shards rebuilt`)
+        }
+      }).catch(err => {
+        log.warn('[ShardManager] FTS tokenizer migration skipped:', err)
+      })
+    }, 5000) // 等待 5 秒让初始搜索就绪
   })()
 
   return initPromise
@@ -570,6 +585,53 @@ export async function insertFileBatch(
 // ============ Search ============
 
 /**
+ * 从用户查询字符串中提取字段限定前缀。
+ * 支持: name:report  path:documents  ext:pdf ext:docx
+ */
+export function extractFieldPrefixes(query: string): {
+  nameQuery?: string
+  pathQuery?: string
+  extFilters: string[]
+  remainingQuery: string
+} {
+  const result = {
+    nameQuery: undefined as string | undefined,
+    pathQuery: undefined as string | undefined,
+    extFilters: [] as string[],
+    remainingQuery: query,
+  }
+
+  // 提取 ext:（可多次出现）
+  const extMatches = [...result.remainingQuery.matchAll(/\bext:([a-zA-Z0-9]+)\b/gi)]
+  if (extMatches.length > 0) {
+    result.extFilters = extMatches.map(m => m[1].toLowerCase())
+    result.remainingQuery = result.remainingQuery.replace(/\bext:[a-zA-Z0-9]+\b/gi, '').trim()
+  }
+
+  // 提取 name:（取第一个）
+  const nameMatch = result.remainingQuery.match(/\bname:("[^"]+"|[^\s]+)/i)
+  if (nameMatch) {
+    result.nameQuery = nameMatch[1].replace(/^"|"$/g, '')
+    result.remainingQuery = result.remainingQuery
+      .replace(/\bname:"[^"]+"\b/i, '')
+      .replace(/\bname:[^\s]+\b/i, '')
+      .trim()
+  }
+
+  // 提取 path:（取第一个）
+  const pathMatch = result.remainingQuery.match(/\bpath:("[^"]+"|[^\s]+)/i)
+  if (pathMatch) {
+    result.pathQuery = pathMatch[1].replace(/^"|"$/g, '')
+    result.remainingQuery = result.remainingQuery
+      .replace(/\bpath:"[^"]+"\b/i, '')
+      .replace(/\bpath:[^\s]+\b/i, '')
+      .trim()
+  }
+
+  return result
+}
+
+/**
  * Parse FTS query from user query string.
  */
 function parseFtsQuery(query: string): string {
@@ -636,6 +698,13 @@ function searchShardDb(
     params.push(options.dateTo)
   }
 
+  // path: 字段 → SQL LIKE（路径不在 FTS5 中）
+  if (options?.pathQuery) {
+    const escaped = options.pathQuery.replace(/[%_\[\]\\\\]/g, '\\\\$&')
+    whereClauses.push('f.path LIKE ?')
+    params.push(`%${escaped}%`)
+  }
+
   // Only search supported files
   whereClauses.push('f.is_supported = 1')
 
@@ -688,7 +757,32 @@ export async function searchAllShards(
   const readyShards = getReadyShards()
   if (readyShards.length === 0) return []
 
-  const ftsQuery = parseFtsQuery(query)
+  // 解析字段限定前缀
+  const fieldInfo = extractFieldPrefixes(query)
+
+  if (fieldInfo.nameQuery) {
+    const nameOnlyResults = await searchByFileName(fieldInfo.nameQuery, {
+      ...options,
+      fileTypes: [...(options?.fileTypes ?? []), ...fieldInfo.extFilters]
+    })
+    if (fieldInfo.pathQuery) {
+      const lowerPath = r.path.toLowerCase()
+      const lowerQuery = fieldInfo.pathQuery!.toLowerCase()
+      return lowerPath.includes(lowerQuery)
+    }
+    return nameOnlyResults
+  }
+
+  const ftsQuery = parseFtsQuery(fieldInfo.remainingQuery)
+  const effectiveFileTypes = [
+    ...(options?.fileTypes ?? []),
+    ...fieldInfo.extFilters
+  ]
+  const effectiveOptions: SearchOptions = {
+    ...options,
+    fileTypes: effectiveFileTypes.length > 0 ? effectiveFileTypes : undefined,
+    pathQuery: fieldInfo.pathQuery,
+  }
 
   // Search each shard in parallel using direct SQLite access
   // (Workers are used for inserts; reads are fast enough for synchronous access)
@@ -697,7 +791,7 @@ export async function searchAllShards(
       try {
         const db = new Database(shard.dbPath, { readonly: true })
         db.pragma('journal_mode = WAL')
-        const results = searchShardDb(db, ftsQuery, options, shard.id)
+        const results = searchShardDb(db, ftsQuery, effectiveOptions, shard.id)
         db.close()
         return results
       } catch (err) {
