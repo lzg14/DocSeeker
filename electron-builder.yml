@@ -12,6 +12,9 @@ files:
   - '!electron/*'
   - '!{.eslintignore,.eslintrc.cjs,.prettierignore,.prettierrc.yaml,dev-app-update.yml,CHANGELOG.md,README.md}'
   - '!{tsconfig.json,tsconfig.node.json,tsconfig.web.json}'
+extraResources:
+  - from: resources/usn-monitor.exe
+    to: go-usn-monitor.exe
 asarUnpack:
   - resources/**
   - node_modules/better-sqlite3/**
