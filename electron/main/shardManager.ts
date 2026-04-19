@@ -1114,6 +1114,85 @@ export function deleteFilesByFolderPrefixFromAllShards(folderPath: string): numb
 }
 
 /**
+ * Rename a file across all shards: update path and name fields.
+ * Used when a file is renamed on disk (not moved between folders).
+ */
+export function renameFileInAllShards(oldPath: string, newPath: string): number {
+  let renamedCount = 0
+  const newName = newPath.replace(/\\/g, '/').split('/').pop() || ''
+  const readyShards = getReadyShards()
+  for (const shard of readyShards) {
+    try {
+      const db = new Database(shard.dbPath)
+      const result = db.prepare(`
+        UPDATE shard_files
+        SET path = ?, name = ?, updated_at = datetime('now')
+        WHERE path = ?
+      `).run(newPath, newName, oldPath.replace(/\\/g, '/'))
+      renamedCount += result.changes
+      db.close()
+    } catch (e) {
+      log.error(`[shardManager] renameFileInAllShards error on shard ${shard.id}:`, e)
+    }
+  }
+  return renamedCount
+}
+
+/**
+ * Update file content (re-extract after file modification).
+ */
+export function updateFileContentInAllShards(filePath: string, content: string | null): number {
+  let updatedCount = 0
+  const normalizedPath = filePath.replace(/\\/g, '/')
+  const readyShards = getReadyShards()
+  for (const shard of readyShards) {
+    try {
+      const db = new Database(shard.dbPath)
+      const result = db.prepare(`
+        UPDATE shard_files
+        SET content = ?, updated_at = datetime('now')
+        WHERE path = ?
+      `).run(content, normalizedPath)
+      updatedCount += result.changes
+      db.close()
+    } catch (e) {
+      log.error(`[shardManager] updateFileContentInAllShards error on shard ${shard.id}:`, e)
+    }
+  }
+  return updatedCount
+}
+
+/**
+ * Rename all files under a folder prefix (used when folder is renamed).
+ * Uses SQLite string concatenation on path prefix for efficiency.
+ */
+export function renameFolderContentsInAllShards(oldFolderPath: string, newFolderPath: string): number {
+  let totalUpdated = 0
+  const oldPrefix = oldFolderPath.replace(/\\/g, '/').replace(/\/$/, '') + '/'
+  const newPrefix = newFolderPath.replace(/\\/g, '/').replace(/\/$/, '') + '/'
+  const oldFolderName = oldFolderPath.replace(/\\/g, '/').split('/').pop() || ''
+  const newFolderName = newFolderPath.replace(/\\/g, '/').split('/').pop() || ''
+  const readyShards = getReadyShards()
+  for (const shard of readyShards) {
+    try {
+      const db = new Database(shard.dbPath)
+      const result = db.prepare(`
+        UPDATE shard_files
+        SET path = (? || SUBSTR(path, ?)),
+            name = (? || SUBSTR(name, ?)),
+            updated_at = datetime('now')
+        WHERE path LIKE ?
+      `).run(newPrefix, oldPrefix.length + 1, newFolderName, oldFolderName.length + 1, oldPrefix + '%')
+      totalUpdated += result.changes
+      db.close()
+    } catch (e) {
+      log.error(`[shardManager] renameFolderContentsInAllShards error on shard ${shard.id}:`, e)
+    }
+  }
+  return totalUpdated
+}
+
+/**
  * Get machine profile (for diagnostics).
  */
 export function getMachineProfile(): MachineProfile | null {

@@ -181,12 +181,19 @@ export interface AppSettings {
   autoLaunch?: boolean
   windowBounds?: { x: number; y: number; width: number; height: number }
   minimizeToTray?: boolean
+  realtimeMonitor?: {
+    enabled: boolean
+    dirs: string[]
+  }
   [key: string]: unknown
 }
 
 export function getAppSetting<T = unknown>(key: string, defaultValue: T): T {
   if (Object.prototype.hasOwnProperty.call(store.app_settings, key)) {
     return store.app_settings[key] as T
+  }
+  if (key === 'realtimeMonitor') {
+    return { enabled: false, dirs: [] } as unknown as T
   }
   return defaultValue
 }
