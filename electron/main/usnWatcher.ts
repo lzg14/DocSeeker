@@ -59,7 +59,9 @@ export class UsnWatcher {
 
     await this.spawnProcess()
     await this.connect()
-    this.send({ type: 'init', dirs: config.dirs })
+    // Normalize all dirs to forward slashes for cross-platform consistency
+    const normalizedDirs = config.dirs.map(d => d.replace(/\\/g, '/'))
+    this.send({ type: 'init', dirs: normalizedDirs })
     this.isRunning = true
     log.info(`[UsnWatcher] started, monitoring ${config.dirs.length} dirs`)
   }
@@ -177,7 +179,8 @@ export class UsnWatcher {
           enabled: false,
           dirs: [],
         })
-        this.send({ type: 'init', dirs: config.dirs })
+        const normalizedDirs = config.dirs.map(d => d.replace(/\\/g, '/'))
+        this.send({ type: 'init', dirs: normalizedDirs })
       }).catch(() => {})
     }, 5000)
   }

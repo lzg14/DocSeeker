@@ -3,6 +3,8 @@ import path from 'path'
 import crypto from 'crypto'
 import log from 'electron-log/main'
 import { createExtractorFromData } from 'node-unrar-js'
+import exifr from 'exifr'
+import { parseFile as parseAudioFile } from 'music-metadata'
 import {
   insertFile,
   getFileByPath,
@@ -24,7 +26,11 @@ const SUPPORTED_EXTENSIONS = new Set([
   '.epub',
   '.zip', '.rar',
   '.mbox', '.eml',
-  '.wps', '.wpp', '.et', '.dps'
+  '.wps', '.wpp', '.et', '.dps',
+  // Image / Audio / Video (metadata extraction)
+  '.jpg', '.jpeg', '.png', '.gif', '.webp', '.bmp', '.tiff', '.tif',
+  '.mp3', '.flac', '.ogg', '.wav', '.aac', '.m4a',
+  '.mp4', '.avi', '.mkv', '.mov', '.wmv', '.flv', '.webm'
 ])
 
 // File type mapping
@@ -55,7 +61,11 @@ const FILE_TYPE_MAP: Record<string, string> = {
   '.zip': 'zip', '.rar': 'rar',
   '.mbox': 'email',
   '.eml': 'email',
-  '.wps': 'docx', '.wpp': 'pptx', '.et': 'xlsx', '.dps': 'pptx'
+  '.wps': 'docx', '.wpp': 'pptx', '.et': 'xlsx', '.dps': 'pptx',
+  // Image / Audio / Video metadata
+  '.jpg': 'image', '.jpeg': 'image', '.png': 'image', '.gif': 'image', '.webp': 'image', '.bmp': 'image', '.tiff': 'image', '.tif': 'image',
+  '.mp3': 'media', '.flac': 'media', '.ogg': 'media', '.wav': 'media', '.aac': 'media', '.m4a': 'media',
+  '.mp4': 'media', '.avi': 'media', '.mkv': 'media', '.mov': 'media', '.wmv': 'media', '.flv': 'media', '.webm': 'media'
 }
 
 // Extensions supported inside ZIP archives
@@ -628,6 +638,59 @@ async function extractTextFromSvg(filePath: string): Promise<string> {
   }
 }
 
+// Extract metadata from image files (EXIF, IPTC, XMP)
+async function extractTextFromImage(filePath: string): Promise<string> {
+  try {
+    const data = await exifr.parse(filePath, {
+      // Only pick text-like fields
+      pick: [
+        'ObjectName', 'Caption', 'Description', 'Title', 'Keywords',
+        'DateTimeOriginal', 'DateTimeDigitized', 'DateTime',
+        'GPSLatitude', 'GPSLongitude', 'GPSAltitude',
+        'Make', 'Model', 'Software',
+        'Artist', 'Copyright', 'Creator', 'Author',
+        'ImageDescription', 'UserComment',
+        'Location', 'City', 'State', 'Country',
+        'Headline', 'Credit', 'Source', 'SpecialInstructions',
+      ]
+    })
+    if (!data) return ''
+    const texts: string[] = []
+    for (const [key, value] of Object.entries(data)) {
+      if (value !== undefined && value !== null && value !== '') {
+        texts.push(`${key}: ${String(value)}`)
+      }
+    }
+    return texts.join(' | ')
+  } catch {
+    return ''
+  }
+}
+
+// Extract metadata from audio / video files (ID3, Vorbis, etc.)
+async function extractTextFromMedia(filePath: string): Promise<string> {
+  try {
+    const metadata = await parseAudioFile(filePath)
+    const { common, format } = metadata
+    const texts: string[] = []
+    if (common.title) texts.push(`标题: ${common.title}`)
+    if (common.artist) texts.push(`歌手: ${common.artist}`)
+    if (common.album) texts.push(`专辑: ${common.album}`)
+    if (common.year) texts.push(`年份: ${common.year}`)
+    if (common.genre?.length) texts.push(`风格: ${common.genre.join(', ')}`)
+    if (common.track?.no) texts.push(`曲号: ${common.track.no}`)
+    if (common.disk?.no) texts.push(`碟号: ${common.disk.no}`)
+    if (common.label) texts.push(`厂牌: ${common.label}`)
+    if (common.copyright) texts.push(`版权: ${common.copyright}`)
+    if (common.comment) texts.push(`备注: ${common.comment}`)
+    if (format.duration) texts.push(`时长: ${Math.round(format.duration)}秒`)
+    if (format.codec) texts.push(`编码: ${format.codec}`)
+    return texts.join(' | ')
+  } catch {
+    return ''
+  }
+}
+
 async function extractText(filePath: string, ext: string): Promise<string> {
   const lowerExt = ext.toLowerCase()
 
@@ -684,6 +747,31 @@ async function extractText(filePath: string, ext: string): Promise<string> {
       return extractTextFromHtml(filePath)
     case '.svg':
       return extractTextFromSvg(filePath)
+    // Image metadata (EXIF/IPTC/XMP)
+    case '.jpg':
+    case '.jpeg':
+    case '.png':
+    case '.gif':
+    case '.webp':
+    case '.bmp':
+    case '.tiff':
+    case '.tif':
+      return extractTextFromImage(filePath)
+    // Audio / Video metadata (ID3 / Vorbis / etc.)
+    case '.mp3':
+    case '.flac':
+    case '.ogg':
+    case '.wav':
+    case '.aac':
+    case '.m4a':
+    case '.mp4':
+    case '.avi':
+    case '.mkv':
+    case '.mov':
+    case '.wmv':
+    case '.flv':
+    case '.webm':
+      return extractTextFromMedia(filePath)
     default:
       return ''
   }
