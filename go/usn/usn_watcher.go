@@ -243,10 +243,11 @@ func parseUsnRecords(data []byte, pr *pathResolver) ([]UsnEvent, error) {
 // pathResolver resolves full paths from USN parent FRNs using a directory cache.
 // Strategy: at startup, walk all monitored directories to build frn→path and parentFRN→path caches.
 type pathResolver struct {
-	volumeRoot string            // e.g. "D:/"
-	volumeChar string            // e.g. "D:"
-	volumeH    windows.Handle   // volume handle
-	cache      map[uint64]string // parentFRN → directory path (with trailing "/")
+	volumeRoot string
+	volumeChar string
+	volumeH    windows.Handle
+	cache      map[uint64]string
+	mu         sync.RWMutex
 }
 
 func newPathResolver(h windows.Handle, volumeChar string, roots []string) *pathResolver {
@@ -301,7 +302,7 @@ func (pr *pathResolver) walkAndCache(dirPath string) {
 	}
 }
 
-// getDirFRNs returns the FRN and parent FRN for a directory by opening it and calling NtQueryInformationFile(FileIdInformation).
+// getDirFRNs returns the FRN and parent FRN for a directory by opening it and calling NtQueryInformationFile(FileIdExtdDirectoryInformation).
 func (pr *pathResolver) getDirFRNs(dirPath string) (frn uint64, parentFRN uint64) {
 	// Convert "D:/Work/Sub" to "\\.\D:\Work\Sub" for Windows API
 	winPath := `\\.\` + pr.volumeChar + `\` + strings.ReplaceAll(filepath.ToSlash(dirPath), "/", `\`)
@@ -320,30 +321,34 @@ func (pr *pathResolver) getDirFRNs(dirPath string) (frn uint64, parentFRN uint64
 	}
 	defer windows.CloseHandle(h)
 
-	// NtQueryInformationFile with FileIdInformation (class 54) returns:
+	// NtQueryInformationFile with FileIdExtdDirectoryInformation (class 89) returns:
 	//   bytes [0:8]   = FileReferenceNumber (FRN)
-	//   bytes [8:16]  = VolumeSerialNumber
-	buf := make([]byte, 32)
+	//   bytes [8:16]  = VolumeSerialNumber (padding in FileIdInformation)
+	//   bytes [72:80] = ParentFileId (parent FRN)
+	buf := make([]byte, 80)
 	var retLen uint32
 	r1, _, _ := windows.NewLazyDLL("ntdll.dll").NewProc("NtQueryInformationFile").Call(
 		uintptr(h),
 		uintptr(unsafe.Pointer(&retLen)),
 		uintptr(unsafe.Pointer(&buf[0])),
-		uintptr(32),
-		uintptr(54), // FileIdInformation
+		uintptr(80),
+		uintptr(89), // FileIdExtdDirectoryInformation
 	)
-	if r1 != 0 || retLen < 16 {
+	if r1 != 0 || retLen < 80 {
 		return 0, 0
 	}
 
 	frn = binary.LittleEndian.Uint64(buf[0:8])
-	// The parent FRN is stored at bytes [8:16] in FileIdInformation
-	parentFRN = binary.LittleEndian.Uint64(buf[8:16])
+	// The parent FRN is stored at bytes [72:80] in FileIdExtdDirectoryInformation
+	parentFRN = binary.LittleEndian.Uint64(buf[72:80])
 	return frn, parentFRN
 }
 
 // resolvePathByParentFRN resolves the full path for a file given its parent directory FRN and filename.
 func (pr *pathResolver) resolvePathByParentFRN(parentFRN uint64, filename string) string {
+	pr.mu.RLock()
+	defer pr.mu.RUnlock()
+
 	// Special case: FRN 0 means root
 	if parentFRN == 0 {
 		return pr.volumeRoot + filename
@@ -495,6 +500,11 @@ func (vm *VolumeManager) readLoop(ctx *volumeCtx) {
 			windows.CloseHandle(ctx.h)
 			return
 		case <-ticker.C:
+			// Capture roots snapshot under lock
+			vm.rootsLock.RLock()
+			roots := ctx.roots
+			vm.rootsLock.RUnlock()
+
 			events, nextUsn, err := ReadJournalStart(ctx.h, ctx.pr, ctx.journalID, ctx.nextUsn)
 			if err != nil {
 				continue
@@ -502,7 +512,7 @@ func (vm *VolumeManager) readLoop(ctx *volumeCtx) {
 			ctx.nextUsn = nextUsn
 
 			for _, ev := range events {
-				if !vm.shouldNotify(ev.Path, ctx.roots) {
+				if !vm.shouldNotify(ev.Path, roots) {
 					continue
 				}
 
