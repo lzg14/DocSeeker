@@ -131,6 +131,10 @@ const translations: Record<Language, Record<string, string>> = {
     'search.clearSecondaryFilter': '清除筛选',
     'search.loadNew': '加载',
     'search.dismiss': '忽略',
+    'search.export': '导出',
+    'search.exportCsv': 'CSV 表格',
+    'search.exportHtml': 'HTML 网页',
+    'search.exportTxt': 'TXT 文本',
     // File detail
     'detail.info': '文件信息',
     'detail.size': '大小',
@@ -307,6 +311,10 @@ const translations: Record<Language, Record<string, string>> = {
     'search.clearSecondaryFilter': 'Clear filter',
     'search.loadNew': 'Load',
     'search.dismiss': 'Dismiss',
+    'search.export': 'Export',
+    'search.exportCsv': 'CSV Spreadsheet',
+    'search.exportHtml': 'HTML Page',
+    'search.exportTxt': 'TXT Text',
     // File list table headers
     'filelist.name': 'File Name',
     'filelist.type': 'Type',
