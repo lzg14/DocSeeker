@@ -5,6 +5,7 @@ import log from 'electron-log/main'
 import { initDatabase, closeDatabase } from './database'
 import { closeAllShards, initShardManager } from './shardManager'
 import { initHotCache, closeHotCache } from './hotCache'
+import { usnWatcher } from './usnWatcher'
 import { registerIpcHandlers } from './ipc'
 import { startUpdater, stopUpdater, handleManualCheck, handleDownloadUpdate, handleQuitAndInstall } from './updater'
 
@@ -263,6 +264,9 @@ app.whenReady().then(async () => {
   // Load shards in background while UI is already showing
   initShardManager().then(() => log.info('Shards loaded in background'))
 
+  // Start USN realtime monitor if enabled
+  usnWatcher.start().catch((e) => log.error('[UsnWatcher] failed to start:', e))
+
   // Auto updater
   try { startUpdater(mainWindow!) } catch (e) { log.error('startUpdater failed:', e) }
   try { createTray() } catch (e) { log.error('createTray failed:', e) }
@@ -308,6 +312,7 @@ app.on('before-quit', () => {
   ;(app as any).isQuitting = true
   globalShortcut.unregisterAll()
   stopUpdater()
+  usnWatcher.stop()
   closeAllShards()
   closeDatabase()
   closeHotCache()
