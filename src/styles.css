@@ -1158,6 +1158,29 @@ textarea:focus:not(:focus-visible) {
   overflow: hidden;
 }
 
+.usn-banner {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  background: var(--primary-light, #e3f2fd);
+  border-radius: 6px;
+  margin-bottom: 12px;
+  animation: fadeIn 0.3s ease;
+}
+.usn-banner-btn {
+  padding: 2px 10px;
+  border-radius: 4px;
+  border: 1px solid var(--primary-color);
+  background: none;
+  color: var(--primary-color);
+  cursor: pointer;
+  font-size: 12px;
+}
+.usn-banner-btn:hover { background: var(--primary-light); }
+.usn-banner-btn-dismiss { border-color: var(--text-secondary); color: var(--text-secondary); }
+.usn-banner-btn-dismiss:hover { background: var(--bg-hover); }
+
 .search-footer-bar {
   padding: 8px 20px;
   font-size: 11px;

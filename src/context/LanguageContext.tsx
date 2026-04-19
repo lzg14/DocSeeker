@@ -304,6 +304,8 @@ const translations: Record<Language, Record<string, string>> = {
     'search.extracting': 'Extracting content...',
     'search.secondaryFilterPlaceholder': 'Filter results by path or filename...',
     'search.clearSecondaryFilter': 'Clear filter',
+    'search.loadNew': 'Load',
+    'search.dismiss': 'Dismiss',
     // File list table headers
     'filelist.name': 'File Name',
     'filelist.type': 'Type',

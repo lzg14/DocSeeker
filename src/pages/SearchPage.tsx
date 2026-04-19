@@ -62,6 +62,7 @@ function SearchPage(): JSX.Element {
   const [searchScope, setSearchScope] = useState<'all' | 'filename'>('all')
   const [dedupEnabled, setDedupEnabled] = useState(false)
   const [secondaryFilter, setSecondaryFilter] = useState('')
+  const [pendingEvents, setPendingEvents] = useState<{ event: string; path: string }[]>([])
   const { t } = useLanguage()
 
   const inputRef = useRef<HTMLInputElement>(null)
@@ -83,6 +84,16 @@ function SearchPage(): JSX.Element {
   useEffect(() => {
     dedupEnabledRef.current = dedupEnabled
   }, [dedupEnabled])
+
+  // Listen for USN file change events
+  useEffect(() => {
+    const unsub = window.electron.onUsnUpdate((ev) => {
+      if (ev.event === 'created' || ev.event === 'renamed') {
+        setPendingEvents(prev => [...prev, ev])
+      }
+    })
+    return unsub
+  }, [])
 
   // Cleanup debounce timer on unmount
   useEffect(() => {
@@ -293,6 +304,16 @@ function SearchPage(): JSX.Element {
 
   const handleFilterChange = (newFilters: SearchOptions) => {
     setFilters(newFilters)
+  }
+
+  const handleLoadPending = async () => {
+    if (pendingEvents.length === 0) return
+    await performSearch(searchQuery, filters)
+    setPendingEvents([])
+  }
+
+  const handleDismissPending = () => {
+    setPendingEvents([])
   }
 
   const toggleFileType = (type: string) => {
@@ -641,6 +662,17 @@ function SearchPage(): JSX.Element {
       </div>
 
       <div className="search-content">
+        {pendingEvents.length > 0 && (
+          <div className="usn-banner">
+            <span>📂 {pendingEvents.length} 个新文件已变更</span>
+            <button className="usn-banner-btn" onClick={handleLoadPending}>
+              {t('search.loadNew')}
+            </button>
+            <button className="usn-banner-btn usn-banner-btn-dismiss" onClick={handleDismissPending}>
+              {t('search.dismiss')}
+            </button>
+          </div>
+        )}
         <div className="file-list-wrapper">
           <FileList
             files={filteredFiles}
