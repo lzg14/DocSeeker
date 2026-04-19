@@ -53,12 +53,29 @@ let handlersRegistered = false
 // Current shard for inserts
 let currentShardId = -1
 
+// Track pending batch completions per shard to avoid querying stats before all batches are written
+const pendingBatches: Map<number, number> = new Map()
+
 async function getCurrentShard(): Promise<number> {
   if (currentShardId < 0) {
     const shard = await openNextShard()
     currentShardId = shard?.id ?? -1
   }
   return currentShardId
+}
+
+/** Wait for all pending batches to be acknowledged by shard workers before querying stats. */
+function flushPendingBatches(shardId: number): Promise<void> {
+  return new Promise((resolve) => {
+    const check = () => {
+      if ((pendingBatches.get(shardId) ?? 0) === 0) {
+        resolve()
+      } else {
+        setTimeout(check, 20)
+      }
+    }
+    check()
+  })
 }
 
 export function registerIpcHandlers(): void {
@@ -324,7 +341,9 @@ export function registerIpcHandlers(): void {
                     is_supported: fileInfo.is_supported ?? 1
                   }))
 
+                  pendingBatches.set(shardId, (pendingBatches.get(shardId) ?? 0) + 1)
                   const result = await insertFileBatch(shardId, records)
+                  pendingBatches.set(shardId, Math.max(0, (pendingBatches.get(shardId) ?? 1) - 1))
                   filesProcessed += result.fileCount
                 } catch (err) {
                   log.error('[IPC] Batch insert error:', err)
@@ -335,6 +354,10 @@ export function registerIpcHandlers(): void {
             }
             case 'complete': {
               log.info(`Incremental scan complete: ${filesProcessed} files, time: ${message.data.totalTime}ms`)
+              // Wait for all pending batches to be written to shards before querying stats
+              if (shardId >= 0) {
+                await flushPendingBatches(shardId)
+              }
               // Sync shard stats back to config.db (the single source of truth)
               const folder = getScannedFolderByPath(folderPath)
               if (folder && folder.id) {
@@ -416,7 +439,9 @@ export function registerIpcHandlers(): void {
                     is_supported: fileInfo.is_supported ?? 1
                   }))
 
+                  pendingBatches.set(shardId, (pendingBatches.get(shardId) ?? 0) + 1)
                   const result = await insertFileBatch(shardId, records)
+                  pendingBatches.set(shardId, Math.max(0, (pendingBatches.get(shardId) ?? 1) - 1))
                   filesProcessed += result.fileCount
 
                   // Check if shard is full
@@ -435,6 +460,10 @@ export function registerIpcHandlers(): void {
             }
             case 'complete':
               log.info(`Full rescan complete: ${filesProcessed} files, time: ${message.data.totalTime}ms`)
+              // Wait for all pending batches to be written to shards before querying stats
+              if (shardId >= 0) {
+                await flushPendingBatches(shardId)
+              }
               if (folder && folder.id) {
                 // Sync shard stats back to config.db after full scan
                 const shardStats = getFolderStatsFromShards(folderPath)
