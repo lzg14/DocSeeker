@@ -200,7 +200,7 @@ func ReadJournalStart(h windows.Handle, journalID uint64, startUsn int64) ([]Usn
 	}
 
 	// First 8 bytes: next USN
-	nextUsn := int64(windows.ByteSliceToLittleEndian(buf[:8]))
+	nextUsn := int64(binary.LittleEndian.Uint64(buf[:8]))
 
 	events, err := parseUsnRecords(buf[8:bytesReturned])
 	return events, nextUsn, nil
@@ -1128,6 +1128,23 @@ Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>"
 import log from 'electron-log/main'
 import { BrowserWindow } from 'electron'
 import path from 'path'
+import fs from 'fs'
+import crypto from 'crypto'
+
+function getFileType(ext: string): string {
+  const map: Record<string, string> = {
+    '.txt': 'text', '.md': 'text', '.json': 'text', '.xml': 'text', '.csv': 'text',
+    '.doc': 'docx', '.docx': 'docx',
+    '.xls': 'xlsx', '.xlsx': 'xlsx',
+    '.ppt': 'pptx', '.pptx': 'pptx',
+    '.pdf': 'pdf', '.rtf': 'rtf', '.chm': 'chm',
+    '.odt': 'odf', '.ods': 'odf', '.odp': 'odf',
+    '.epub': 'epub',
+    '.zip': 'archive', '.mbox': 'mail', '.eml': 'mail',
+    '.wps': 'wps', '.wpp': 'wps', '.et': 'wps', '.dps': 'wps',
+  }
+  return map[ext] || 'unsupported'
+}
 import {
   deleteFileFromAllShards,
   renameFileInAllShards,
@@ -1241,10 +1258,6 @@ async function handleFolderRenamed(oldPath: string, newPath: string): Promise<vo
 }
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
-
-import fs from 'fs'
-import crypto from 'crypto'
-import { getFileType } from './scanner'
 
 const SUPPORTED_EXTENSIONS = new Set([
   '.txt', '.md', '.json', '.xml', '.csv',
