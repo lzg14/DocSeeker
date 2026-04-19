@@ -14,7 +14,8 @@ interface ExportOptions {
 // ---------------------------------------------------------------------------
 
 export function formatSizeSafe(bytes?: number | null): string {
-  if (!bytes) return '-'
+  if (bytes == null || bytes < 0) return '-'
+  if (bytes === 0) return '0 B'
   const k = 1024
   const sizes = ['B', 'KB', 'MB', 'GB']
   const i = Math.floor(Math.log(bytes) / Math.log(k))
@@ -76,8 +77,11 @@ export function toHtml(options: ExportOptions): string {
 
   const rows = files
     .map((f) => {
-      const snippet = snippets[f.path]
-        ? snippets[f.path]
+      const rawSnippet = snippets[f.path]
+      const snippet = rawSnippet
+        ? /<[^>]+>/.test(rawSnippet)
+          ? esc(rawSnippet)
+          : rawSnippet  // already has mark.hl highlight tags, safe to inject
         : `<span class="file-path">${esc(f.path)}</span>`
       return `<tr>
   <td>${esc(f.name)}</td>
