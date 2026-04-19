@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react'
 import { FileRecord } from '../types'
 import { useLanguage } from '../context/LanguageContext'
-import { renderPdfPage } from '../utils/pdfRender'
 
 interface FileDetailProps {
   file: FileRecord
@@ -28,20 +27,9 @@ function FileDetail({ file, formatSize }: FileDetailProps): JSX.Element {
     const ext = file.path.split('.').pop()?.toLowerCase()
 
     if (ext === 'pdf') {
-      // PDF: check cache first, then render if miss
-      window.electron.thumbCacheGet(file.path).then(cached => {
-        if (cached) {
-          setThumbnail(cached)
-          return
-        }
-        // Cache miss → render with pdfjs-dist
-        renderPdfPage(file.path, 1, 1.5).then(dataUrl => {
-          if (dataUrl) {
-            setThumbnail(dataUrl)
-            // Write back to cache
-            window.electron.thumbCacheSet(file.path, dataUrl)
-          }
-        })
+      // PDF: go through main process (Windows Shell thumbnail via System.Drawing)
+      window.electron.thumbnailGet(file.path).then(data => {
+        if (data) setThumbnail(data)
       })
     } else {
       // Images and other: go through main process
