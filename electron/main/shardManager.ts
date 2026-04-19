@@ -991,9 +991,7 @@ export function deleteFileFromAllShards(filePath: string): number {
  */
 export function deleteFilesByFolderPrefixFromAllShards(folderPath: string): number {
   let totalDeleted = 0
-  const prefix = folderPath.endsWith('/') || folderPath.endsWith('\\')
-    ? folderPath
-    : folderPath + (folderPath.includes('\\') ? '\\' : '/')
+  const prefix = folderPath.replace(/\\/g, '/').replace(/\/$/, '') + '/'
   const readyShards = getReadyShards()
   for (const shard of readyShards) {
     try {
@@ -1064,9 +1062,7 @@ export type { Database }
  * Used to sync shard stats back to config.db after a scan completes.
  */
 export function getFolderStatsFromShards(folderPath: string): { fileCount: number; totalSize: number } {
-  const prefix = folderPath.endsWith('/') || folderPath.endsWith('\\')
-    ? folderPath
-    : folderPath + (folderPath.includes('\\') ? '\\' : '/')
+  const prefix = folderPath.replace(/\\/g, '/').replace(/\/$/, '') + '/'
   let totalCount = 0
   let totalSize = 0
   const readyShards = getReadyShards()
