@@ -4,6 +4,7 @@ import FileDetail from '../components/FileDetail'
 import { FileRecord } from '../types'
 import { useLanguage } from '../context/LanguageContext'
 import { formatSize } from '../utils/format'
+import { exportResults, ExportFormat } from '../utils/exportResults'
 
 interface SearchHistoryEntry {
   id?: number
@@ -68,6 +69,8 @@ function SearchPage(): JSX.Element {
   const [dedupEnabled, setDedupEnabled] = useState(false)
   const [secondaryFilter, setSecondaryFilter] = useState('')
   const [pendingEvents, setPendingEvents] = useState<{ event: string; path: string }[]>([])
+  const [showExportMenu, setShowExportMenu] = useState(false)
+  const exportMenuRef = useRef<HTMLDivElement>(null)
   const { t } = useLanguage()
 
   const inputRef = useRef<HTMLInputElement>(null)
@@ -129,6 +132,18 @@ function SearchPage(): JSX.Element {
     document.addEventListener('mousedown', handleClickOutside)
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [])
+
+  // Close export menu on outside click
+  useEffect(() => {
+    if (!showExportMenu) return
+    const handleClickOutside = (e: MouseEvent) => {
+      if (exportMenuRef.current && !exportMenuRef.current.contains(e.target as Node)) {
+        setShowExportMenu(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [showExportMenu])
 
   const loadHistory = async () => {
     try {
@@ -243,6 +258,11 @@ function SearchPage(): JSX.Element {
     if (e.key === 'Enter') {
       handleSearch()
     }
+  }
+
+  const handleExport = (format: ExportFormat) => {
+    exportResults({ query: searchQuery, files, snippets, formatSize }, format)
+    setShowExportMenu(false)
   }
 
   const handleHistoryClick = (query: string) => {
@@ -510,6 +530,31 @@ function SearchPage(): JSX.Element {
             >
               ?
             </button>
+            {/* Export button */}
+            {files.length > 0 && (
+              <div className="export-wrapper" ref={exportMenuRef} style={{ position: 'relative' }}>
+                <button
+                  className={`toolbar-btn ${showExportMenu ? 'active' : ''}`}
+                  onClick={() => setShowExportMenu(v => !v)}
+                  title={t('search.export') || '导出结果'}
+                >
+                  {t('search.export') || '导出'}
+                </button>
+                {showExportMenu && (
+                  <div className="export-dropdown">
+                    <div className="export-dropdown-item" onClick={() => handleExport('csv')}>
+                      <span>📊</span> CSV
+                    </div>
+                    <div className="export-dropdown-item" onClick={() => handleExport('html')}>
+                      <span>🌐</span> HTML
+                    </div>
+                    <div className="export-dropdown-item" onClick={() => handleExport('txt')}>
+                      <span>📝</span> TXT
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         </div>
 
