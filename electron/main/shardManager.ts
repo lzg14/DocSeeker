@@ -465,17 +465,35 @@ function isShardFull(shard: ShardInfo): boolean {
 }
 
 /**
- * Open the next shard. If the current shard is full or doesn't exist,
- * create and load a new one.
+ * Get the shard with the most remaining space (least loaded).
+ * Used for balancing new file writes across shards.
+ */
+function getLeastLoadedShard(): ShardInfo | null {
+  if (!config) return null
+  const maxBytes = config.maxSizeMB * 1024 * 1024
+  const readyShards = shards.filter(s => s.status === 'ready')
+  if (readyShards.length === 0) return null
+
+  return readyShards.reduce((best, s) => {
+    const remainingBest = (config!.maxSizeMB * 1024 * 1024) - best.currentSizeBytes
+    const remainingCurr = maxBytes - s.currentSizeBytes
+    return remainingCurr > remainingBest ? s : best
+  })
+}
+
+/**
+ * Open the best shard for new writes. Prefers the least loaded shard
+ * over the last shard, to keep all shards balanced.
+ * Creates a new shard when all existing ones are full.
  */
 export async function openNextShard(): Promise<ShardInfo | null> {
   await initShardManager()
 
-  let currentShard = getCurrentShard()
+  // Use the shard with most remaining space instead of always using the last one
+  let leastLoaded = getLeastLoadedShard()
 
-  // Check if current shard is full
-  if (currentShard && currentShard.status === 'ready' && !isShardFull(currentShard)) {
-    return currentShard
+  if (leastLoaded && !isShardFull(leastLoaded)) {
+    return leastLoaded
   }
 
   // Need a new shard

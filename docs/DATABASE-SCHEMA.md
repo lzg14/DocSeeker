@@ -100,6 +100,25 @@ db/
 
 每个分片存储一组文件的索引，使用 FTS5 全文搜索。
 
+### Shard 写入策略（负载均衡）
+
+新增文件写入 shard 时，**不总是写最后一个 shard**，而是选择**剩余空间最大的 shard**：
+
+```
+openNextShard() → getLeastLoadedShard()
+  → 扫描所有 status='ready' 的 shard
+  → 计算每个 shard 的 (maxSizeMB - currentSizeBytes)，取差值最大者
+  → 若该 shard 未满，写入；否则创建新 shard
+```
+
+**均衡效果：**
+- 删除目录后，该 shard 剩余空间变大 → 优先填入新文件
+- 所有 shard 均匀填充，避免单 shard 过载
+- 新增文件自动分散到各 shard，无需手动均衡
+
+**为什么不主动迁移文件？**
+迁移已有文件需要在 shard 间移动数据，复杂度高且可能影响搜索。而使用"最空优先写"策略，删除目录后自然留出空间，新增文件自动填补，无需额外处理。
+
 ### 重要：路径格式
 
 shards 里存储的路径**统一使用正斜杠**（`D:/User/Desktop/...`），由 `scanWorker` 写入时通过 `filePath.replace(/\\/g, '/')` 转换。
@@ -156,3 +175,4 @@ DELETE FROM sqlite_sequence WHERE name = 'old_table_name';
 2. **config.json** 存储系统配置，无则自动生成默认值
 3. **shards/** 存储文件内容索引，不可丢失，丢失后需重新扫描
 4. 所有数据库启用 WAL 模式，提高并发读写性能
+5. **Shard 写入使用最空优先策略**，避免手动均衡
