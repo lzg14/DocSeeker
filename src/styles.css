@@ -2642,3 +2642,37 @@ button, input, select {
   background: var(--border);
   margin: 4px 0;
 }
+
+/* 导出下拉菜单 */
+.export-wrapper {
+  display: inline-block;
+  position: relative;
+}
+
+.export-dropdown {
+  position: absolute;
+  top: calc(100% + 4px);
+  right: 0;
+  background: var(--bg-secondary, #fff);
+  border: 1px solid var(--border-color, #ddd);
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+  min-width: 160px;
+  z-index: 200;
+  overflow: hidden;
+}
+
+.export-dropdown-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  cursor: pointer;
+  font-size: 13px;
+  color: var(--text-primary, #333);
+  transition: background 0.15s;
+}
+
+.export-dropdown-item:hover {
+  background: var(--bg-hover, #f5f5f5);
+}
