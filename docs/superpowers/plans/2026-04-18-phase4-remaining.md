@@ -2,9 +2,9 @@
 
 > 维护人：lizhgb
 > 更新日期：2026-04-19
-> 状态：部分完成
+> 状态：已完成（图片 + PDF 缩略图、去重功能）
 >
-> **说明：** 图片缩略图和去重功能已在集成阶段实现。PDF 缩略图实施中（见 `2026-04-19-pdf-thumbnail.md`）。
+> **说明：** 图片缩略图、去重功能、PDF 缩略图均已在集成阶段实现完成。
 
 ---
 
@@ -49,7 +49,7 @@
 
 ---
 
-## 三、PDF 缩略图（待实现 ❌）
+## 三、PDF 缩略图（已完成 ✅）
 
 ### 推荐方案：混合策略
 
@@ -197,7 +197,7 @@ CREATE VIRTUAL TABLE IF NOT EXISTS shard_folders_fts USING fts5(name, parent_pat
 |------|------|------|
 | 1 | ThumbnailCache LRU 磁盘缓存 | ✅ 已完成 |
 | 2 | 图片缩略图生成 + FileDetail 展示 | ✅ 已完成 |
-| 3 | PDF 缩略图（混合策略：Shell原生优先 + pdfjs-dist 回退） | ❌ 待实施 |
+| 3 | PDF 缩略图（Windows Shell: System.Drawing.Bitmap.FromFile） | ✅ 已完成 |
 | 4 | 去重后端 deduplicateResults + IPC | ✅ 已完成 |
 | 5 | 去重前端 toggle + i18n | ✅ 已完成 |
 | 6 | 文件夹索引后端（shardFolderIndex.ts） | ❌ 待实施 |
@@ -211,6 +211,6 @@ CREATE VIRTUAL TABLE IF NOT EXISTS shard_folders_fts USING fts5(name, parent_pat
 
 - [x] M4.1: 图片文件在 FileDetail 中显示缩略图，hover 触发加载，缓存命中不再重新生成
 - [x] M4.6: SearchPage 工具栏显示去重按钮，勾选后搜索结果按 hash 过滤
-- [ ] PDF 文件在 FileDetail 中显示缩略图（首页预览）
+- [x] PDF 文件在 FileDetail 中显示缩略图（Windows Shell 方案）
 - [ ] 搜索 `folder:Desktop` 能返回名为 Desktop 的文件夹
 - [ ] `docs/CROSSPLATFORM.md` 包含 macOS/Linux 可行性评估和实施建议
