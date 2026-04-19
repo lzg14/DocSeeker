@@ -82,6 +82,14 @@ export interface SearchOptions {
   dateTo?: string
 }
 
+export interface UsnEvent {
+  event: string
+  path: string
+  volume: string
+  timestamp: number
+  oldPath?: string
+}
+
 export interface ElectronAPI {
   selectDirectory: () => Promise<string | null>
   onScanProgress: (callback: (progress: ScanProgress) => void) => () => void
@@ -143,6 +151,10 @@ export interface ElectronAPI {
   thumbCacheSet: (filePath: string, dataUrl: string) => Promise<void>
   // Clipboard
   clipboardWriteText: (text: string) => Promise<{ success: boolean }>
+  // USN Realtime Monitor
+  usnGetConfig: () => Promise<{ enabled: boolean; dirs: string[] }>
+  usnSetConfig: (config: { enabled?: boolean; dirs?: string[] }) => Promise<void>
+  onUsnUpdate: (callback: (ev: UsnEvent) => void) => () => void
 }
 
 const electronAPI: ElectronAPI = {
@@ -267,6 +279,16 @@ const electronAPI: ElectronAPI = {
   thumbCacheSet: (filePath: string, dataUrl: string) => ipcRenderer.invoke('thumb-cache-set', filePath, dataUrl),
 
   clipboardWriteText: (text: string) => ipcRenderer.invoke('clipboard-write-text', text),
+
+  usnGetConfig: () => ipcRenderer.invoke('usn-get-config'),
+
+  usnSetConfig: (config) => ipcRenderer.invoke('usn-set-config', config),
+
+  onUsnUpdate: (callback) => {
+    const handler = (_: any, ev: UsnEvent) => callback(ev)
+    ipcRenderer.on('usn-update', handler)
+    return () => ipcRenderer.removeListener('usn-update', handler)
+  },
 }
 
 contextBridge.exposeInMainWorld('electron', electronAPI)

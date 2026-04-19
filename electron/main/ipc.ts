@@ -43,7 +43,8 @@ import {
   deleteSavedSearch,
   type ScannedFolder as MetaScannedFolder
 } from './meta'
-import { getScanSettings, updateScanSettings } from './config'
+import { getScanSettings, updateScanSettings, getAppSetting, setAppSetting } from './config'
+import { usnWatcher } from './usnWatcher'
 import { getImageThumbnail, isImageFile, THUMB_CACHE } from './thumbnail'
 import { getPdfThumbnail } from './pdfThumbnail'
 
@@ -600,6 +601,29 @@ export function registerIpcHandlers(): void {
     const { clipboard } = await import('electron')
     clipboard.writeText(text)
     return { success: true }
+  })
+
+  // ── USN Realtime Monitor ────────────────────────────────────────────────────
+  ipcMain.handle('usn-get-config', async (): Promise<{ enabled: boolean; dirs: string[] }> => {
+    return getAppSetting<{ enabled: boolean; dirs: string[] }>('realtimeMonitor', {
+      enabled: false,
+      dirs: [],
+    })
+  })
+
+  ipcMain.handle('usn-set-config', async (_, config: { enabled?: boolean; dirs?: string[] }): Promise<void> => {
+    const current = getAppSetting<{ enabled: boolean; dirs: string[] }>('realtimeMonitor', {
+      enabled: false,
+      dirs: [],
+    })
+    const updated = { ...current, ...config }
+    setAppSetting('realtimeMonitor', updated)
+
+    if (updated.enabled && updated.dirs.length > 0) {
+      await usnWatcher.start()
+    } else {
+      usnWatcher.stop()
+    }
   })
 
   // Read thumbnail from disk cache (supports both images and PDF)
