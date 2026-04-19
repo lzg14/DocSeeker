@@ -129,6 +129,8 @@ const translations: Record<Language, Record<string, string>> = {
     'search.extracting': '正在提取内容...',
     'search.secondaryFilterPlaceholder': '在结果中筛选路径或文件名...',
     'search.clearSecondaryFilter': '清除筛选',
+    'search.loadNew': '加载',
+    'search.dismiss': '忽略',
     // File detail
     'detail.info': '文件信息',
     'detail.size': '大小',
@@ -406,6 +408,10 @@ const translations: Record<Language, Record<string, string>> = {
     'settings.window.autoLaunchDesc': 'Launch DocSeeker automatically when Windows starts',
     'settings.window.minimizeToTray': 'Minimize to Tray on Close',
     'settings.window.minimizeToTrayDesc': 'Hide to system tray instead of closing when clicking the close button',
+    'settings.realtimeMonitor': 'Realtime File Monitor',
+    'settings.enableRealtimeMonitor': 'Enable Realtime Monitor',
+    'settings.enableRealtimeMonitorDesc': 'Monitor file changes in watched directories and update search index in real time. Note: deleting a folder will remove all its files from the search index.',
+    'settings.realtimeMonitorWarning': 'Deleting a folder will remove all its files from the search index. Restore requires a manual rescan.',
     // Status bar
     'status.indexed': '{count} files indexed',
     'status.loading': 'Loading...',

@@ -10,14 +10,23 @@ function LanguagePage(): JSX.Element {
   const [minimizeToTray, setMinimizeToTray] = useState(
     () => localStorage.getItem('minimizeToTray') === 'true'
   )
+  const [monitorEnabled, setMonitorEnabled] = useState(false)
 
   useEffect(() => {
     window.electron.getGlobalHotkey().then(h => setCurrentHotkey(formatHotkey(h)))
     window.electron.getAutoLaunch?.().then(setAutoLaunch)
+    window.electron.usnGetConfig?.().then(cfg => {
+      if (cfg) setMonitorEnabled(cfg.enabled)
+    })
   }, [])
 
   const formatHotkey = (hk: string) =>
     hk.replace('CommandOrControl', 'Ctrl').replace(/\+/g, ' + ')
+
+  const handleToggleMonitor = async (checked: boolean) => {
+    setMonitorEnabled(checked)
+    await window.electron.usnSetConfig?.({ enabled: checked })
+  }
 
   const listenForHotkey = async () => {
     setListening(true)
@@ -180,6 +189,27 @@ function LanguagePage(): JSX.Element {
               setMinimizeToTray(v)
               localStorage.setItem('minimizeToTray', String(v))
             }} />
+          </div>
+        </div>
+      </div>
+
+      <div className="settings-section">
+        <div className="settings-section-title">{t('settings.realtimeMonitor')}</div>
+        <div className="settings-card">
+          <div className="settings-row">
+            <div className="settings-row-info">
+              <div className="settings-row-label">{t('settings.enableRealtimeMonitor')}</div>
+              <div className="settings-row-desc">
+                {t('settings.enableRealtimeMonitorDesc')}
+                <span style={{ color: 'var(--warning-color)', display: 'block', marginTop: '4px' }}>
+                  {t('settings.realtimeMonitorWarning')}
+                </span>
+              </div>
+            </div>
+            <Toggle
+              checked={monitorEnabled}
+              onChange={handleToggleMonitor}
+            />
           </div>
         </div>
       </div>
