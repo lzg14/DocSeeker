@@ -19,7 +19,7 @@ const SUPPORTED_EXTENSIONS = new Set([
   '.doc', '.docx',
   '.xls', '.xlsx',
   '.ppt', '.pptx',
-  '.pdf',
+  '.pdf', '.xps',
   '.rtf',
   '.chm',
   '.odt', '.ods', '.odp',
@@ -52,6 +52,7 @@ const FILE_TYPE_MAP: Record<string, string> = {
   '.ppt': 'pptx',
   '.pptx': 'pptx',
   '.pdf': 'pdf',
+  '.xps': 'xps',
   '.rtf': 'rtf',
   '.chm': 'chm',
   '.odt': 'odf',
@@ -209,6 +210,39 @@ async function extractTextFromOdf(filePath: string): Promise<string> {
     return texts.join('\n')
   } catch (error) {
     log.warn(`Failed to extract text from odf: ${filePath}`, error)
+    return ''
+  }
+}
+
+// Extract text from XPS files (ZIP+XML, Microsoft PDF alternative)
+async function extractTextFromXps(filePath: string): Promise<string> {
+  try {
+    const JSZip = require('jszip')
+    const data = fs.readFileSync(filePath)
+    const zip = await JSZip.loadAsync(data)
+    const texts: string[] = []
+
+    // XPS document structure: Documents/1/Pages/*.fpage contain page XML
+    for (const [name, file] of Object.entries(zip.files)) {
+      if (file.dir || !name.endsWith('.fpage')) continue
+      const pageXml = await file.async('string')
+      // Extract text from Glyphs elements (XPS text rendering unit)
+      const glyphMatches = pageXml.match(/<Glyphs[^>]*UnicodeString="([^"]*)"[^>]*>/gi) || []
+      for (const m of glyphMatches) {
+        const match = m.match(/UnicodeString="([^"]*)"/i)
+        if (match && match[1]) texts.push(match[1])
+      }
+      // Also extract from TextBlock > Run elements
+      const runMatches = pageXml.match(/<Run[^>]*>([^<]*)<\/Run>/gi) || []
+      for (const m of runMatches) {
+        const t = m.replace(/<[^>]+>/g, '').trim()
+        if (t) texts.push(t)
+      }
+    }
+
+    return texts.join('\n')
+  } catch (error) {
+    log.warn(`[WARN] XPS failed: ${filePath}`, error)
     return ''
   }
 }
@@ -705,6 +739,8 @@ async function extractText(filePath: string, ext: string): Promise<string> {
       return extractTextFromPptx(filePath)
     case '.pdf':
       return extractTextFromPdf(filePath)
+    case '.xps':
+      return extractTextFromXps(filePath)
     case '.rtf':
       return extractTextFromRtf(filePath)
     case '.odt':

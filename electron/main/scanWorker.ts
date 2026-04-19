@@ -56,7 +56,7 @@ const SUPPORTED_EXTENSIONS = new Set([
   '.doc', '.docx',
   '.xls', '.xlsx',
   '.ppt', '.pptx',
-  '.pdf',
+  '.pdf', '.xps',
   '.rtf',
   '.chm',
   '.odt', '.ods', '.odp',
@@ -757,6 +757,42 @@ async function extractTextFromMedia(filePath: string): Promise<string> {
   }
 }
 
+// Extract text from XPS files (XML Paper Specification - Microsoft's ZIP+XML format)
+async function extractTextFromXps(filePath: string): Promise<string> {
+  try {
+    const JSZip = require('jszip')
+    const data = await fs.readFile(filePath)
+    // ZIP 头部检测
+    if (!isValidZip(data)) {
+      log.warn(`[XPS] Skip invalid ZIP header: ${filePath}`)
+      return ''
+    }
+    const zip = await withTimeout(JSZip.loadAsync(data), TIMEOUT_MS)
+    const texts: string[] = []
+    for (const [name, file] of Object.entries(zip.files) as [string, { dir: boolean, async: (type: string) => Promise<string> }][]) {
+      if (file.dir) continue
+      if (!name.endsWith('.fpage')) continue
+      const pageXml = await file.async('string')
+      // XPS text is stored in Glyphs elements with UnicodeString attribute
+      const glyphMatches = pageXml.match(/<Glyphs[^>]*UnicodeString="([^"]*)"[^>]*>/gi) || []
+      for (const m of glyphMatches) {
+        const match = m.match(/UnicodeString="([^"]*)"/i)
+        if (match && match[1]) texts.push(match[1])
+      }
+      // Also extract plain Run elements
+      const runMatches = pageXml.match(/<Run[^>]*>([^<]*)<\/Run>/gi) || []
+      for (const m of runMatches) {
+        const t = m.replace(/<[^>]+>/g, '').trim()
+        if (t) texts.push(t)
+      }
+    }
+    return texts.join('\n')
+  } catch (error) {
+    log.warn(`[WARN] XPS failed: ${error.message}`)
+    return ''
+  }
+}
+
 async function extractText(filePath: string, ext: string, fileSize?: number): Promise<string> {
   const lowerExt = ext.toLowerCase()
 
@@ -771,6 +807,8 @@ async function extractText(filePath: string, ext: string, fileSize?: number): Pr
       return extractTextFromPptx(filePath, fileSize)
     case '.pdf':
       return extractTextFromPdf(filePath, fileSize)
+    case '.xps':
+      return extractTextFromXps(filePath)
     case '.rtf':
       return extractTextFromRtf(filePath)
     case '.odt':
@@ -961,6 +999,7 @@ function getFileType(ext: string): string {
     '.xls': 'xlsx', '.xlsx': 'xlsx',
     '.ppt': 'pptx', '.pptx': 'pptx',
     '.pdf': 'pdf',
+    '.xps': 'xps',
     '.rtf': 'rtf',
     '.chm': 'chm',
     '.odt': 'odf', '.ods': 'odf', '.odp': 'odf',

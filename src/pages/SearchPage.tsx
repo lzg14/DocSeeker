@@ -31,6 +31,7 @@ const FILE_TYPE_OPTIONS = [
   { value: 'xlsx', label: 'Excel' },
   { value: 'pptx', label: 'PPT' },
   { value: 'pdf', label: 'PDF' },
+  { value: 'xps', label: 'XPS' },
   { value: 'text', label: '文本' },
   { value: 'html', label: 'HTML' },
   { value: 'svg', label: 'SVG' },

@@ -4,7 +4,7 @@
 
 ---
 
-## 已支持文件格式（28 种）
+## 已支持文件格式（29 种）
 
 | 格式 | 扩展名 | 全文索引 | UI 过滤器 |
 |------|--------|----------|-----------|
@@ -15,6 +15,7 @@
 | Excel | .xls .xlsx | ✅ | ✅ Excel |
 | PowerPoint | .ppt .pptx | ✅ | ✅ PPT |
 | PDF | .pdf | ✅ | ✅ PDF |
+| XPS | .xps | ✅ | ✅ XPS |
 | RTF | .rtf | ✅ | ✅ RTF |
 | CHM | .chm | ✅ | ✅ CHM |
 | ODF | .odt .ods .odp | ✅ | ✅ ODF |
