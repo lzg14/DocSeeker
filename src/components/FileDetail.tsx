@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { FileRecord } from '../types'
 import { useLanguage } from '../context/LanguageContext'
+import { renderPdfPage } from '../utils/pdfRender'
 
 interface FileDetailProps {
   file: FileRecord
@@ -19,14 +20,24 @@ function FileDetail({ file, formatSize }: FileDetailProps): JSX.Element {
     return new Date(dateStr).toLocaleString('zh-CN')
   }
 
-  // Load thumbnail when file path changes (main process filters by file type)
+  // Load thumbnail when file path changes (image via main, PDF via renderer)
   useEffect(() => {
     setThumbnail(null)
     if (!file?.path) return
 
-    window.electron.thumbnailGet(file.path).then(data => {
-      if (data) setThumbnail(data)
-    })
+    const ext = file.path.split('.').pop()?.toLowerCase()
+
+    if (ext === 'pdf') {
+      // PDF: use pdfjs-dist renderer (has DOM Canvas access)
+      renderPdfPage(file.path, 1, 1.5).then(dataUrl => {
+        if (dataUrl) setThumbnail(dataUrl)
+      })
+    } else {
+      // Images and other: go through main process
+      window.electron.thumbnailGet(file.path).then(data => {
+        if (data) setThumbnail(data)
+      })
+    }
   }, [file?.path])
 
   return (

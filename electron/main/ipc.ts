@@ -582,6 +582,13 @@ export function registerIpcHandlers(): void {
     return null
   })
 
+  // PDF thumbnail renderer — actual rendering happens in renderer process
+  // This handler exists for interface consistency; do NOT call from renderer
+  ipcMain.handle('pdf-render', async (_, _filePath: string): Promise<string | null> => {
+    log.warn('[IPC] pdf-render should not be called from main — use renderPdfPage directly in renderer')
+    return null
+  })
+
   // Clear thumbnail cache
   ipcMain.handle('thumbnail-clear', async () => {
     THUMB_CACHE.clear()
