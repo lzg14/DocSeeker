@@ -40,9 +40,9 @@
 | macOS | 图片：`jimp`（纯 JS）；PDF：需用 QuickLook 或 pdfjs-dist Canvas |
 | Linux | 图片：`jimp`（纯 JS）；PDF：需用 pdfjs-dist Canvas |
 
-**当前状态：** 图片缩略图已用 `jimp` 实现（纯 JS，无需修改）；PDF 缩略图在 Windows 上用 Shell 原生方案，macOS/Linux 暂无实现。
+**当前状态：** 图片缩略图已用 `jimp` 实现（纯 JS，无需修改）；PDF 缩略图在 Windows 上用 Shell 原生方案，macOS/Linux 用 pdfjs-dist Canvas 渲染（`pdfRender.ts`，CDN CMaps 支持 CJK 字体）。
 
-**结论：** 图片缩略图天然跨平台。PDF 缩略图需统一用 pdfjs-dist Canvas 渲染（跨平台一致，但 CJK 字体需额外处理）。
+**结论：** 图片缩略图天然跨平台。PDF 缩略图跨平台均已实现。
 
 ### 2.3 注册表 / .lnk 快捷方式
 
@@ -221,13 +221,13 @@ Phase 4: macOS 打包 + 代码签名
 
 | 平台 | 可行性 | 优先级 | 预估工作量 | 主要风险 |
 |------|--------|--------|-----------|---------|
-| macOS | ✅ 完全可行 | **P1** | 约 2 个月 | PDF 缩略图、代码签名 |
+| macOS | ✅ 完全可行 | **P1** | 约 2 个月 | 代码签名 |
 | Linux | ✅ 完全可行 | P2 | 约 2 个月 | 发行版碎片化 |
 
 **当前优势：** 所有核心文件格式（.doc/.xls/.pptx/.pdf/.chm/.epub/.zip/.rar 等）均已纯 JS 实现，无 Windows 原生依赖，跨平台工作量比预期大幅减少。
 
 **行动建议：**
-1. **立即**：抽象 `FileWatcher` 接口，为跨平台做准备
-2. **短期**：PDF 缩略图统一迁移到 pdfjs-dist Canvas（跨平台一致）
+1. **已完成**：PDF 缩略图跨平台（Windows Shell + macOS/Linux pdfjs-dist Canvas）
+2. **立即**：抽象 `FileWatcher` 接口，为跨平台做准备
 3. **中期**：macOS 移植（UI 适配 + 打包 + 签名）
 4. **长期**：Linux 评估（根据用户反馈决定优先级）
