@@ -45,6 +45,11 @@
 
 ## 数据库规范
 
+### 直接查询 SQLite 数据
+- **使用 Python 脚本**，不要用 Node.js REPL 或重新构建 sql.js
+- 示例：`node -e "..."` 使用 sql.js 需要编译/加载 WASM，容易出错
+- Python: `python -c "import sqlite3; ..."` 或编写 `.py` 脚本直接查询
+
 ### SQLite 字段修改流程
 1. 在 `migration.ts` 中编写迁移脚本，使用 ALTER TABLE
 2. 修改实体类字段后，必须同步更新 TypeScript 类型定义
