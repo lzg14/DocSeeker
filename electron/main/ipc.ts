@@ -353,27 +353,29 @@ export function registerIpcHandlers(): void {
               break
             }
             case 'complete': {
-              log.info(`Incremental scan complete: ${filesProcessed} files, time: ${message.data.totalTime}ms`)
-              // Wait for all pending batches to be written to shards before querying stats
-              if (shardId >= 0) {
-                await flushPendingBatches(shardId)
-              }
-              // Sync shard stats back to config.db (the single source of truth)
-              const folder = getScannedFolderByPath(folderPath)
-              if (folder && folder.id) {
-                const shardStats = getFolderStatsFromShards(folderPath)
-                syncFolderStatsFromShards(folder.id, folderPath, shardStats)
-              }
-              event.sender.send('scan-progress', {
-                current: filesProcessed,
-                total: filesProcessed,
-                currentFile: '扫描完成',
-                phase: 'complete',
-                errorStats: message.data.errorStats,
-                totalTime: message.data.totalTime
-              })
-              resolve({ success: true, filesProcessed, skipped, errors })
-              worker.terminate()
+              ;(async () => {
+                log.info(`Incremental scan complete: ${filesProcessed} files, time: ${message.data.totalTime}ms`)
+                // Wait for all pending batches to be written to shards before querying stats
+                if (shardId >= 0) {
+                  await flushPendingBatches(shardId)
+                }
+                // Sync shard stats back to config.db (the single source of truth)
+                const folder = getScannedFolderByPath(folderPath)
+                if (folder && folder.id) {
+                  const shardStats = getFolderStatsFromShards(folderPath)
+                  syncFolderStatsFromShards(folder.id, folderPath, shardStats)
+                }
+                event.sender.send('scan-progress', {
+                  current: filesProcessed,
+                  total: filesProcessed,
+                  currentFile: '扫描完成',
+                  phase: 'complete',
+                  errorStats: message.data.errorStats,
+                  totalTime: message.data.totalTime
+                })
+                resolve({ success: true, filesProcessed, skipped, errors })
+                worker.terminate()
+              })()
               break
             }
             case 'error':
@@ -459,26 +461,28 @@ export function registerIpcHandlers(): void {
               break
             }
             case 'complete':
-              log.info(`Full rescan complete: ${filesProcessed} files, time: ${message.data.totalTime}ms`)
-              // Wait for all pending batches to be written to shards before querying stats
-              if (shardId >= 0) {
-                await flushPendingBatches(shardId)
-              }
-              if (folder && folder.id) {
-                // Sync shard stats back to config.db after full scan
-                const shardStats = getFolderStatsFromShards(folderPath)
-                syncFolderStatsFromShardsFull(folder.id, folderPath, shardStats)
-              }
-              event.sender.send('scan-progress', {
-                current: filesProcessed,
-                total: filesProcessed,
-                currentFile: '扫描完成',
-                phase: 'complete',
-                errorStats: message.data.errorStats,
-                totalTime: message.data.totalTime
-              })
-              resolve({ success: true, filesProcessed, errors })
-              worker.terminate()
+              ;(async () => {
+                log.info(`Full rescan complete: ${filesProcessed} files, time: ${message.data.totalTime}ms`)
+                // Wait for all pending batches to be written to shards before querying stats
+                if (shardId >= 0) {
+                  await flushPendingBatches(shardId)
+                }
+                if (folder && folder.id) {
+                  // Sync shard stats back to config.db after full scan
+                  const shardStats = getFolderStatsFromShards(folderPath)
+                  syncFolderStatsFromShardsFull(folder.id, folderPath, shardStats)
+                }
+                event.sender.send('scan-progress', {
+                  current: filesProcessed,
+                  total: filesProcessed,
+                  currentFile: '扫描完成',
+                  phase: 'complete',
+                  errorStats: message.data.errorStats,
+                  totalTime: message.data.totalTime
+                })
+                resolve({ success: true, filesProcessed, errors })
+                worker.terminate()
+              })()
               break
             case 'error':
               log.error('Full rescan worker error:', message.data.message)
