@@ -595,5 +595,35 @@ export function registerIpcHandlers(): void {
     return { success: true }
   })
 
+  // Read thumbnail from disk cache (supports both images and PDF)
+  ipcMain.handle('thumb-cache-get', async (_, filePath: string): Promise<string | null> => {
+    try {
+      const { createHash } = await import('crypto')
+      const fs = await import('fs')
+      const stat = await fs.promises.stat(filePath)
+      const hash = createHash('sha256').update(filePath + stat.mtimeMs).digest('hex').slice(0, 16)
+      const cached = THUMB_CACHE.get(hash)
+      return cached ? `data:image/png;base64,${cached.toString('base64')}` : null
+    } catch {
+      return null
+    }
+  })
+
+  // Write thumbnail to disk cache
+  ipcMain.handle('thumb-cache-set', async (_, filePath: string, dataUrl: string): Promise<void> => {
+    try {
+      const { createHash } = await import('crypto')
+      const fs = await import('fs')
+      const stat = await fs.promises.stat(filePath)
+      const hash = createHash('sha256').update(filePath + stat.mtimeMs).digest('hex').slice(0, 16)
+      // dataUrl format: data:image/png;base64,xxxxx
+      const base64 = dataUrl.replace(/^data:image\/\w+;base64,/, '')
+      const buffer = Buffer.from(base64, 'base64')
+      THUMB_CACHE.set(filePath, buffer)
+    } catch (err) {
+      log.warn('[IPC] thumb-cache-set failed:', err)
+    }
+  })
+
   log.info('[IPC] All handlers registered')
 }

@@ -28,9 +28,20 @@ function FileDetail({ file, formatSize }: FileDetailProps): JSX.Element {
     const ext = file.path.split('.').pop()?.toLowerCase()
 
     if (ext === 'pdf') {
-      // PDF: use pdfjs-dist renderer (has DOM Canvas access)
-      renderPdfPage(file.path, 1, 1.5).then(dataUrl => {
-        if (dataUrl) setThumbnail(dataUrl)
+      // PDF: check cache first, then render if miss
+      window.electron.thumbCacheGet(file.path).then(cached => {
+        if (cached) {
+          setThumbnail(cached)
+          return
+        }
+        // Cache miss → render with pdfjs-dist
+        renderPdfPage(file.path, 1, 1.5).then(dataUrl => {
+          if (dataUrl) {
+            setThumbnail(dataUrl)
+            // Write back to cache
+            window.electron.thumbCacheSet(file.path, dataUrl)
+          }
+        })
       })
     } else {
       // Images and other: go through main process

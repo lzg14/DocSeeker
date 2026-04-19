@@ -138,6 +138,9 @@ export interface ElectronAPI {
   // Image thumbnail
   thumbnailGet: (filePath: string) => Promise<string | null>
   thumbnailClear: () => Promise<{ success: boolean }>
+  // Thumbnail cache
+  thumbCacheGet: (filePath: string) => Promise<string | null>
+  thumbCacheSet: (filePath: string, dataUrl: string) => Promise<void>
 }
 
 const electronAPI: ElectronAPI = {
@@ -256,6 +259,10 @@ const electronAPI: ElectronAPI = {
   thumbnailGet: (filePath: string) => ipcRenderer.invoke('thumbnail-get', filePath),
 
   thumbnailClear: () => ipcRenderer.invoke('thumbnail-clear'),
+
+  thumbCacheGet: (filePath: string) => ipcRenderer.invoke('thumb-cache-get', filePath),
+
+  thumbCacheSet: (filePath: string, dataUrl: string) => ipcRenderer.invoke('thumb-cache-set', filePath, dataUrl),
 }
 
 contextBridge.exposeInMainWorld('electron', electronAPI)
