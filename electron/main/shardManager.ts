@@ -1002,6 +1002,9 @@ export function deleteFilesByFolderPrefixFromAllShards(folderPath: string): numb
       db.close()
       if (result.changes > 0) {
         totalDeleted += result.changes
+        // Refresh fileCount so status bar reflects accurate total
+        const countRow = db.prepare('SELECT COUNT(*) as count FROM shard_files').get() as { count: number } | undefined
+        shard.fileCount = countRow?.count ?? shard.fileCount
         log.info(`[ShardManager] Deleted ${result.changes} files under ${folderPath} from shard ${shard.id}`)
       }
     } catch (err) {
