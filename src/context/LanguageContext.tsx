@@ -203,7 +203,6 @@ const translations: Record<Language, Record<string, string>> = {
     'guide.documents': '文档',
     'guide.desktop': '桌面',
     'guide.addFolders': '添加选中文件夹',
-    'guide.skipSetup': '暂不设置，稍后在「扫描目录」中添加',
     'guide.foldersAdded': '已添加 {count} 个文件夹，正在跳转到扫描页面...',
     'guide.noFoldersSelected': '请至少选择一个文件夹',
     // Settings
@@ -373,7 +372,6 @@ const translations: Record<Language, Record<string, string>> = {
     'guide.documents': 'Documents',
     'guide.desktop': 'Desktop',
     'guide.addFolders': 'Add Selected Folders',
-    'guide.skipSetup': 'Skip, add folders later in "Scan Directory"',
     'guide.foldersAdded': '{count} folder(s) added. Redirecting to scan page...',
     'guide.noFoldersSelected': 'Please select at least one folder',
     // Settings

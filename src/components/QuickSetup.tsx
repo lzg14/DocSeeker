@@ -47,11 +47,6 @@ function QuickSetup({ onComplete }: QuickSetupProps): JSX.Element {
 
   if (!systemPaths) return <div />
 
-  const getFolderName = (path: string): string => {
-    const parts = path.split(/[/\\]/)
-    return parts[parts.length - 1] || path
-  }
-
   return (
     <div className="settings-section">
       <div className="settings-section-title">{t('guide.quickSetup')}</div>
@@ -88,23 +83,13 @@ function QuickSetup({ onComplete }: QuickSetupProps): JSX.Element {
             {t('guide.foldersAdded').replace('{count}', String(addedCount))}
           </p>
         ) : (
-          <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-            <button
-              className="btn btn-primary"
-              onClick={handleAddFolders}
-              disabled={adding}
-            >
-              {adding ? '...' : t('guide.addFolders')}
-            </button>
-            {onComplete && (
-              <button
-                className="btn btn-secondary"
-                onClick={onComplete}
-              >
-                {t('guide.skipSetup')}
-              </button>
-            )}
-          </div>
+          <button
+            className="btn btn-primary"
+            onClick={handleAddFolders}
+            disabled={adding}
+          >
+            {adding ? '...' : t('guide.addFolders')}
+          </button>
         )}
       </div>
     </div>
