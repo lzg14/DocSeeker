@@ -50,6 +50,7 @@ export interface SearchResult {
   content: string | null
   created_at?: string
   updated_at?: string
+  is_supported?: number  // 0 = unsupported, 1 = supported
   shardId?: number  // Which shard this result came from
   rank?: number     // BM25 rank for cross-shard sorting
   match_type?: 'content' | 'filename'
