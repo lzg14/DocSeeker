@@ -80,8 +80,7 @@ function StatusBar(): JSX.Element {
         </span>
         {monitorStatus.enabled && (
           <span className="status-monitor" title={monitorStatus.dirs.join(', ')}>
-            🔴 {translate('status.monitoring')}: {monitorStatus.dirs.length > 0 ? monitorStatus.dirs[0] : ''}
-            {monitorStatus.dirs.length > 1 && ` +${monitorStatus.dirs.length - 1}`}
+            🔴 {translate('status.monitoring')}
           </span>
         )}
         {!monitorStatus.enabled && (
