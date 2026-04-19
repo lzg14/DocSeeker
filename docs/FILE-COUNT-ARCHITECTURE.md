@@ -6,7 +6,7 @@
 
 ## 一、单一数据源原则
 
-DocSeeker 中**所有界面显示的文件数量都来自 `config.db`**，shard 只负责存储文件内容，不作为 UI 数据源。
+DocSeeker 中**所有界面显示的文件数量都来自 `meta.db` 的 `scanned_folders` 表**，shards 只负责存储文件内容，不作为 UI 数据源。
 
 ### 数据流
 
@@ -14,23 +14,23 @@ DocSeeker 中**所有界面显示的文件数量都来自 `config.db`**，shard 
 增量/全量扫描
     │
     ▼
-shard/shard_files 写入数据（insertFileBatch）
+shards/shard_files 写入数据（insertFileBatch）
     │
     ▼
-扫描完成 → 从 shard 统计该文件夹的文件数和大小
+扫描完成 → 从所有 shard 统计该文件夹的文件数和大小
     │
     ▼
-更新 config.db scanned_folders (file_count, total_size) ← 唯一真实数据
+更新 meta.db scanned_folders (file_count, total_size) ← 唯一真实数据
     │
     ▼
-界面从 config.db 读取显示
+界面从 meta.db 读取显示
 ```
 
 ---
 
 ## 二、存储结构
 
-### config.db → scanned_folders 表
+### meta.db → scanned_folders 表
 
 | 字段 | 说明 |
 |------|------|
@@ -62,7 +62,7 @@ shard/shard_files 写入数据（insertFileBatch）
 export function getFolderStatsFromShards(folderPath: string): { fileCount: number; totalSize: number }
 ```
 
-### config.ts
+### meta.ts
 
 ```typescript
 // 增量扫描完成后同步 stats
@@ -75,7 +75,7 @@ export function syncFolderStatsFromShardsFull(id, folderPath, stats)
 ### database.ts
 
 ```typescript
-// UI 获取总数的接口：累加 config.db 中所有 folder.file_count
+// UI 获取总数的接口：累加 meta.db 中所有 folder.file_count
 export function getTotalFileCountFromConfig(): number
 ```
 
@@ -89,26 +89,24 @@ export function getTotalFileCountFromConfig(): number
 
 ---
 
-## 四、历史遗留问题
+## 四、数据库架构（2026-04-19 重构）
 
-### 症状
-shards 中有历史数据（2.1M 条），而 config.db 只有新扫描的数据（30 条），导致总数不一致。
+重构后数据库职责分离：
 
-### 原因
-旧架构下 shards 和 config.db 是两套独立计数，没有关联。
+| 数据库 | 存储内容 | 管理模块 |
+|--------|---------|---------|
+| `meta.db` | scanned_folders, search_history, saved_searches | meta.ts |
+| `config.json` | scan_settings, app_settings | config.ts |
+| `shards/*.db` | 文件内容索引 | shardManager.ts |
 
-### 解决方式（用户需要手动操作一次）
-1. 停止 DocSeeker
-2. 删除 shards 目录：`rm -rf "$APPDATA/DocSeeker/db/shards/"`
-3. 重新启动，shards 重建为空
-4. 对每个文件夹重新扫描，数据自动同步
+详情见 [DATABASE-SCHEMA.md](./DATABASE-SCHEMA.md)。
 
 ---
 
 ## 五、正常情况下的预期行为
 
-| 操作 | config.db.file_count | 界面显示总数 |
-|------|----------------------|------------|
+| 操作 | meta.db.file_count | 界面显示总数 |
+|------|--------------------|------------|
 | 扫描前 | 0 | 0 |
 | 扫描 Desktop（1 个文件） | 1 | 1 |
 | 扫描 Documents（100 个文件） | 101 | 101 |

@@ -1,78 +1,20 @@
 /**
- * Config Database (db/config.db)
+ * Config Store (config.json)
  *
- * Stores ONLY app-level settings:
+ * Stores app-level settings as JSON:
  * - scan_settings: scanning preferences (file size limits, skip rules, etc.)
- * - app_settings: theme, language, hotkey, window state, etc.
+ * - app_settings: shard profile/config cache, etc.
  *
  * Folder metadata and search history are stored in meta.db (see meta.ts).
+ *
+ * Migration: On first run, if config.db exists, migrate data to config.json
+ * then delete config.db.
  */
 
 import { app } from 'electron'
 import { join } from 'path'
-import { existsSync, mkdirSync } from 'fs'
-import Database, { Database as BetterSqlite3Database } from 'better-sqlite3'
+import { existsSync, mkdirSync, readFileSync, writeFileSync, unlinkSync } from 'fs'
 import log from 'electron-log/main'
-
-let configDb: BetterSqlite3Database | null = null
-
-export function getConfigDbPath(): string {
-  return join(app.getPath('userData'), 'db', 'config.db')
-}
-
-function ensureDbDir(): void {
-  const dir = join(app.getPath('userData'), 'db')
-  if (!existsSync(dir)) {
-    mkdirSync(dir, { recursive: true })
-    log.info('[Config] Created db directory:', dir)
-  }
-}
-
-export function initConfig(): void {
-  ensureDbDir()
-  const dbPath = getConfigDbPath()
-
-  configDb = new Database(dbPath)
-  configDb.pragma('journal_mode = WAL')
-
-  // Scan settings table
-  configDb.exec(`
-    CREATE TABLE IF NOT EXISTS scan_settings (
-      id INTEGER PRIMARY KEY CHECK (id = 1),
-      settings TEXT NOT NULL DEFAULT '{}'
-    )
-  `)
-
-  // App settings table (theme, language, hotkey, window, etc.)
-  configDb.exec(`
-    CREATE TABLE IF NOT EXISTS app_settings (
-      key TEXT PRIMARY KEY,
-      value TEXT NOT NULL,
-      updated_at TEXT DEFAULT (datetime('now'))
-    )
-  `)
-
-  // Ensure default scan settings row exists
-  const row = configDb.prepare('SELECT id FROM scan_settings WHERE id = 1').get()
-  if (!row) {
-    configDb.prepare('INSERT INTO scan_settings (id, settings) VALUES (1, ?)').run(['{"timeoutMs":15000,"maxFileSize":104857600,"maxPdfSize":52428800,"skipOfficeInZip":true,"checkZipHeader":true,"checkFileSize":true,"skipRules":[],"includeHidden":false,"includeSystem":false}'])
-  }
-
-  log.info(`[Config] Initialized at ${dbPath}`)
-}
-
-export function closeConfig(): void {
-  if (configDb) {
-    configDb.close()
-    configDb = null
-    log.info('[Config] Closed')
-  }
-}
-
-function getDb(): BetterSqlite3Database {
-  if (!configDb) throw new Error('Config database not initialized')
-  return configDb
-}
 
 // ============ Scan Settings ============
 
@@ -107,30 +49,130 @@ export const DEFAULT_SCAN_SETTINGS: ScanSettings = {
   includeSystem: false
 }
 
-let currentScanSettings: ScanSettings = { ...DEFAULT_SCAN_SETTINGS }
+// ============ In-Memory State ============
 
-export function getScanSettings(): ScanSettings {
-  try {
-    const row = getDb().prepare('SELECT settings FROM scan_settings WHERE id = 1').get() as { settings: string } | undefined
-    if (row) {
-      const parsed = JSON.parse(row.settings)
-      currentScanSettings = { ...DEFAULT_SCAN_SETTINGS, ...parsed }
-    }
-  } catch {}
-  return { ...currentScanSettings }
+interface ConfigStore {
+  scan_settings: ScanSettings
+  app_settings: Record<string, unknown>
 }
 
-export function updateScanSettings(settings: Partial<ScanSettings>): void {
-  currentScanSettings = { ...currentScanSettings, ...settings }
-  try {
-    const stmt = getDb().prepare('UPDATE scan_settings SET settings = ? WHERE id = 1')
-    stmt.run([JSON.stringify(currentScanSettings)])
-  } catch (err) {
-    log.warn('[Config] Failed to save scan settings:', err)
+let store: ConfigStore = {
+  scan_settings: { ...DEFAULT_SCAN_SETTINGS },
+  app_settings: {}
+}
+
+// ============ Paths ============
+
+export function getConfigPath(): string {
+  return join(app.getPath('userData'), 'db', 'config.json')
+}
+
+function getConfigDir(): string {
+  return join(app.getPath('userData'), 'db')
+}
+
+function ensureConfigDir(): void {
+  const dir = getConfigDir()
+  if (!existsSync(dir)) {
+    mkdirSync(dir, { recursive: true })
   }
 }
 
-// ============ App Settings (theme, language, hotkey, etc.) ============
+// ============ Persist ============
+
+function saveStore(): void {
+  try {
+    ensureConfigDir()
+    writeFileSync(getConfigPath(), JSON.stringify(store, null, 2), 'utf-8')
+  } catch (err) {
+    log.warn('[Config] Failed to save config.json:', err)
+  }
+}
+
+// ============ Migration from config.db ============
+
+function migrateFromDb(dbPath: string): void {
+  try {
+    const Database = require('better-sqlite3')
+    const db = new Database(dbPath, { readonly: true })
+
+    try {
+      const row = db.prepare('SELECT settings FROM scan_settings WHERE id = 1').get() as { settings: string } | undefined
+      if (row) {
+        store.scan_settings = { ...DEFAULT_SCAN_SETTINGS, ...JSON.parse(row.settings) }
+      }
+    } catch {}
+
+    try {
+      const rows = db.prepare('SELECT key, value FROM app_settings').all() as { key: string; value: string }[]
+      for (const row of rows) {
+        try {
+          store.app_settings[row.key] = JSON.parse(row.value)
+        } catch {}
+      }
+    } catch {}
+
+    db.close()
+    saveStore()
+    log.info('[Config] Migrated config.db → config.json')
+  } catch (err) {
+    log.warn('[Config] migrateFromDb failed:', err)
+  }
+}
+
+// ============ Init ============
+
+export function initConfig(): void {
+  ensureConfigDir()
+  const configPath = getConfigPath()
+  const dbPath = join(getConfigDir(), 'config.db')
+
+  // Migrate from config.db if it exists (backward compatibility)
+  if (existsSync(dbPath)) {
+    migrateFromDb(dbPath)
+    try { unlinkSync(dbPath) } catch {}
+    try { unlinkSync(dbPath + '-wal') } catch {}
+    try { unlinkSync(dbPath + '-shm') } catch {}
+    return
+  }
+
+  // Load config.json
+  if (existsSync(configPath)) {
+    try {
+      const raw = readFileSync(configPath, 'utf-8')
+      const parsed = JSON.parse(raw)
+      if (parsed.scan_settings) {
+        store.scan_settings = { ...DEFAULT_SCAN_SETTINGS, ...parsed.scan_settings }
+      }
+      if (parsed.app_settings) {
+        store.app_settings = { ...parsed.app_settings }
+      }
+      log.info('[Config] Loaded from config.json')
+    } catch (err) {
+      log.warn('[Config] Failed to parse config.json, using defaults:', err)
+    }
+  } else {
+    log.info('[Config] No config.json found, saving defaults')
+    saveStore()
+  }
+}
+
+export function closeConfig(): void {
+  // Nothing to close for JSON store
+}
+
+// ============ Scan Settings API ============
+
+export function getScanSettings(): ScanSettings {
+  return { ...store.scan_settings }
+}
+
+export function updateScanSettings(settings: Partial<ScanSettings>): void {
+  store.scan_settings = { ...store.scan_settings, ...settings }
+  saveStore()
+}
+
+// ============ App Settings ============
 
 export interface AppSettings {
   themeId?: string
@@ -143,37 +185,17 @@ export interface AppSettings {
 }
 
 export function getAppSetting<T = unknown>(key: string, defaultValue: T): T {
-  try {
-    const row = getDb().prepare('SELECT value FROM app_settings WHERE key = ?').get() as { value: string } | undefined
-    if (row) {
-      return JSON.parse(row.value) as T
-    }
-  } catch {}
+  if (Object.prototype.hasOwnProperty.call(store.app_settings, key)) {
+    return store.app_settings[key] as T
+  }
   return defaultValue
 }
 
 export function setAppSetting(key: string, value: unknown): void {
-  try {
-    const stmt = getDb().prepare(`
-      INSERT INTO app_settings (key, value, updated_at) VALUES (?, ?, datetime('now'))
-      ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = datetime('now')
-    `)
-    stmt.run([key, JSON.stringify(value)])
-  } catch (err) {
-    log.warn('[Config] Failed to save app setting:', err)
-  }
+  store.app_settings[key] = value
+  saveStore()
 }
 
 export function getAllAppSettings(): AppSettings {
-  try {
-    const rows = getDb().prepare('SELECT key, value FROM app_settings').all() as { key: string; value: string }[]
-    const settings: AppSettings = {}
-    for (const row of rows) {
-      try {
-        (settings as Record<string, unknown>)[row.key] = JSON.parse(row.value)
-      } catch {}
-    }
-    return settings
-  } catch {}
-  return {}
+  return { ...store.app_settings } as AppSettings
 }
