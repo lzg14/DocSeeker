@@ -436,7 +436,7 @@ function SearchPage(): JSX.Element {
             <button
               className={`toolbar-btn ${dedupEnabled ? 'active' : ''}`}
               onClick={() => setDedupEnabled(d => !d)}
-              title={t('search.dedup') || '隐藏重复文件'}
+              title={t('search.dedupTip') || '按文件内容 hash 过滤重复文件，仅保留最新修改版本'}
             >
               🔗 {t('search.dedup') || '去重'}
             </button>

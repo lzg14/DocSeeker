@@ -3,6 +3,7 @@ import { ScannedFolder } from '../types'
 import { useAppContext } from '../context/AppContext'
 import { useLanguage } from '../context/LanguageContext'
 import DeleteFolderConfirmDialog from '../components/DeleteFolderConfirmDialog'
+import QuickSetup from '../components/QuickSetup'
 import { formatSize } from '../utils/format'
 
 function ScanPage(): JSX.Element {
@@ -189,10 +190,7 @@ function ScanPage(): JSX.Element {
 
       <div className="scan-content">
         {folders.length === 0 ? (
-          <div className="empty-state">
-            <p>{t('config.noFolders')}</p>
-            <p>{t('config.addHint')}</p>
-          </div>
+          <QuickSetup onComplete={loadFolders} />
         ) : (
           <div className="folder-list">
             {folders.map((folder) => (
