@@ -45,7 +45,7 @@ function FloatingSearch(): JSX.Element {
     try {
       const res = await window.electron.searchFiles(q)
       if (thisVersion !== searchVersion.current) return // 新搜索已发出，忽略旧结果
-      setResults(res.slice(0, 8))
+      setResults(res)
       setSearched(true)
       setIsSearching(false)
     } catch (err) {
@@ -70,11 +70,7 @@ function FloatingSearch(): JSX.Element {
       window.electron.hideFloatingWindow?.()
     } else if (e.key === 'Enter') {
       if (query.trim()) {
-        if (results.length > 0) {
-          openSelected()
-        } else {
-          search(query.trim())
-        }
+        search(query.trim())
       }
     } else if (e.key === 'ArrowDown') {
       e.preventDefault()
