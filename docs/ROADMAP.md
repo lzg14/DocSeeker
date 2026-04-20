@@ -1,6 +1,6 @@
 # DocSeeker 开发路线图
 
-> 更新时间: 2026-04-18（分片架构重构 + 数据库合并）
+> 更新时间: 2026-04-20（竞品分析扩展 + 新增企业级功能）
 
 ---
 
@@ -19,6 +19,8 @@
 
 DocSeeker 是一款基于 Electron + React + TypeScript 的本地文档全文搜索工具，使用 SQLite FTS5 + BM25 提供相关性排序。目前核心功能已就绪，但与竞品（AnyTXT 60+ 格式、Copernic 400+ 格式）相比，在文件格式覆盖、高级搜索、实时监控等方面存在明显差距。
 
+**主要竞品：** AnyTXT Searcher（免费/60+格式）、Copernic Desktop Search（收费/企业级）、TextSeek（收费/SQLite FTS5）、dtSearch（收费/企业级）、Recoll（Linux/开源）、FileSeek（收费）、UltraFileSearch（收费）、Lookeen（收费/Outlook 集成）
+
 本路线图以竞品分析 (`docs/COMPETITION.md`) 为依据，按优先级分四个阶段推进，目标是在 6-12 个月内将 DocSeeker 提升至与 AnyTXT 同级别的竞争力。
 
 ---
@@ -33,6 +35,8 @@ DocSeeker 是一款基于 Electron + React + TypeScript 的本地文档全文搜
 | 实时文件监控 | ✅ **已实现**（NTFS USN Journal API + Go 独立进程） | 重新启用需改用 NTFS USN Journal API | Everything / AnyTXT |
 | 正则搜索 | ✅ 已支持 `/pattern/` 语法 | 词干提取和字段搜索均已完成 | Everything / AnyTXT |
 | 文件过滤器 | ✅ 已支持类型/大小/日期三重过滤 | — | 所有主流竞品 |
+| **内容高亮跳转**（打开文件+定位关键词） | ❌ 缺失 | 点击结果直接定位到关键词位置 | AnyTXT / TextSeek / FileSeek 核心功能 |
+| **搜索语法自动补全** | ❌ 缺失 | 输入时智能提示搜索语法 | TextSeek / FileSeek / AnyTXT |
 
 ### P1 — 体验缺失（尽快补全）
 
@@ -42,9 +46,15 @@ DocSeeker 是一款基于 Electron + React + TypeScript 的本地文档全文搜
 | 保存的搜索 | ✅ 已完成 | — | AnyTXT / Copernic |
 | 搜索语法提示 | ✅ 语法提示面板已完成 | — | Recoll |
 | 去重 UI | ✅ 已完成 | — | 仅 Copernic |
-| 全局快捷键浮层 | ✅ Ctrl+Shift+F 已完成 | — | Listary |
+| 全局快捷键浮层 | ✅ Ctrl+Shift+F 已完成 | 双击 Ctrl 唤起（计划中） | Listary |
 | 缩略图预览 | ✅ hover 预览已完成 | — | Copernic / Listary |
 | 拖拽文件搜索 | ✅ 已完成 | — | Listary |
+| **搜索结果导出** | ✅ CSV/HTML/TXT 已完成 | — | Copernic / AnyTXT |
+| **搜索结果批量操作** | ❌ 缺失 | 移动/复制/删除多个结果 | FileSeek / FileSearchy |
+| **右键资源管理器集成** | ❌ 缺失 | "用 DocSeeker 搜索"右键菜单 | AnyTXT / Copernic |
+| **Outlook PST 邮件** | ❌ 缺失 | 解析 Outlook 数据文件 | Copernic / dtSearch / Lookeen / TextSeek |
+| **搜索结果排序自定义** | ❌ 缺失 | 按相关性/大小/修改时间排序 | Copernic / dtSearch / FileSeek |
+| **文件/文件夹标签** | ❌ 缺失 | 用户自定义标签分类 | Copernic / dtSearch / Lookeen |
 
 ### P2 — 技术债（逐步优化）
 
@@ -53,6 +63,11 @@ DocSeeker 是一款基于 Electron + React + TypeScript 的本地文档全文搜
 | Electron 冷启动 | ✅ 分片架构已完成（启动 <100ms，搜索 DB 后台加载） | 继续优化至毫秒级 | Everything 毫秒级 |
 | 跨平台支持 | 仅 Windows | 评估 macOS/Linux 可行性 | DocFetcher / Recoll |
 | 便携版 | ✅ 已完成 | — | Everything / AnyTXT / DocFetcher |
+| **双击 Ctrl 唤起浮层** | 🔄 计划中（Go USN 进程键盘钩子） | 多显示器支持 | Listary / Everything |
+| **网络驱动器/云盘搜索** | ⚠️ OneDrive 已支持 | NAS / SharePoint / Google Drive | dtSearch / Copernic |
+| **图片 OCR** | ❌ 缺失 | 扫描件/截图全文可搜 | Copernic / dtSearch |
+| **模糊搜索/容错** | ❌ 缺失 | 打字错误也能搜 | TextSeek / FileSeek |
+| **CAD 文件（DWG/DXF）** | ❌ 缺失 | 工程图纸可搜 | Copernic / dtSearch |
 
 ---
 
@@ -132,12 +147,13 @@ DocSeeker 是一款基于 Electron + React + TypeScript 的本地文档全文搜
 #### 里程碑
 
 - [x] **M4.1** 搜索结果缩略图预览（图片 / PDF 首帧） — _已实现图片 + PDF 缩略图（Windows Shell 方案）_
-- [x] **M4.2** 全局快捷键浮层搜索（类 Listary 双击 Ctrl）
+- [x] **M4.2** 全局快捷键浮层搜索（类 Listary 双击 Ctrl） — _基础完成（Ctrl+Shift+F），双击 Ctrl 计划中_
 - [x] **M4.3** Electron 冷启动优化（分片架构：config.db 同步加载 + shards 后台并行加载，UI <100ms 可交互）
 - [x] **M4.4** 跨平台支持评估 — FileWatcher 接口已抽象，macOS FSEvents / Linux inotify 实现只需新增文件
 - [x] **M4.5** 搜索结果命中词高亮增强
 - [x] **M4.6** 去重功能 UI 集成
 - [x] **M4.7** 文件计数数据源统一（界面数据全部来自 config.db，shard 仅作索引存储）
+- [x] **M4.8** 搜索结果导出（CSV / HTML / TXT）
 
 **技术要点:**
 - 缩略图：Windows 可调用 ShellThumbnail API，跨平台考虑 thumbbar 或自绘
@@ -147,15 +163,41 @@ DocSeeker 是一款基于 Electron + React + TypeScript 的本地文档全文搜
 
 ---
 
+### Phase 5: 企业级功能（竞品差距补全）
+
+**目标:** 对标 Copernic / dtSearch / FileSeek 等企业级竞品，补全关键企业功能
+**预计周期:** 持续迭代
+
+#### 里程碑
+
+- [ ] **M5.1** 内容高亮跳转（点击搜索结果直接打开文件并定位到关键词位置）
+- [ ] **M5.2** 搜索语法自动补全（输入时智能提示语法，减少学习成本）
+- [ ] **M5.3** 搜索结果批量操作（移动/复制/删除多个结果）
+- [ ] **M5.4** 右键资源管理器集成（"用 DocSeeker 搜索"右键菜单）
+- [ ] **M5.5** Outlook PST 邮件支持（解析 Outlook 数据文件，企业核心需求）
+- [ ] **M5.6** 搜索结果排序自定义（按相关性/大小/修改时间/类型排序）
+- [ ] **M5.7** 文件/文件夹标签（用户自定义标签分类管理）
+- [ ] **M5.8** 双击 Ctrl 唤起浮层（通过 Go USN 进程键盘钩子实现，多显示器支持）
+- [ ] **M5.9** 图片 OCR（扫描件/截图全文可搜）
+- [ ] **M5.10** CAD 文件支持（DWG/DXF 工程图纸）
+
+**技术要点:**
+- 内容跳转：利用现有搜索片段中的关键词位置，通过文件解析器定位到精确行号
+- OCR：Tesseract.js（纯 JS）或 Python 调用 tesseract-ocr
+- Outlook PST：libpst（Python）或使用 `extract-msg` npm 包
+- CAD DWG：TeighaFile（Teigha）或odaXF（Open Design Alliance）
+
+---
+
 ## 四、里程碑时间线
 
 ```
-2026                    2027
+2026                          2027
 Apr  May  Jun  Jul  Aug  Sep  Oct  Nov  Dec  Jan  Feb  Mar  Apr
-|---Phase 1---|------Phase 2------|---Phase 3---|---Phase 4 (持续)--|
-M1.1-M1.7                   M3.1-M3.4
-         M2.1-M2.6          M4.1-M4.6
-         └─ 与 Phase 1 部分并行
+|---Phase 1---|------Phase 2------|---Phase 3---|---Phase 4 (持续)---|
+M1.1-M1.7                   M3.1-M3.4          M5.1-M5.10
+         M2.1-M2.6          M4.1-M4.8
+         └─ 与 Phase 1 部分并行       └─ 与 Phase 3 部分并行
 ```
 
 ### 关键交付节点
@@ -166,7 +208,8 @@ M1.1-M1.7                   M3.1-M3.4
 | 2026-06 (Phase 1 结束) | M1.4-M1.7 监控 + 历史 + 搜索上限 | Phase 1 |
 | 2026-08 (Phase 2 结束) | M2.1-M2.6 完整高级搜索能力 | Phase 2 |
 | 2026-11 (Phase 3 结束) | M3.1-M3.3 企业级格式与便携版 | Phase 3 |
-| 2027+ (Phase 4 持续) | M4.1-M4.6 体验优化与跨平台 | Phase 4 |
+| 2027+ (Phase 4 持续) | M4.1-M4.8 体验优化与跨平台 | Phase 4 |
+| 2027+ (Phase 5 持续) | M5.1-M5.10 企业级功能补全 | Phase 5 |
 
 ---
 
