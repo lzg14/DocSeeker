@@ -3040,3 +3040,23 @@ button, input, select {
 .detail-card {
   position: relative;
 }
+
+/* === 搜索关键词高亮 === */
+.search-highlight {
+  background: #fef08a;
+  color: #854d0e;
+  padding: 0 2px;
+  border-radius: 2px;
+  font-weight: 600;
+}
+
+.preview-keyword-info {
+  font-size: 11px;
+  font-weight: normal;
+  color: var(--text-muted);
+  margin-left: 8px;
+}
+
+.preview-keyword-info strong {
+  color: var(--accent);
+}

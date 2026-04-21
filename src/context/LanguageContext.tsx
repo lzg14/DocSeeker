@@ -175,6 +175,8 @@ const translations: Record<Language, Record<string, string>> = {
     'detail.selectTags': '选择标签',
     'detail.noMoreTags': '暂无更多标签',
     'detail.createTagPlaceholder': '创建新标签...',
+    'detail.keywordAtLine': '关键词在第',
+    'detail.line': '行',
     // Context menu
     'contextMenu.copyPath': '复制路径',
     'contextMenu.copyName': '复制文件名',
@@ -395,6 +397,8 @@ const translations: Record<Language, Record<string, string>> = {
     'detail.selectTags': 'Select Tags',
     'detail.noMoreTags': 'No more tags',
     'detail.createTagPlaceholder': 'Create new tag...',
+    'detail.keywordAtLine': 'Keyword at line',
+    'detail.line': '',
     // Context menu
     'contextMenu.copyPath': 'Copy Path',
     'contextMenu.copyName': 'Copy Filename',

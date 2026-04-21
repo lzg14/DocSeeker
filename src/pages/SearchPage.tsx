@@ -1127,7 +1127,7 @@ function SearchPage(): JSX.Element {
         </div>
         {selectedFile && (
           <div className="file-detail-area">
-            <FileDetail file={selectedFile} formatSize={formatSize} />
+            <FileDetail file={selectedFile} formatSize={formatSize} searchQuery={searchQuery} />
           </div>
         )}
       </div>

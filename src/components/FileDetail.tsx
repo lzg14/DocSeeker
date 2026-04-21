@@ -12,9 +12,10 @@ interface Tag {
 interface FileDetailProps {
   file: FileRecord
   formatSize: (bytes: number) => string
+  searchQuery?: string // 当前搜索关键词，用于高亮
 }
 
-function FileDetail({ file, formatSize }: FileDetailProps): JSX.Element {
+function FileDetail({ file, formatSize, searchQuery = '' }: FileDetailProps): JSX.Element {
   const { t } = useLanguage()
   const [thumbnail, setThumbnail] = useState<string | null>(null)
   const [fileTags, setFileTags] = useState<Tag[]>([])
@@ -29,6 +30,29 @@ function FileDetail({ file, formatSize }: FileDetailProps): JSX.Element {
   const formatDate = (dateStr: string | undefined): string => {
     if (!dateStr) return '-'
     return new Date(dateStr).toLocaleString('zh-CN')
+  }
+
+  // 高亮关键词的函数
+  const highlightText = (text: string, query: string): string => {
+    if (!query.trim() || !text) return text
+    // 转义特殊字符
+    const escapedQuery = query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+    // 忽略大小写的高亮
+    const regex = new RegExp(`(${escapedQuery})`, 'gi')
+    return text.replace(regex, '<mark class="search-highlight">$1</mark>')
+  }
+
+  // 查找关键词所在行号
+  const findKeywordLine = (content: string, query: string): number | null => {
+    if (!query.trim() || !content) return null
+    const lines = content.split('\n')
+    const lowerQuery = query.toLowerCase()
+    for (let i = 0; i < lines.length; i++) {
+      if (lines[i].toLowerCase().includes(lowerQuery)) {
+        return i + 1 // 行号从 1 开始
+      }
+    }
+    return null
   }
 
   // Load tags for this file
@@ -164,12 +188,24 @@ function FileDetail({ file, formatSize }: FileDetailProps): JSX.Element {
       </div>
 
       <div className="detail-card">
-        <div className="detail-card-title">{t('detail.preview')}</div>
-        <div className="detail-content-preview">
-          {file.content
-            ? file.content.slice(0, 500) + (file.content.length > 500 ? '...' : '')
-            : t('detail.noContent')}
+        <div className="detail-card-title">
+          {t('detail.preview')}
+          {searchQuery && file.content && (
+            <span className="preview-keyword-info">
+              {t('detail.keywordAtLine') || '关键词在第'}{' '}
+              <strong>{findKeywordLine(file.content, searchQuery) ?? '?'}</strong>{' '}
+              {t('detail.line') || '行'}
+            </span>
+          )}
         </div>
+        <div
+          className="detail-content-preview"
+          dangerouslySetInnerHTML={{
+            __html: file.content
+              ? highlightText(file.content.slice(0, 1000) + (file.content.length > 1000 ? '...' : ''), searchQuery)
+              : t('detail.noContent')
+          }}
+        />
       </div>
 
     </div>
