@@ -12,7 +12,16 @@ import {
   ScannedFolder,
   SavedSearch,
   SearchHistoryEntry,
-  SearchOptions
+  SearchOptions,
+  Tag,
+  addTag,
+  getAllTags,
+  updateTag,
+  deleteTag,
+  addFileTag,
+  removeFileTag,
+  getTagsForFile,
+  getAllFileTags
 } from './database'
 import {
   openNextShard,
@@ -693,6 +702,48 @@ export function registerIpcHandlers(): void {
     } catch (err) {
       log.warn('[IPC] thumb-cache-set failed:', err)
     }
+  })
+
+  // ── Tags ────────────────────────────────────────────────────────────────────
+
+  // Get all tags
+  ipcMain.handle('tags-get-all', async (): Promise<Tag[]> => {
+    return getAllTags()
+  })
+
+  // Create a new tag
+  ipcMain.handle('tags-add', async (_, name: string, color?: string): Promise<number> => {
+    return addTag(name, color)
+  })
+
+  // Update a tag
+  ipcMain.handle('tags-update', async (_, id: number, updates: { name?: string; color?: string }): Promise<void> => {
+    updateTag(id, updates)
+  })
+
+  // Delete a tag
+  ipcMain.handle('tags-delete', async (_, id: number): Promise<void> => {
+    deleteTag(id)
+  })
+
+  // Get tags for a file
+  ipcMain.handle('tags-get-for-file', async (_, filePath: string): Promise<Tag[]> => {
+    return getTagsForFile(filePath)
+  })
+
+  // Add tag to file
+  ipcMain.handle('tags-add-to-file', async (_, filePath: string, tagId: number): Promise<void> => {
+    addFileTag(filePath, tagId)
+  })
+
+  // Remove tag from file
+  ipcMain.handle('tags-remove-from-file', async (_, filePath: string, tagId: number): Promise<void> => {
+    removeFileTag(filePath, tagId)
+  })
+
+  // Get all file tags (returns Record<filePath, tags[]>)
+  ipcMain.handle('tags-get-all-file-tags', async (): Promise<Record<string, Tag[]>> => {
+    return getAllFileTags()
   })
 
   log.info('[IPC] All handlers registered')

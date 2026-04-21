@@ -71,7 +71,7 @@ export function closeDatabase(): void {
 
 // ============ Re-export types and functions from config ============
 
-export type { ScannedFolder, SavedSearch, SearchHistoryEntry, SearchOptions, SearchResult }
+export type { ScannedFolder, SavedSearch, SearchHistoryEntry, SearchOptions, SearchResult, Tag }
 
 export {
   searchByFileName
@@ -93,7 +93,16 @@ export {
   clearSearchHistory,
   addSavedSearch,
   getSavedSearches,
-  deleteSavedSearch
+  deleteSavedSearch,
+  addTag,
+  getAllTags,
+  updateTag,
+  deleteTag,
+  addFileTag,
+  removeFileTag,
+  getTagsForFile,
+  getFilesWithTag,
+  getAllFileTags
 } from './meta'
 
 export { getScanSettings, updateScanSettings } from './config'

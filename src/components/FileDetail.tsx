@@ -1,7 +1,13 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { FileRecord } from '../types'
 import { useLanguage } from '../context/LanguageContext'
 import { renderPdfPage } from '../utils/pdfRender'
+
+interface Tag {
+  id?: number
+  name: string
+  color: string
+}
 
 interface FileDetailProps {
   file: FileRecord
@@ -11,6 +17,11 @@ interface FileDetailProps {
 function FileDetail({ file, formatSize }: FileDetailProps): JSX.Element {
   const { t } = useLanguage()
   const [thumbnail, setThumbnail] = useState<string | null>(null)
+  const [fileTags, setFileTags] = useState<Tag[]>([])
+  const [allTags, setAllTags] = useState<Tag[]>([])
+  const [showTagMenu, setShowTagMenu] = useState(false)
+  const [newTagName, setNewTagName] = useState('')
+  const [editingTagId, setEditingTagId] = useState<number | null>(null)
 
   const handleShowInFolder = () => window.electron.showInFolder(file.path)
   const handleOpenFile = () => window.electron.openFile(file.path)
@@ -19,6 +30,25 @@ function FileDetail({ file, formatSize }: FileDetailProps): JSX.Element {
     if (!dateStr) return '-'
     return new Date(dateStr).toLocaleString('zh-CN')
   }
+
+  // Load tags for this file
+  const loadTags = useCallback(async () => {
+    if (!file?.path) return
+    try {
+      const [tags, all] = await Promise.all([
+        window.electron.tagsGetForFile(file.path),
+        window.electron.tagsGetAll()
+      ])
+      setFileTags(tags)
+      setAllTags(all)
+    } catch (err) {
+      console.error('Failed to load tags:', err)
+    }
+  }, [file?.path])
+
+  useEffect(() => {
+    loadTags()
+  }, [loadTags])
 
   // Load thumbnail when file path changes
   useEffect(() => {
@@ -48,6 +78,52 @@ function FileDetail({ file, formatSize }: FileDetailProps): JSX.Element {
       })
     }
   }, [file?.path])
+
+  // Tag management functions
+  const handleAddTag = async (tag: Tag) => {
+    if (!file?.path || !tag.id) return
+    try {
+      await window.electron.tagsAddToFile(file.path, tag.id)
+      await loadTags()
+    } catch (err) {
+      console.error('Failed to add tag:', err)
+    }
+  }
+
+  const handleRemoveTag = async (tagId: number) => {
+    if (!file?.path) return
+    try {
+      await window.electron.tagsRemoveFromFile(file.path, tagId)
+      await loadTags()
+    } catch (err) {
+      console.error('Failed to remove tag:', err)
+    }
+  }
+
+  const handleCreateTag = async () => {
+    if (!newTagName.trim()) return
+    try {
+      const tagId = await window.electron.tagsAdd(newTagName.trim())
+      if (tagId > 0 && file?.path) {
+        await window.electron.tagsAddToFile(file.path, tagId)
+      }
+      setNewTagName('')
+      await loadTags()
+    } catch (err) {
+      console.error('Failed to create tag:', err)
+    }
+  }
+
+  const handleDeleteTag = async (tagId: number) => {
+    try {
+      await window.electron.tagsDelete(tagId)
+      await loadTags()
+    } catch (err) {
+      console.error('Failed to delete tag:', err)
+    }
+  }
+
+  const fileTagIds = new Set(fileTags.map(t => t.id))
 
   return (
     <>
@@ -105,6 +181,64 @@ function FileDetail({ file, formatSize }: FileDetailProps): JSX.Element {
         {t('detail.openFile')}
       </button>
     </div>
+
+      {/* Tags section */}
+      <div className="detail-card">
+        <div className="detail-card-title">
+          <span>{t('detail.tags') || '标签'}</span>
+          <button className="tag-add-btn" onClick={() => setShowTagMenu(!showTagMenu)} title={t('detail.addTag') || '添加标签'}>
+            +
+          </button>
+        </div>
+        <div className="detail-tags-container">
+          {fileTags.length > 0 ? (
+            fileTags.map(tag => (
+              <span
+                key={tag.id}
+                className="detail-tag"
+                style={{ backgroundColor: tag.color + '20', borderColor: tag.color, color: tag.color }}
+              >
+                {tag.name}
+                <button className="tag-remove-btn" onClick={() => tag.id && handleRemoveTag(tag.id)}>×</button>
+              </span>
+            ))
+          ) : (
+            <span className="detail-tags-empty">{t('detail.noTags') || '暂无标签'}</span>
+          )}
+        </div>
+
+        {/* Tag dropdown menu */}
+        {showTagMenu && (
+          <div className="tag-menu">
+            <div className="tag-menu-header">{t('detail.selectTags') || '选择标签'}</div>
+            <div className="tag-menu-list">
+              {allTags.filter(tag => !fileTagIds.has(tag.id!)).length === 0 && newTagName.trim() === '' && (
+                <div className="tag-menu-empty">{t('detail.noMoreTags') || '暂无更多标签'}</div>
+              )}
+              {allTags.filter(tag => !fileTagIds.has(tag.id!)).map(tag => (
+                <div
+                  key={tag.id}
+                  className="tag-menu-item"
+                  onClick={() => handleAddTag(tag)}
+                >
+                  <span className="tag-color-dot" style={{ backgroundColor: tag.color }}></span>
+                  {tag.name}
+                </div>
+              ))}
+              <div className="tag-menu-create">
+                <input
+                  type="text"
+                  placeholder={t('detail.createTagPlaceholder') || '创建新标签...'}
+                  value={newTagName}
+                  onChange={(e) => setNewTagName(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && handleCreateTag()}
+                />
+                <button onClick={handleCreateTag}>+</button>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
     </>
   )
 }

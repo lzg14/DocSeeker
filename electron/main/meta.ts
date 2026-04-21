@@ -77,6 +77,30 @@ export function initMeta(): void {
     )
   `)
 
+  // Tags table
+  metaDb.exec(`
+    CREATE TABLE IF NOT EXISTS tags (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      name TEXT UNIQUE NOT NULL,
+      color TEXT DEFAULT '#2563eb',
+      created_at TEXT DEFAULT (datetime('now'))
+    )
+  `)
+
+  // File tags (many-to-many)
+  metaDb.exec(`
+    CREATE TABLE IF NOT EXISTS file_tags (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      file_path TEXT NOT NULL,
+      tag_id INTEGER NOT NULL,
+      created_at TEXT DEFAULT (datetime('now')),
+      FOREIGN KEY (tag_id) REFERENCES tags(id) ON DELETE CASCADE,
+      UNIQUE(file_path, tag_id)
+    )
+  `)
+  metaDb.exec(`CREATE INDEX IF NOT EXISTS idx_file_tags_path ON file_tags(file_path)`)
+  metaDb.exec(`CREATE INDEX IF NOT EXISTS idx_file_tags_tag ON file_tags(tag_id)`)
+
   log.info(`[Meta] Initialized at ${dbPath}`)
 }
 
@@ -257,4 +281,93 @@ export function getSavedSearches(): SavedSearch[] {
 export function deleteSavedSearch(id: number): void {
   const stmt = getDb().prepare('DELETE FROM saved_searches WHERE id = ?')
   stmt.run([id])
+}
+
+// ============ Tags ============
+
+export interface Tag {
+  id?: number
+  name: string
+  color: string
+  created_at?: string
+}
+
+export function addTag(name: string, color = '#2563eb'): number {
+  const stmt = getDb().prepare('INSERT INTO tags (name, color) VALUES (?, ?)')
+  try {
+    const result = stmt.run([name.trim(), color])
+    return result.lastInsertRowid as number
+  } catch (err) {
+    // Tag already exists, return existing id
+    const existing = getDb().prepare('SELECT id FROM tags WHERE name = ?').get([name.trim()]) as { id: number } | undefined
+    return existing?.id ?? -1
+  }
+}
+
+export function getAllTags(): Tag[] {
+  const stmt = getDb().prepare('SELECT * FROM tags ORDER BY name ASC')
+  return stmt.all() as Tag[]
+}
+
+export function updateTag(id: number, updates: { name?: string; color?: string }): void {
+  const fields: string[] = []
+  const values: unknown[] = []
+  if (updates.name !== undefined) { fields.push('name = ?'); values.push(updates.name.trim()) }
+  if (updates.color !== undefined) { fields.push('color = ?'); values.push(updates.color) }
+  if (fields.length > 0) {
+    values.push(id)
+    const stmt = getDb().prepare(`UPDATE tags SET ${fields.join(', ')} WHERE id = ?`)
+    stmt.run(values)
+  }
+}
+
+export function deleteTag(id: number): void {
+  getDb().exec('DELETE FROM file_tags WHERE tag_id = ?')
+  const stmt = getDb().prepare('DELETE FROM tags WHERE id = ?')
+  stmt.run([id])
+}
+
+export function addFileTag(filePath: string, tagId: number): void {
+  const stmt = getDb().prepare('INSERT OR IGNORE INTO file_tags (file_path, tag_id) VALUES (?, ?)')
+  stmt.run([filePath, tagId])
+}
+
+export function removeFileTag(filePath: string, tagId: number): void {
+  const stmt = getDb().prepare('DELETE FROM file_tags WHERE file_path = ? AND tag_id = ?')
+  stmt.run([filePath, tagId])
+}
+
+export function getTagsForFile(filePath: string): Tag[] {
+  const stmt = getDb().prepare(`
+    SELECT t.* FROM tags t
+    INNER JOIN file_tags ft ON t.id = ft.tag_id
+    WHERE ft.file_path = ?
+    ORDER BY t.name
+  `)
+  stmt.bind([filePath])
+  return stmt.all() as Tag[]
+}
+
+export function getFilesWithTag(tagId: number): string[] {
+  const stmt = getDb().prepare('SELECT file_path FROM file_tags WHERE tag_id = ?')
+  stmt.bind([tagId])
+  const rows = stmt.all() as { file_path: string }[]
+  return rows.map(r => r.file_path)
+}
+
+export function getAllFileTags(): Record<string, Tag[]> {
+  const stmt = getDb().prepare(`
+    SELECT ft.file_path, t.* FROM file_tags ft
+    INNER JOIN tags t ON t.id = ft.tag_id
+    ORDER BY ft.file_path, t.name
+  `)
+  const rows = stmt.all() as { file_path: string; id: number; name: string; color: string }[]
+  const result: Record<string, Tag[]> = {}
+  for (const row of rows) {
+    if (!result[row.file_path]) {
+      result[row.file_path] = []
+    }
+    result[row.file_path].push({ id: row.id, name: row.name, color: row.color })
+  }
+  return result
 }

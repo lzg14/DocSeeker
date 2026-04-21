@@ -159,6 +159,22 @@ export interface ElectronAPI {
   onUsnUpdate: (callback: (ev: UsnEvent) => void) => () => void
   // Platform (for renderer to choose PDF thumbnail strategy)
   getPlatform: () => Promise<string>
+  // Tags
+  tagsGetAll: () => Promise<Tag[]>
+  tagsAdd: (name: string, color?: string) => Promise<number>
+  tagsUpdate: (id: number, updates: { name?: string; color?: string }) => Promise<void>
+  tagsDelete: (id: number) => Promise<void>
+  tagsGetForFile: (filePath: string) => Promise<Tag[]>
+  tagsAddToFile: (filePath: string, tagId: number) => Promise<void>
+  tagsRemoveFromFile: (filePath: string, tagId: number) => Promise<void>
+  tagsGetAllFileTags: () => Promise<Record<string, Tag[]>>
+}
+
+export interface Tag {
+  id?: number
+  name: string
+  color: string
+  created_at?: string
 }
 
 const electronAPI: ElectronAPI = {
@@ -299,6 +315,16 @@ const electronAPI: ElectronAPI = {
   },
 
   getPlatform: () => ipcRenderer.invoke('get-platform'),
+
+  // Tags
+  tagsGetAll: () => ipcRenderer.invoke('tags-get-all'),
+  tagsAdd: (name: string, color?: string) => ipcRenderer.invoke('tags-add', name, color),
+  tagsUpdate: (id: number, updates: { name?: string; color?: string }) => ipcRenderer.invoke('tags-update', id, updates),
+  tagsDelete: (id: number) => ipcRenderer.invoke('tags-delete', id),
+  tagsGetForFile: (filePath: string) => ipcRenderer.invoke('tags-get-for-file', filePath),
+  tagsAddToFile: (filePath: string, tagId: number) => ipcRenderer.invoke('tags-add-to-file', filePath, tagId),
+  tagsRemoveFromFile: (filePath: string, tagId: number) => ipcRenderer.invoke('tags-remove-from-file', filePath, tagId),
+  tagsGetAllFileTags: () => ipcRenderer.invoke('tags-get-all-file-tags'),
 }
 
 contextBridge.exposeInMainWorld('electron', electronAPI)
