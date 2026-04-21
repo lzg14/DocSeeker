@@ -25,7 +25,30 @@ interface SearchOptions {
   sizeMax?: number
   dateFrom?: string
   dateTo?: string
+  sortBy?: 'relevance' | 'name' | 'size' | 'modified'
+  sortOrder?: 'asc' | 'desc'
 }
+
+// Autocomplete suggestion types
+interface AutocompleteSuggestion {
+  type: 'syntax' | 'history' | 'saved'
+  text: string
+  description: string
+  insertText?: string // What to insert when selected
+}
+
+// Autocomplete items
+const AUTOCOMPLETE_ITEMS = [
+  { text: 'AND', description: '多关键词AND搜索', insertText: ' AND ' },
+  { text: 'OR', description: 'OR组合搜索', insertText: ' OR ' },
+  { text: 'NOT', description: '排除关键词', insertText: ' NOT ' },
+  { text: '"phrase"', description: '精确短语匹配', insertText: '"' },
+  { text: 'term*', description: '前缀通配符', insertText: '*' },
+  { text: '/regex/', description: '正则搜索', insertText: '//' },
+  { text: 'name:', description: '文件名搜索', insertText: 'name:' },
+  { text: 'path:', description: '路径搜索', insertText: 'path:' },
+  { text: 'ext:', description: '按扩展名筛选', insertText: 'ext:' },
+]
 
 const FILE_TYPE_OPTIONS = [
   { value: 'docx', label: 'Word' },
@@ -71,6 +94,12 @@ function SearchPage(): JSX.Element {
   const [pendingEvents, setPendingEvents] = useState<{ event: string; path: string }[]>([])
   const [showExportMenu, setShowExportMenu] = useState(false)
   const exportMenuRef = useRef<HTMLDivElement>(null)
+
+  // Autocomplete state
+  const [showAutocomplete, setShowAutocomplete] = useState(false)
+  const [autocompleteSuggestions, setAutocompleteSuggestions] = useState<AutocompleteSuggestion[]>([])
+  const [selectedAutocompleteIndex, setSelectedAutocompleteIndex] = useState(-1)
+  const autocompleteRef = useRef<HTMLDivElement>(null)
   const { t } = useLanguage()
 
   const inputRef = useRef<HTMLInputElement>(null)
@@ -353,6 +382,86 @@ function SearchPage(): JSX.Element {
     filters.sizeMin || filters.sizeMax ||
     filters.dateFrom || filters.dateTo
 
+  // Update autocomplete suggestions based on current input
+  const updateAutocomplete = useCallback((input: string, cursorPos: number) => {
+    if (!input.trim()) {
+      setAutocompleteSuggestions([])
+      setShowAutocomplete(false)
+      return
+    }
+
+    const suggestions: AutocompleteSuggestion[] = []
+    const inputLower = input.toLowerCase()
+    const textBeforeCursor = input.substring(0, cursorPos)
+    const lastWordMatch = textBeforeCursor.match(/[\w]+$/)
+
+    if (!lastWordMatch) {
+      setAutocompleteSuggestions([])
+      setShowAutocomplete(false)
+      return
+    }
+
+    const prefix = lastWordMatch[0]
+
+    // Filter syntax suggestions (show all if input is short)
+    if (prefix.length >= 1) {
+      AUTOCOMPLETE_ITEMS.forEach(item => {
+        if (item.text.toLowerCase().startsWith(prefix.toLowerCase()) ||
+            (prefix.length >= 2 && item.text.toLowerCase().includes(prefix.toLowerCase()))) {
+          suggestions.push({
+            type: 'syntax',
+            text: item.text,
+            description: item.description,
+            insertText: item.insertText
+          })
+        }
+      })
+    }
+
+    // Add matching history
+    history.forEach(h => {
+      if (h.query.toLowerCase().startsWith(inputLower) && suggestions.length < 5) {
+        if (!suggestions.find(s => s.text === h.query)) {
+          suggestions.push({
+            type: 'history',
+            text: h.query,
+            description: h.searched_at ? new Date(h.searched_at).toLocaleDateString('zh-CN') : ''
+          })
+        }
+      }
+    })
+
+    // Add matching saved searches
+    savedSearches.forEach(s => {
+      if (s.query.toLowerCase().startsWith(inputLower) && suggestions.length < 5) {
+        if (!suggestions.find(su => su.text === s.query)) {
+          suggestions.push({
+            type: 'saved',
+            text: s.query,
+            description: s.name
+          })
+        }
+      }
+    })
+
+    setAutocompleteSuggestions(suggestions)
+    setShowAutocomplete(suggestions.length > 0)
+    setSelectedAutocompleteIndex(-1)
+  }, [history, savedSearches])
+
+  // Click outside handler for autocomplete
+  useEffect(() => {
+    if (!showAutocomplete) return
+    const handleClickOutside = (e: MouseEvent) => {
+      if (autocompleteRef.current && !autocompleteRef.current.contains(e.target as Node) &&
+          e.target !== inputRef.current) {
+        setShowAutocomplete(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [showAutocomplete])
+
   return (
     <div className="search-page">
       <div
@@ -378,6 +487,8 @@ function SearchPage(): JSX.Element {
               value={searchQuery}
               onChange={(e) => {
                 setSearchQuery(e.target.value)
+                // Update autocomplete
+                updateAutocomplete(e.target.value, e.target.selectionStart || e.target.value.length)
                 // Debounce: clear previous timer and schedule a new search
                 if (debounceTimerRef.current) {
                   clearTimeout(debounceTimerRef.current)
@@ -386,9 +497,96 @@ function SearchPage(): JSX.Element {
                   performSearch(e.target.value, filters)
                 }, 300)
               }}
-              onKeyDown={handleKeyDown}
-              onFocus={() => { setShowHistory(true); setShowSaved(false) }}
+              onKeyDown={(e) => {
+                // Autocomplete navigation
+                if (showAutocomplete && autocompleteSuggestions.length > 0) {
+                  if (e.key === 'ArrowDown') {
+                    e.preventDefault()
+                    setSelectedAutocompleteIndex(prev =>
+                      prev < autocompleteSuggestions.length - 1 ? prev + 1 : 0
+                    )
+                    return
+                  }
+                  if (e.key === 'ArrowUp') {
+                    e.preventDefault()
+                    setSelectedAutocompleteIndex(prev =>
+                      prev > 0 ? prev - 1 : autocompleteSuggestions.length - 1
+                    )
+                    return
+                  }
+                  if (e.key === 'Tab' || (e.key === 'Enter' && selectedAutocompleteIndex >= 0)) {
+                    e.preventDefault()
+                    const selected = autocompleteSuggestions[selectedAutocompleteIndex >= 0 ? selectedAutocompleteIndex : 0]
+                    if (selected) {
+                      // Replace the current word with the suggestion
+                      const cursorPos = e.currentTarget.selectionStart || searchQuery.length
+                      const textBeforeCursor = searchQuery.substring(0, cursorPos)
+                      const textAfterCursor = searchQuery.substring(cursorPos)
+                      const lastWordMatch = textBeforeCursor.match(/[\w*\/]+$/)
+
+                      if (lastWordMatch) {
+                        const newTextBefore = textBeforeCursor.substring(0, textBeforeCursor.length - lastWordMatch[0].length)
+                        const insertText = selected.insertText || selected.text
+                        setSearchQuery(newTextBefore + insertText + textAfterCursor)
+                        updateAutocomplete(newTextBefore + insertText, (newTextBefore + insertText).length)
+                      } else {
+                        setSearchQuery(selected.text)
+                        updateAutocomplete(selected.text, selected.text.length)
+                      }
+                      setShowAutocomplete(false)
+                    }
+                    return
+                  }
+                  if (e.key === 'Escape') {
+                    setShowAutocomplete(false)
+                    return
+                  }
+                }
+
+                // Default search behavior
+                if (e.key === 'Enter') {
+                  handleSearch()
+                }
+              }}
+              onFocus={() => { setShowHistory(true); setShowSaved(false); setShowAutocomplete(false) }}
             />
+
+            {/* Autocomplete dropdown */}
+            {showAutocomplete && autocompleteSuggestions.length > 0 && (
+              <div className="autocomplete-dropdown" ref={autocompleteRef}>
+                {autocompleteSuggestions.map((suggestion, idx) => (
+                  <div
+                    key={`${suggestion.type}-${suggestion.text}`}
+                    className={`autocomplete-item ${idx === selectedAutocompleteIndex ? 'selected' : ''} ${suggestion.type}`}
+                    onClick={() => {
+                      // Apply suggestion
+                      const cursorPos = inputRef.current?.selectionStart || searchQuery.length
+                      const textBeforeCursor = searchQuery.substring(0, cursorPos)
+                      const textAfterCursor = searchQuery.substring(cursorPos)
+                      const lastWordMatch = textBeforeCursor.match(/[\w*\/]+$/)
+
+                      if (lastWordMatch) {
+                        const newTextBefore = textBeforeCursor.substring(0, textBeforeCursor.length - lastWordMatch[0].length)
+                        const insertText = suggestion.insertText || suggestion.text
+                        setSearchQuery(newTextBefore + insertText + textAfterCursor)
+                      } else {
+                        setSearchQuery(suggestion.text)
+                      }
+                      setShowAutocomplete(false)
+                      inputRef.current?.focus()
+                    }}
+                  >
+                    <span className="autocomplete-text">
+                      {suggestion.type === 'syntax' && <code>{suggestion.text}</code>}
+                      {suggestion.type === 'history' && <span>🕐</span>}
+                      {suggestion.type === 'saved' && <span>⭐</span>}
+                      {suggestion.type !== 'syntax' && suggestion.text}
+                    </span>
+                    <span className="autocomplete-desc">{suggestion.description}</span>
+                  </div>
+                ))}
+              </div>
+            )}
             <button
               className="btn btn-primary search-btn"
               onClick={handleSearch}

@@ -139,6 +139,7 @@ const translations: Record<Language, Record<string, string>> = {
     'search.scopeFilename': '仅文件名',
     'search.scopeTitleAll': '切换到仅文件名搜索',
     'search.scopeTitleFilename': '切换到全部搜索',
+    'search.autocompleteHint': '按 Tab 选择补全',
     // File detail
     'detail.info': '文件信息',
     'detail.size': '大小',
@@ -329,6 +330,7 @@ const translations: Record<Language, Record<string, string>> = {
     'filelist.type': 'Type',
     'filelist.size': 'Size',
     'filelist.modified': 'Modified',
+    'search.autocompleteHint': 'Press Tab to autocomplete',
     // Nav group labels
     'nav.group.nav': 'Navigation',
     'nav.group.settings': 'Settings',

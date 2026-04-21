@@ -2676,3 +2676,69 @@ button, input, select {
 .export-dropdown-item:hover {
   background: var(--bg-hover, #f5f5f5);
 }
+
+/* === 自动补全下拉菜单 === */
+.autocomplete-dropdown {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  background: var(--bg-secondary, #fff);
+  border: 1px solid var(--border-color, #ddd);
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+  max-height: 280px;
+  overflow-y: auto;
+  z-index: 200;
+}
+
+.autocomplete-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  cursor: pointer;
+  font-size: 13px;
+  transition: background 0.1s;
+  gap: 8px;
+}
+
+.autocomplete-item:hover,
+.autocomplete-item.selected {
+  background: var(--bg-hover, #f0f0f0);
+}
+
+.autocomplete-item.syntax {
+  border-left: 3px solid var(--accent, #2563eb);
+}
+
+.autocomplete-item.history {
+  border-left: 3px solid #888;
+}
+
+.autocomplete-item.saved {
+  border-left: 3px solid #f0ad4e;
+}
+
+.autocomplete-text {
+  font-weight: 500;
+  color: var(--text-primary, #333);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.autocomplete-text code {
+  background: var(--bg-primary, #fff);
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 12px;
+  color: var(--accent, #2563eb);
+  border: 1px solid var(--border-color, #ddd);
+}
+
+.autocomplete-desc {
+  font-size: 11px;
+  color: var(--text-muted, #888);
+  flex-shrink: 0;
+}
