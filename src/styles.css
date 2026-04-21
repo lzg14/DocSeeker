@@ -2742,3 +2742,59 @@ button, input, select {
   color: var(--text-muted, #888);
   flex-shrink: 0;
 }
+
+/* === 排序按钮 === */
+.sort-wrapper {
+  display: inline-block;
+  margin-left: auto;
+}
+
+.sort-btn {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  height: 28px;
+  padding: 0 8px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all var(--transition-base);
+}
+
+.sort-btn:hover {
+  background: var(--bg-hover, #f0f0f0);
+  border-color: var(--border-light);
+}
+
+.sort-btn.active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+
+.sort-label {
+  margin-right: 4px;
+}
+
+.sort-order-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  background: rgba(255, 255, 255, 0.2);
+  border: none;
+  border-radius: 3px;
+  font-size: 11px;
+  color: inherit;
+  cursor: pointer;
+  margin-left: 2px;
+}
+
+.sort-order-btn:hover {
+  background: rgba(255, 255, 255, 0.3);
+}

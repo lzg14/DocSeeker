@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect, useRef } from 'react'
+import { useState, useCallback, useEffect, useRef, useMemo } from 'react'
 import FileList from '../components/FileList'
 import FileDetail from '../components/FileDetail'
 import { FileRecord } from '../types'
@@ -95,6 +95,10 @@ function SearchPage(): JSX.Element {
   const [showExportMenu, setShowExportMenu] = useState(false)
   const exportMenuRef = useRef<HTMLDivElement>(null)
 
+  // Sort state
+  const [sortBy, setSortBy] = useState<'relevance' | 'name' | 'size' | 'modified'>('relevance')
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc')
+
   // Autocomplete state
   const [showAutocomplete, setShowAutocomplete] = useState(false)
   const [autocompleteSuggestions, setAutocompleteSuggestions] = useState<AutocompleteSuggestion[]>([])
@@ -116,6 +120,31 @@ function SearchPage(): JSX.Element {
         f.name?.toLowerCase().includes(secondaryFilter.toLowerCase())
       )
     : files
+
+  // Sort files based on sort criteria
+  const sortedFiles = useMemo(() => {
+    if (sortBy === 'relevance') {
+      return filteredFiles // Keep original order (BM25 relevance)
+    }
+
+    return [...filteredFiles].sort((a, b) => {
+      let cmp = 0
+      switch (sortBy) {
+        case 'name':
+          cmp = (a.name || '').localeCompare(b.name || '')
+          break
+        case 'size':
+          cmp = (a.size || 0) - (b.size || 0)
+          break
+        case 'modified':
+          const aTime = a.updated_at ? new Date(a.updated_at).getTime() : 0
+          const bTime = b.updated_at ? new Date(b.updated_at).getTime() : 0
+          cmp = aTime - bTime
+          break
+      }
+      return sortOrder === 'asc' ? cmp : -cmp
+    })
+  }, [filteredFiles, sortBy, sortOrder])
 
   // Sync dedupEnabled to ref so performSearch always reads the latest value
   useEffect(() => {
@@ -775,8 +804,47 @@ function SearchPage(): JSX.Element {
                 ×
               </button>
             )}
+
+            {/* Sort dropdown */}
+            <div className="sort-wrapper">
+              <button
+                className={`toolbar-btn sort-btn ${sortBy !== 'relevance' ? 'active' : ''}`}
+                onClick={() => {
+                  // Toggle sort dropdown - cycle through sort options
+                  const sortOptions: Array<'relevance' | 'name' | 'size' | 'modified'> = ['relevance', 'name', 'size', 'modified']
+                  const currentIndex = sortOptions.indexOf(sortBy)
+                  const nextIndex = (currentIndex + 1) % sortOptions.length
+                  setSortBy(sortOptions[nextIndex])
+                }}
+                title={t('search.sortBy') || '排序'}
+              >
+                {sortBy === 'relevance' && '📊'}
+                {sortBy === 'name' && '📝'}
+                {sortBy === 'size' && '📦'}
+                {sortBy === 'modified' && '🕐'}
+                <span className="sort-label">
+                  {sortBy === 'relevance' && (t('search.sortRelevance') || '相关')}
+                  {sortBy === 'name' && (t('search.sortName') || '名称')}
+                  {sortBy === 'size' && (t('search.sortSize') || '大小')}
+                  {sortBy === 'modified' && (t('search.sortModified') || '时间')}
+                </span>
+                {sortBy !== 'relevance' && (
+                  <button
+                    className="sort-order-btn"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      setSortOrder(o => o === 'asc' ? 'desc' : 'asc')
+                    }}
+                    title={sortOrder === 'asc' ? (t('search.sortAsc') || '升序') : (t('search.sortDesc') || '降序')}
+                  >
+                    {sortOrder === 'asc' ? '↑' : '↓'}
+                  </button>
+                )}
+              </button>
+            </div>
+
             <span className="secondary-filter-count">
-              {filteredFiles.length} / {files.length}
+              {sortedFiles.length} / {files.length}
             </span>
           </div>
         )}
@@ -923,7 +991,7 @@ function SearchPage(): JSX.Element {
         )}
         <div className="file-list-wrapper">
           <FileList
-            files={filteredFiles}
+            files={sortedFiles}
             selectedFile={selectedFile}
             onSelectFile={setSelectedFile}
             formatSize={formatSize}
