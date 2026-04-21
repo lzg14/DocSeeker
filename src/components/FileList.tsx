@@ -16,15 +16,23 @@ interface FileListProps {
   formatSize: (bytes: number) => string
   hasSearched: boolean
   snippets?: Record<string, string>
+  selectedFiles: Set<number>
+  onToggleSelect: (fileId: number) => void
+  onSelectAll: (select: boolean) => void
 }
 
-type SortField = 'name' | 'size' | 'updated_at' | 'relevance'
-type SortOrder = 'asc' | 'desc'
-
-function FileList({ files, selectedFile, onSelectFile, formatSize, hasSearched, snippets = {} }: FileListProps): JSX.Element {
+function FileList({
+  files,
+  selectedFile,
+  onSelectFile,
+  formatSize,
+  hasSearched,
+  snippets = {},
+  selectedFiles,
+  onToggleSelect,
+  onSelectAll
+}: FileListProps): JSX.Element {
   const { t } = useLanguage()
-  const [sortField, setSortField] = useState<SortField>('relevance')
-  const [sortOrder, setSortOrder] = useState<SortOrder>('asc')
   const [contextMenu, setContextMenu] = useState<ContextMenuState>({ visible: false, x: 0, y: 0, file: null })
   const menuRef = useRef<HTMLDivElement>(null)
 
@@ -65,33 +73,6 @@ function FileList({ files, selectedFile, onSelectFile, formatSize, hasSearched, 
     if (contextMenu.file) window.electron.clipboardWriteText(contextMenu.file.name)
     setContextMenu(prev => ({ ...prev, visible: false }))
   }
-
-  const handleSort = (field: SortField): void => {
-    if (field === 'relevance') return // relevance 不允许排序
-    if (sortField === field) {
-      setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')
-    } else {
-      setSortField(field)
-      setSortOrder('asc')
-    }
-  }
-
-  const sortedFiles = [...files].sort((a, b) => {
-    if (sortField === 'relevance') return 0 // 保持原始顺序（BM25 相关性排序）
-    let comparison = 0
-    switch (sortField) {
-      case 'name':
-        comparison = a.name.localeCompare(b.name)
-        break
-      case 'size':
-        comparison = a.size - b.size
-        break
-      case 'updated_at':
-        comparison = (a.updated_at || '').localeCompare(b.updated_at || '')
-        break
-    }
-    return sortOrder === 'asc' ? comparison : -comparison
-  })
 
   const MatchTypeBadge: React.FC<{ matchType?: string }> = ({ matchType }) => {
     if (!matchType) return null
@@ -157,18 +138,35 @@ function FileList({ files, selectedFile, onSelectFile, formatSize, hasSearched, 
       ) : (
         <>
           <div className="file-table-header">
+            <div className="file-checkbox-cell">
+              <input
+                type="checkbox"
+                checked={selectedFiles.size === files.length && files.length > 0}
+                ref={(el) => {
+                  if (el) el.indeterminate = selectedFiles.size > 0 && selectedFiles.size < files.length
+                }}
+                onChange={(e) => onSelectAll(e.target.checked)}
+              />
+            </div>
             <div>{t('filelist.name')}</div>
             <div>{t('filelist.type')}</div>
             <div>{t('filelist.size')}</div>
             <div>{t('filelist.modified')}</div>
           </div>
-          {sortedFiles.map((file) => (
+          {files.map((file) => (
             <div
               key={file.id}
-              className={`file-row ${selectedFile?.id === file.id ? 'selected' : ''}`}
+              className={`file-row ${selectedFile?.id === file.id ? 'selected' : ''} ${selectedFiles.has(file.id!) ? 'checked' : ''}`}
               onClick={() => onSelectFile(file)}
               onContextMenu={(e) => handleContextMenu(e, file)}
             >
+              <div className="file-checkbox-cell" onClick={(e) => e.stopPropagation()}>
+                <input
+                  type="checkbox"
+                  checked={selectedFiles.has(file.id!)}
+                  onChange={() => file.id && onToggleSelect(file.id)}
+                />
+              </div>
               <div className="file-name-cell">
                 <span>{getFileIcon(file.is_supported === false ? 'unsupported' : file.file_type)}</span>
                 <div className="file-name-info">

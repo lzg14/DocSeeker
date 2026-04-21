@@ -98,6 +98,8 @@ export interface ElectronAPI {
   searchDeduplicate: (query: string, options?: SearchOptions) => Promise<FileRecord[]>
   searchByFileName: (query: string, options?: SearchOptions) => Promise<FileRecord[]>
   deleteFile: (filePath: string) => Promise<boolean>
+  batchCopyFile: (sourcePath: string, targetDir: string) => Promise<boolean>
+  batchMoveFile: (sourcePath: string, targetDir: string) => Promise<boolean>
   getFileCount: () => Promise<number>
   getFilesByFolder: () => Promise<Record<string, number>>
   showInFolder: (filePath: string) => Promise<void>
@@ -181,6 +183,10 @@ const electronAPI: ElectronAPI = {
   searchByFileName: (query: string, options?: SearchOptions) => ipcRenderer.invoke('search-by-filename', query, options),
 
   deleteFile: (filePath: string) => ipcRenderer.invoke('delete-file', filePath),
+
+  batchCopyFile: (sourcePath: string, targetDir: string) => ipcRenderer.invoke('batch-copy-file', sourcePath, targetDir),
+
+  batchMoveFile: (sourcePath: string, targetDir: string) => ipcRenderer.invoke('batch-move-file', sourcePath, targetDir),
 
   getFileCount: () => ipcRenderer.invoke('get-file-count'),
 

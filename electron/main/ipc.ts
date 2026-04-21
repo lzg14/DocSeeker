@@ -234,6 +234,38 @@ export function registerIpcHandlers(): void {
     }
   })
 
+  // Batch copy file
+  ipcMain.handle('batch-copy-file', async (_, sourcePath: string, targetDir: string): Promise<boolean> => {
+    try {
+      const fs = await import('fs')
+      const { basename } = await import('path')
+      const targetPath = join(targetDir, basename(sourcePath))
+      await fs.promises.copyFile(sourcePath, targetPath)
+      log.info(`[IPC] Copied ${sourcePath} to ${targetPath}`)
+      return true
+    } catch (error) {
+      log.error('[IPC] Failed to copy file:', error)
+      return false
+    }
+  })
+
+  // Batch move file
+  ipcMain.handle('batch-move-file', async (_, sourcePath: string, targetDir: string): Promise<boolean> => {
+    try {
+      const fs = await import('fs')
+      const { basename } = await import('path')
+      const targetPath = join(targetDir, basename(sourcePath))
+      await fs.promises.rename(sourcePath, targetPath)
+      // Update index after move
+      deleteFileFromAllShards(sourcePath)
+      log.info(`[IPC] Moved ${sourcePath} to ${targetPath}`)
+      return true
+    } catch (error) {
+      log.error('[IPC] Failed to move file:', error)
+      return false
+    }
+  })
+
   // Get file count — sum from config.db (the single source of truth)
   ipcMain.handle('get-file-count', async (): Promise<number> => {
     return getTotalFileCountFromConfig()
