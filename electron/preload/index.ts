@@ -168,6 +168,11 @@ export interface ElectronAPI {
   tagsAddToFile: (filePath: string, tagId: number) => Promise<void>
   tagsRemoveFromFile: (filePath: string, tagId: number) => Promise<void>
   tagsGetAllFileTags: () => Promise<Record<string, Tag[]>>
+  // Context menu integration
+  registerContextMenu: () => Promise<{ success: boolean; error?: string }>
+  unregisterContextMenu: () => Promise<{ success: boolean; error?: string }>
+  isContextMenuRegistered: () => Promise<boolean>
+  onContextMenuSearch: (callback: (query: string) => void) => () => void
 }
 
 export interface Tag {
@@ -325,6 +330,17 @@ const electronAPI: ElectronAPI = {
   tagsAddToFile: (filePath: string, tagId: number) => ipcRenderer.invoke('tags-add-to-file', filePath, tagId),
   tagsRemoveFromFile: (filePath: string, tagId: number) => ipcRenderer.invoke('tags-remove-from-file', filePath, tagId),
   tagsGetAllFileTags: () => ipcRenderer.invoke('tags-get-all-file-tags'),
+
+  // Context menu integration
+  registerContextMenu: () => ipcRenderer.invoke('register-context-menu'),
+  unregisterContextMenu: () => ipcRenderer.invoke('unregister-context-menu'),
+  isContextMenuRegistered: () => ipcRenderer.invoke('is-context-menu-registered'),
+
+  onContextMenuSearch: (callback) => {
+    const handler = (_: any, query: string) => callback(query)
+    ipcRenderer.on('context-menu-search', handler)
+    return () => ipcRenderer.removeListener('context-menu-search', handler)
+  },
 }
 
 contextBridge.exposeInMainWorld('electron', electronAPI)

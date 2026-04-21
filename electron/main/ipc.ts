@@ -704,6 +704,115 @@ export function registerIpcHandlers(): void {
     }
   })
 
+  // ── Context Menu Integration (Windows Explorer) ──────────────────────────────
+
+  // Register context menu (add to Windows Explorer right-click menu)
+  ipcMain.handle('register-context-menu', async (): Promise<{ success: boolean; error?: string }> => {
+    if (process.platform !== 'win32') {
+      return { success: false, error: 'Only supported on Windows' }
+    }
+
+    try {
+      const { exec } = await import('child_process')
+      const { promisify } = await import('util')
+      const execAsync = promisify(exec)
+      const exePath = app.getPath('exe')
+
+      // Registry script to add context menu
+      const regScript = `
+        Windows Registry Editor Version 5.00
+
+        ; Add "Search with DocSeeker" to directory background context menu
+        [HKEY_CLASSES_ROOT\\Directory\\Background\\shell\\DocSeeker]
+        @="Search with DocSeeker"
+        "Icon"="${exePath.replace(/\\/g, '\\\\')}"
+
+        [HKEY_CLASSES_ROOT\\Directory\\Background\\shell\\DocSeeker\\command]
+        @="\\"${exePath.replace(/\\/g, '\\\\')}\\" --search \\"%V\\""
+
+        ; Add "Search with DocSeeker" to directory context menu
+        [HKEY_CLASSES_ROOT\\Directory\\shell\\DocSeeker]
+        @="Search with DocSeeker"
+        "Icon"="${exePath.replace(/\\/g, '\\\\')}"
+
+        [HKEY_CLASSES_ROOT\\Directory\\shell\\DocSeeker\\command]
+        @="\\"${exePath.replace(/\\/g, '\\\\')}\\" --search \\"%1\\""
+
+        ; Add "Search with DocSeeker" to folder context menu (including drives)
+        [HKEY_CLASSES_ROOT\\Drive\\shell\\DocSeeker]
+        @="Search with DocSeeker"
+        "Icon"="${exePath.replace(/\\/g, '\\\\')}"
+
+        [HKEY_CLASSES_ROOT\\Drive\\shell\\DocSeeker\\command]
+        @="\\"${exePath.replace(/\\/g, '\\\\')}\\" --search \\"%1\\""
+      `
+
+      // Write to temp file and execute
+      const fs = await import('fs')
+      const os = await import('os')
+      const tempFile = join(os.tmpdir(), 'docseeker_context_menu.reg')
+      await fs.promises.writeFile(tempFile, regScript, { encoding: 'utf16le' })
+
+      await execAsync(`reg import "${tempFile}"`)
+      await fs.promises.unlink(tempFile)
+
+      log.info('[IPC] Context menu registered successfully')
+      return { success: true }
+    } catch (err) {
+      log.error('[IPC] Failed to register context menu:', err)
+      return { success: false, error: (err as Error).message }
+    }
+  })
+
+  // Unregister context menu
+  ipcMain.handle('unregister-context-menu', async (): Promise<{ success: boolean; error?: string }> => {
+    if (process.platform !== 'win32') {
+      return { success: false, error: 'Only supported on Windows' }
+    }
+
+    try {
+      const { exec } = await import('child_process')
+      const { promisify } = await import('util')
+      const execAsync = promisify(exec)
+
+      // Registry keys to remove
+      const keysToRemove = [
+        'HKEY_CLASSES_ROOT\\Directory\\Background\\shell\\DocSeeker',
+        'HKEY_CLASSES_ROOT\\Directory\\shell\\DocSeeker',
+        'HKEY_CLASSES_ROOT\\Drive\\shell\\DocSeeker'
+      ]
+
+      for (const key of keysToRemove) {
+        try {
+          await execAsync(`reg delete "${key}" /f`)
+        } catch {
+          // Key might not exist, ignore error
+        }
+      }
+
+      log.info('[IPC] Context menu unregistered successfully')
+      return { success: true }
+    } catch (err) {
+      log.error('[IPC] Failed to unregister context menu:', err)
+      return { success: false, error: (err as Error).message }
+    }
+  })
+
+  // Check if context menu is registered
+  ipcMain.handle('is-context-menu-registered', async (): Promise<boolean> => {
+    if (process.platform !== 'win32') return false
+
+    try {
+      const { exec } = await import('child_process')
+      const { promisify } = await import('util')
+      const execAsync = promisify(exec)
+      await execAsync('reg query "HKEY_CLASSES_ROOT\\Directory\\Background\\shell\\DocSeeker"')
+      return true
+    } catch {
+      return false
+    }
+  })
+
   // ── Tags ────────────────────────────────────────────────────────────────────
 
   // Get all tags

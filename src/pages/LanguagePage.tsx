@@ -11,6 +11,8 @@ function LanguagePage(): JSX.Element {
     () => localStorage.getItem('minimizeToTray') === 'true'
   )
   const [monitorEnabled, setMonitorEnabled] = useState(false)
+  const [contextMenuEnabled, setContextMenuEnabled] = useState(false)
+  const [contextMenuLoading, setContextMenuLoading] = useState(false)
 
   useEffect(() => {
     window.electron.getGlobalHotkey().then(h => setCurrentHotkey(formatHotkey(h)))
@@ -18,6 +20,8 @@ function LanguagePage(): JSX.Element {
     window.electron.usnGetConfig?.().then(cfg => {
       if (cfg) setMonitorEnabled(cfg.enabled)
     })
+    // Check if context menu is registered
+    window.electron.isContextMenuRegistered?.().then(setContextMenuEnabled)
   }, [])
 
   const handleToggleMonitor = async (checked: boolean) => {
@@ -29,6 +33,31 @@ function LanguagePage(): JSX.Element {
       await window.electron.usnSetConfig?.({ enabled: true, dirs })
     } else {
       await window.electron.usnSetConfig?.({ enabled: false })
+    }
+  }
+
+  const handleToggleContextMenu = async () => {
+    setContextMenuLoading(true)
+    try {
+      if (contextMenuEnabled) {
+        const result = await window.electron.unregisterContextMenu?.()
+        if (result?.success) {
+          setContextMenuEnabled(false)
+        } else {
+          alert(t('settings.contextMenu.unregisterFailed') || result?.error || 'Failed to unregister')
+        }
+      } else {
+        const result = await window.electron.registerContextMenu?.()
+        if (result?.success) {
+          setContextMenuEnabled(true)
+        } else {
+          alert(t('settings.contextMenu.registerFailed') || result?.error || 'Failed to register (need admin rights)')
+        }
+      }
+    } catch (err) {
+      console.error('Context menu toggle failed:', err)
+    } finally {
+      setContextMenuLoading(false)
     }
   }
 
@@ -218,6 +247,34 @@ function LanguagePage(): JSX.Element {
               checked={monitorEnabled}
               onChange={handleToggleMonitor}
             />
+          </div>
+        </div>
+      </div>
+
+      <div className="settings-section">
+        <div className="settings-section-title">{t('settings.contextMenu.title')}</div>
+        <div className="settings-card">
+          <div className="settings-row">
+            <div className="settings-row-info">
+              <div className="settings-row-label">{t('settings.contextMenu.enable')}</div>
+              <div className="settings-row-desc">
+                {t('settings.contextMenu.desc')}
+                <span style={{ color: 'var(--warning-color)', display: 'block', marginTop: '4px' }}>
+                  {t('settings.contextMenu.adminWarning')}
+                </span>
+              </div>
+            </div>
+            <button
+              className="btn btn-secondary"
+              onClick={handleToggleContextMenu}
+              disabled={contextMenuLoading}
+            >
+              {contextMenuLoading
+                ? t('settings.contextMenu.loading')
+                : contextMenuEnabled
+                  ? t('settings.contextMenu.disable')
+                  : t('settings.contextMenu.enable')}
+            </button>
           </div>
         </div>
       </div>

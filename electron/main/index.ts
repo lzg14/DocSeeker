@@ -31,6 +31,35 @@ let floatingWindow: BrowserWindow | null = null
 let currentHotkey = 'CommandOrControl+Shift+F'
 const isSilentStart = process.argv.includes('--startup')
 
+// Parse --search argument for context menu integration
+const searchArgIndex = process.argv.indexOf('--search')
+const initialSearchQuery = searchArgIndex >= 0 ? process.argv[searchArgIndex + 1] : null
+
+// Single instance lock
+const gotTheLock = app.requestSingleInstanceLock()
+
+if (!gotTheLock) {
+  log.info('Another instance is running, quitting...')
+  app.quit()
+} else {
+  app.on('second-instance', (_, commandLine) => {
+    // When another instance launches with --search, focus main window and send search
+    const idx = commandLine.indexOf('--search')
+    const query = idx >= 0 ? commandLine[idx + 1] : null
+
+    if (mainWindow) {
+      if (mainWindow.isMinimized()) mainWindow.restore()
+      mainWindow.show()
+      mainWindow.focus()
+
+      if (query) {
+        log.info(`[Second Instance] Received search query: ${query}`)
+        mainWindow.webContents.send('context-menu-search', query)
+      }
+    }
+  })
+}
+
 const VALID_MODIFIERS = new Set(['Ctrl', 'Shift', 'Alt', 'Meta'])
 const MODIFIER_REPLACE: Record<string, string> = {
   CommandOrControl: 'Ctrl',
@@ -185,6 +214,12 @@ function createWindow(): void {
     if (!isSilentStart) {
       log.info('React app loaded, showing window')
       mainWindow?.show()
+
+      // Send initial search query if passed via --search argument
+      if (initialSearchQuery) {
+        log.info(`[Context Menu] Initial search query: ${initialSearchQuery}`)
+        mainWindow?.webContents.send('context-menu-search', initialSearchQuery)
+      }
     } else {
       log.info('React app loaded, silent start — window hidden')
     }
