@@ -25,7 +25,7 @@ const SUPPORTED_EXTENSIONS = new Set([
   '.odt', '.ods', '.odp',
   '.epub',
   '.zip', '.rar',
-  '.mbox', '.eml',
+  '.mbox', '.eml', '.pst',
   '.wps', '.wpp', '.et', '.dps',
   // Image / Audio / Video (metadata extraction)
   '.jpg', '.jpeg', '.png', '.gif', '.webp', '.bmp', '.tiff', '.tif',
@@ -62,6 +62,7 @@ const FILE_TYPE_MAP: Record<string, string> = {
   '.zip': 'zip', '.rar': 'rar',
   '.mbox': 'email',
   '.eml': 'email',
+  '.pst': 'email',
   '.wps': 'docx', '.wpp': 'pptx', '.et': 'xlsx', '.dps': 'pptx',
   // Image / Audio / Video metadata
   '.jpg': 'image', '.jpeg': 'image', '.png': 'image', '.gif': 'image', '.webp': 'image', '.bmp': 'image', '.tiff': 'image', '.tif': 'image',
@@ -376,6 +377,78 @@ async function extractTextFromMbox(filePath: string): Promise<string> {
     return texts.join('\n---\n')
   } catch (error) {
     log.warn(`Failed to extract text from mbox: ${filePath}`, error)
+    return ''
+  }
+}
+
+// Extract text from Outlook PST files (MS Outlook data files)
+async function extractTextFromPst(filePath: string): Promise<string> {
+  try {
+    const { PSTFile, PSTMessage, PSTFolder } = require('pst-extractor')
+    const pstFile = new PSTFile(filePath)
+    const store = pstFile.getMessageStore()
+    const texts: string[] = []
+
+    // Recursively process all folders
+    function processFolder(folder: PSTFolder, depth: number): void {
+      const indent = '  '.repeat(depth)
+      if (depth > 0 && folder.displayName) {
+        log.info(`[PST] Processing folder: ${indent}${folder.displayName}`)
+      }
+
+      // Process emails in this folder
+      if (folder.contentCount > 0) {
+        let email: PSTMessage | null = folder.getNextChild()
+        while (email) {
+          const emailData: string[] = []
+
+          // Extract email metadata
+          if (email.subject) emailData.push(`Subject: ${email.subject}`)
+          if (email.senderName) emailData.push(`From: ${email.senderName}`)
+          if (email.recipientTo) emailData.push(`To: ${email.recipientTo}`)
+          if (email.recipientCc) emailData.push(`Cc: ${email.recipientCc}`)
+          if (email.messageDeliveryTime) emailData.push(`Date: ${email.messageDeliveryTime}`)
+
+          // Extract body content
+          if (email.body) {
+            emailData.push(email.body)
+          }
+
+          // Extract attachments info
+          if (email.numberOfAttachments > 0) {
+            const attachments = email.getAttachments()
+            const attachmentNames = attachments.map((a: { filename: string }) => a.filename).filter(Boolean)
+            if (attachmentNames.length > 0) {
+              emailData.push(`Attachments: ${attachmentNames.join(', ')}`)
+            }
+          }
+
+          if (emailData.length > 0) {
+            texts.push(emailData.join('\n'))
+          }
+
+          email = folder.getNextChild()
+        }
+      }
+
+      // Process subfolders
+      if (folder.hasSubfolders) {
+        const childFolders: PSTFolder[] = folder.getSubFolders()
+        for (const child of childFolders) {
+          processFolder(child, depth + 1)
+        }
+      }
+    }
+
+    // Start processing from root folder
+    const rootFolder = pstFile.getRootFolder()
+    processFolder(rootFolder, 0)
+
+    const result = texts.join('\n---\n')
+    log.info(`[PST] Extracted ${texts.length} emails from: ${filePath}`)
+    return result
+  } catch (error) {
+    log.warn(`Failed to extract text from pst: ${filePath}`, error)
     return ''
   }
 }
@@ -751,6 +824,8 @@ async function extractText(filePath: string, ext: string): Promise<string> {
       return extractTextFromChm(filePath)
     case '.eml':
       return extractTextFromEml(filePath)
+    case '.pst':
+      return extractTextFromPst(filePath)
     case '.mbox':
       return extractTextFromMbox(filePath)
     case '.epub':
