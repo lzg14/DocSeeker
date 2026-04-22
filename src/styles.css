@@ -1501,65 +1501,8 @@ textarea:focus:not(:focus-visible) {
   margin-bottom: 20px;
 }
 
-.settings-section {
-  margin-bottom: 20px;
-}
-
-.settings-section-title {
-  font-size: 11px;
-  color: var(--text-muted);
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  margin-bottom: 8px;
-  padding-left: 2px;
-}
-
-.settings-card {
-  background: var(--bg-primary);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  overflow: hidden;
-  margin-bottom: 16px;
-}
-
-.settings-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 16px;
-  gap: 16px;
-  min-height: 60px;
-}
-
-.settings-row + .settings-row {
-  border-top: 1px solid var(--border);
-}
-
-.settings-row-info {
-  flex: 1;
-  min-width: 0;
-}
-
-.settings-row-label {
-  font-size: 14px;
-  font-weight: 500;
-  color: var(--text-primary);
-  margin-bottom: 2px;
-}
-
-.settings-row-desc {
-  font-size: 12px;
-  color: var(--text-secondary);
-  line-height: 1.4;
-}
-
-.settings-divider {
-  height: 1px;
-  background: var(--border);
-  margin: 0;
-}
-
-.about-content {
+/* Theme cards */
+.theme-cards {
   padding: 32px 16px;
   text-align: center;
 }
@@ -2948,32 +2891,36 @@ button, input, select {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 10px 12px;
+  padding: 4px 8px;
   background: var(--accent-light-bg, rgba(37, 99, 235, 0.1));
   border-bottom: 1px solid var(--accent, #2563eb);
-  gap: 12px;
+  gap: 8px;
+  min-height: 32px;
 }
 
 .batch-count {
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 500;
   color: var(--accent, #2563eb);
+  flex-shrink: 0;
 }
 
 .batch-actions {
   display: flex;
-  gap: 8px;
+  gap: 4px;
 }
 
 .batch-btn {
   display: flex;
   align-items: center;
-  gap: 4px;
-  padding: 6px 12px;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  padding: 0;
   background: var(--bg-primary);
   border: 1px solid var(--border);
-  border-radius: var(--radius);
-  font-size: 12px;
+  border-radius: 4px;
+  font-size: 14px;
   color: var(--text-primary);
   cursor: pointer;
   transition: all var(--transition-base);

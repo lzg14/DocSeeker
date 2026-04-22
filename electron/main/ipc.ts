@@ -795,7 +795,15 @@ export function registerIpcHandlers(): void {
       log.info('[IPC] Context menu registered successfully')
       return { success: true }
     } catch (err) {
+      const error = err as Error & { code?: string; killed?: boolean }
       log.error('[IPC] Failed to register context menu:', err)
+
+      // Check if it's a permission error
+      if (error.code === 'EACCES' || error.message.includes('access') ||
+          error.message.includes('权限') || error.message.includes('denied')) {
+        return { success: false, error: 'PERMISSION_DENIED' }
+      }
+
       return { success: false, error: (err as Error).message }
     }
   })

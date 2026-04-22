@@ -50,6 +50,8 @@ function LanguagePage(): JSX.Element {
         const result = await window.electron.registerContextMenu?.()
         if (result?.success) {
           setContextMenuEnabled(true)
+        } else if (result?.error === 'PERMISSION_DENIED') {
+          alert(t('settings.contextMenu.adminWarning') || '需要管理员权限才能修改注册表，请右键选择"以管理员身份运行"')
         } else {
           alert(t('settings.contextMenu.registerFailed') || 'Failed to register')
         }

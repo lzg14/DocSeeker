@@ -42,37 +42,15 @@ export class UsnWatcher {
       enabled: false,
       dirs: [],
     })
-    if (!config.enabled) {
-      log.info('[UsnWatcher] realtime monitor disabled, not starting')
-      return
-    }
 
-    // Fallback: if dirs empty at startup, fetch from meta and save
-    if (config.dirs.length === 0) {
-      log.info('[UsnWatcher] dirs empty, fetching from scanned folders...')
-      try {
-        const folders = getAllScannedFolders()
-        config = { enabled: true, dirs: folders.map(f => f.path) }
-        setAppSetting('realtimeMonitor', config)
-        log.info(`[UsnWatcher] loaded ${config.dirs.length} dirs from meta`)
-      } catch (e) {
-        log.error('[UsnWatcher] failed to get scanned folders:', e)
-      }
-    }
-
-    if (config.dirs.length === 0) {
-      log.warn('[UsnWatcher] still no dirs after fallback, not starting')
-      return
-    }
-
-    // Spawn process first (non-blocking for UI)
+    // Always spawn the process for keyboard hook (double-ctrl)
     await this.spawnProcess()
 
     // Connect asynchronously, don't block UI
-    this.tryConnect(config.dirs)
+    this.tryConnect(config)
   }
 
-  private async tryConnect(dirs: string[]): Promise<void> {
+  private async tryConnect(config: { enabled: boolean; dirs: string[] }): Promise<void> {
     // Retry connection with backoff
     let attempts = 0
     const maxAttempts = 10
@@ -80,11 +58,32 @@ export class UsnWatcher {
     const attempt = async (): Promise<void> => {
       try {
         await this.connect()
-        // Connected successfully, send init
-        const normalizedDirs = dirs.map(d => d.replace(/\\/g, '/'))
-        this.send({ type: 'init', dirs: normalizedDirs })
-        this.isRunning = true
-        log.info(`[UsnWatcher] connected, monitoring ${dirs.length} dirs`)
+        // Connected successfully
+        log.info('[UsnWatcher] connected to Go process')
+
+        // If monitor is enabled and we have dirs, start monitoring
+        if (config.enabled && config.dirs.length > 0) {
+          const normalizedDirs = config.dirs.map(d => d.replace(/\\/g, '/'))
+          this.send({ type: 'init', dirs: normalizedDirs })
+          this.isRunning = true
+          log.info(`[UsnWatcher] file monitoring enabled for ${config.dirs.length} dirs`)
+        } else if (config.enabled && config.dirs.length === 0) {
+          // Try to fetch dirs from meta
+          try {
+            const folders = getAllScannedFolders()
+            if (folders.length > 0) {
+              const normalizedDirs = folders.map(f => f.path.replace(/\\/g, '/'))
+              this.send({ type: 'init', dirs: normalizedDirs })
+              this.isRunning = true
+              setAppSetting('realtimeMonitor', { enabled: true, dirs: folders.map(f => f.path) })
+              log.info(`[UsnWatcher] file monitoring started with ${folders.length} dirs from meta`)
+            }
+          } catch (e) {
+            log.error('[UsnWatcher] failed to get scanned folders:', e)
+          }
+        } else {
+          log.info('[UsnWatcher] double-ctrl ready (file monitoring disabled)')
+        }
       } catch {
         attempts++
         if (attempts < maxAttempts) {

@@ -4,7 +4,7 @@ import crypto from 'crypto'
 import log from 'electron-log/main'
 import { createExtractorFromData } from 'node-unrar-js'
 import exifr from 'exifr'
-import { parseFile as parseAudioFile } from 'music-metadata'
+// import { parseFile as parseAudioFile } from 'music-metadata'  // ESM模块，暂不启用
 import {
   insertFile,
   getFileByPath,

@@ -227,7 +227,7 @@ const translations: Record<Language, Record<string, string>> = {
     // Guide page
     'guide.title': '关于',
     'guide.overview': '概述',
-    'guide.overviewDesc': 'DocSeeker 是一款高效的本地文档全文搜索工具，基于 Electron + SQLite FTS5 + BM25 构建，支持 AND/OR/NOT/正则/前缀等多种搜索语法，按相关性排序。所有数据存储在本地，隐私安全。支持以下文档格式的全文索引与搜索：Word · Excel · PowerPoint · PDF · XPS · Text/MD/JSON/CSV · HTML · SVG · RTF · CHM · ODF · EPUB · ZIP · RAR · Email · WPS；并支持图片/音视频元数据全文索引（标题、歌手、GPS 等）。',
+    'guide.overviewDesc': 'DocSeeker 是一款高效的本地文档全文搜索工具，基于 Electron + SQLite FTS5 + BM25 构建，支持 AND/OR/NOT/前缀等多种搜索语法，按相关性排序。所有数据存储在本地，隐私安全。支持以下文档格式的全文索引与搜索：Word · Excel · PowerPoint · PDF · RTF · CHM · ODF (ODT/ODS/ODP) · EPUB · ZIP/RAR/7Z/GZIP · 邮件 (MSG/PST) · WPS (WPS/ET/DPS) · Apple iWork (Pages/Numbers/Keynote)；支持 70+ 种源代码和配置文件格式；支持图片 OCR 文字识别 (JPG/PNG/GIF/BMP/TIFF/WebP/ICO)。',
     'guide.formats': '支持的格式',
     'guide.formatsDesc': 'DocSeeker 支持以下文档格式的全文索引与搜索：',
     'guide.feature1': '全文搜索：基于 SQLite FTS5 + BM25 相关性排序，支持 AND/OR/NOT/前缀等多种搜索语法',
@@ -295,6 +295,10 @@ const translations: Record<Language, Record<string, string>> = {
     'theme.solarized.desc': '暖灰 / 专业写作者',
     'theme.system': '系统',
     'theme.system.desc': '自动匹配系统亮色/暗色模式',
+    // Tray menu
+    'tray.showWindow': '显示窗口',
+    'tray.globalSearch': '全局搜索',
+    'tray.exit': '退出',
     // Status bar
     'status.indexed': '已索引 {count} 个文件',
     'status.loading': '正在加载...',
@@ -462,7 +466,7 @@ const translations: Record<Language, Record<string, string>> = {
     // Guide page
     'guide.title': 'About',
     'guide.overview': 'Overview',
-    'guide.overviewDesc': 'DocSeeker is an efficient local full-text search tool built on Electron + SQLite FTS5 + BM25, supporting AND/OR/NOT/regex/prefix search with relevance ranking. All data stored locally for privacy. Indexes and searches: Word · Excel · PowerPoint · PDF · XPS · Text/MD/JSON/CSV · HTML · SVG · RTF · CHM · ODF · EPUB · ZIP · RAR · Email · WPS; also indexes image/audio/video metadata (title, artist, GPS, etc.)',
+    'guide.overviewDesc': 'DocSeeker is an efficient local full-text search tool built on Electron + SQLite FTS5 + BM25, supporting AND/OR/NOT/regex/prefix search with relevance ranking. All data stored locally for privacy. Supports 70+ document formats: Word · Excel · PowerPoint · PDF · RTF · CHM · ODF (ODT/ODS/ODP) · EPUB · ZIP/RAR/7Z/GZIP · Email (MSG/PST) · WPS (WPS/ET/DPS) · Apple iWork (Pages/Numbers/Keynote); 70+ source code and config file formats; image OCR (JPG/PNG/GIF/BMP/TIFF/WebP/ICO).',
     'guide.formats': 'Supported Formats',
     'guide.formatsDesc': 'DocSeeker indexes and searches the following document formats:',
     'guide.features': 'Key Features',

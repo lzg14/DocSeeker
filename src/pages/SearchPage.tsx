@@ -1108,19 +1108,19 @@ function SearchPage(): JSX.Element {
         {/* Batch operation toolbar */}
         {selectedFiles.size > 0 && (
           <div className="batch-toolbar">
-            <span className="batch-count">{selectedFiles.size} 个文件已选中</span>
+            <span className="batch-count">{selectedFiles.size} 个文件</span>
             <div className="batch-actions">
               <button className="batch-btn" onClick={handleBatchOpenFolder} title="在文件夹中显示">
-                📁 {t('batch.showInFolder') || '显示'}
+                📁
               </button>
               <button className="batch-btn" onClick={handleBatchCopy} title="复制到...">
-                📋 {t('batch.copy') || '复制'}
+                📋
               </button>
               <button className="batch-btn" onClick={handleBatchMove} title="移动到...">
-                📦 {t('batch.move') || '移动'}
+                📦
               </button>
               <button className="batch-btn danger" onClick={handleBatchDelete} title="删除">
-                🗑️ {t('batch.delete') || '删除'}
+                🗑️
               </button>
               <button className="batch-btn" onClick={() => setSelectedFiles(new Set())} title="取消选择">
                 ✕
