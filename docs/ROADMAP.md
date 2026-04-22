@@ -1,6 +1,6 @@
 # DocSeeker 开发路线图
 
-> 更新时间: 2026-04-22（完成 M5.1 M5.2 M5.3 M5.4 M5.5 M5.6 M5.7 M5.8）
+> 更新时间: 2026-04-22（完成 M5.1-M5.8 + 模糊搜索 + 77种格式）
 
 ---
 
@@ -67,7 +67,7 @@ DocSeeker 是一款基于 Electron + React + TypeScript 的本地文档全文搜
 | **网络驱动器/云盘搜索** | ⚠️ OneDrive 已支持 | NAS / SharePoint / Google Drive | dtSearch / Copernic |
 | **文件格式扩展** | ✅ 77 种 | 目标 60+（已完成） | AnyTXT 60+ |
 | **图片 OCR** | ⏸️ 暂不计划 | 扫描件/截图全文可搜 | Copernic / dtSearch |
-| **模糊搜索/容错** | ❌ 缺失 | 打字错误也能搜 | TextSeek / FileSeek |
+| **模糊搜索/容错** | ✅ 已完成（Fuse.js 后置过滤） | 打字错误也能搜 | TextSeek / FileSeek |
 | **CAD 文件（DWG/DXF）** | ⏸️ 暂不计划 | 工程图纸可搜 | Copernic / dtSearch |
 
 ---

@@ -16,6 +16,7 @@ import { existsSync, mkdirSync, unlinkSync, writeFileSync, readFileSync } from '
 import { Worker } from 'worker_threads'
 import log from 'electron-log/main'
 import Database from 'better-sqlite3'
+import Fuse from 'fuse.js'
 import { getAppSetting, setAppSetting } from './config'
 
 // ============ Types ============
@@ -815,6 +816,58 @@ export async function searchAllShards(
   merged.sort((a, b) => (a.rank ?? 0) - (b.rank ?? 0))
 
   return merged.slice(0, 200) // Limit to top 200 results
+}
+
+// ─── Fuzzy Search ──────────────────────────────────────────────────────────
+
+export interface FuzzySearchResult {
+  id: number
+  path: string
+  name: string
+  size: number
+  hash: string | null
+  file_type: string
+  content: string | null
+  created_at: string
+  updated_at: string
+  is_supported: boolean | null
+  match_type?: string
+  rank?: number
+  fuzzyScore?: number  // 0 = 完美匹配, 1 = 最差
+}
+
+/**
+ * Fuzzy search across all shards.
+ * First performs FTS5 search, then re-ranks with Fuse.js for typo tolerance.
+ */
+export async function fuzzySearchAllShards(
+  query: string,
+  threshold = 0.4
+): Promise<FuzzySearchResult[]> {
+  // First get FTS5 results
+  const ftsResults = await searchAllShards(query)
+
+  if (ftsResults.length === 0) return []
+
+  // Apply Fuse.js for fuzzy re-ranking
+  const fuse = new Fuse(ftsResults, {
+    keys: [
+      { name: 'name', weight: 0.7 },
+      { name: 'content', weight: 0.3 }
+    ],
+    threshold,
+    distance: 100,
+    ignoreLocation: true,
+    includeScore: true,
+    minMatchCharLength: 2
+  })
+
+  const fuzzyResults = fuse.search(query)
+
+  return fuzzyResults.map(r => ({
+    ...r.item,
+    fuzzyScore: r.score ?? 0
+  }))
 }
 
 /**

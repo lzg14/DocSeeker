@@ -27,6 +27,7 @@ import {
   openNextShard,
   insertFileBatch,
   searchAllShards,
+  fuzzySearchAllShards,
   deduplicateResults,
   searchByFileName as shardSearchByFileName,
   getSearchSnippets as shardGetSearchSnippets,
@@ -122,6 +123,31 @@ export function registerIpcHandlers(): void {
       }))
     } catch (err) {
       log.error('[IPC] search-files error:', err)
+      return []
+    }
+  })
+
+  // Fuzzy search files (Fuse.js on top of FTS5)
+  ipcMain.handle('search-files-fuzzy', async (_, query: string, threshold?: number): Promise<FileRecord[]> => {
+    if (query.trim()) addSearchHistory(query)
+    try {
+      const results = await fuzzySearchAllShards(query, threshold ?? 0.4)
+      return results.map(r => ({
+        id: r.id,
+        path: r.path,
+        name: r.name,
+        size: r.size,
+        hash: r.hash,
+        file_type: r.file_type,
+        content: r.content,
+        created_at: r.created_at,
+        updated_at: r.updated_at,
+        is_supported: r.is_supported === 1 ? true : r.is_supported === 0 ? false : undefined,
+        match_type: r.match_type ?? 'fuzzy',
+        fuzzyScore: r.fuzzyScore
+      }))
+    } catch (err) {
+      log.error('[IPC] search-files-fuzzy error:', err)
       return []
     }
   })

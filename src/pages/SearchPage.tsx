@@ -90,6 +90,7 @@ function SearchPage(): JSX.Element {
   const [isExtracting, setIsExtracting] = useState(false)
   const [searchScope, setSearchScope] = useState<'all' | 'filename'>('all')
   const [dedupEnabled, setDedupEnabled] = useState(false)
+  const [fuzzyEnabled, setFuzzyEnabled] = useState(false)
   const [secondaryFilter, setSecondaryFilter] = useState('')
   const [pendingEvents, setPendingEvents] = useState<{ event: string; path: string }[]>([])
   const [showExportMenu, setShowExportMenu] = useState(false)
@@ -116,6 +117,7 @@ function SearchPage(): JSX.Element {
   const filterRef = useRef<HTMLDivElement>(null)
   const searchScopeRef = useRef<'all' | 'filename'>('all')
   const dedupEnabledRef = useRef(false)
+  const fuzzyEnabledRef = useRef(false)
   const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   // Derived filtered files based on secondary filter
@@ -155,6 +157,10 @@ function SearchPage(): JSX.Element {
   useEffect(() => {
     dedupEnabledRef.current = dedupEnabled
   }, [dedupEnabled])
+
+  useEffect(() => {
+    fuzzyEnabledRef.current = fuzzyEnabled
+  }, [fuzzyEnabled])
 
   // Listen for USN file change events
   useEffect(() => {
@@ -270,7 +276,9 @@ function SearchPage(): JSX.Element {
               ? await window.electron.searchDeduplicate(bareQuery, opts)
               : await window.electron.searchFilesAdvanced(bareQuery, opts))
           : bareQuery
-            ? await window.electron.searchFiles(bareQuery)
+            ? fuzzyEnabledRef.current
+              ? await window.electron.searchFilesFuzzy(bareQuery)
+              : await window.electron.searchFiles(bareQuery)
             : hasFilters ? await window.electron.searchFilesAdvanced('', opts) : []
 
         // Filter results by regex against path and content
@@ -287,7 +295,9 @@ function SearchPage(): JSX.Element {
             : dedupEnabledRef.current
               ? await window.electron.searchDeduplicate(query, opts)
               : await window.electron.searchFilesAdvanced(query, opts))
-          : await window.electron.searchFiles(query)
+          : fuzzyEnabledRef.current
+            ? await window.electron.searchFilesFuzzy(query)
+            : await window.electron.searchFiles(query)
       }
 
       setFiles(result)
@@ -847,6 +857,13 @@ function SearchPage(): JSX.Element {
               title={t('search.dedupTip') || '按文件内容 hash 过滤重复文件，仅保留最新修改版本'}
             >
               🔗 {t('search.dedup') || '去重'}
+            </button>
+            <button
+              className={`toolbar-btn ${fuzzyEnabled ? 'active' : ''}`}
+              onClick={() => setFuzzyEnabled(f => !f)}
+              title={t('search.fuzzyTip') || '模糊搜索，容忍拼写错误'}
+            >
+              ✨ {t('search.fuzzy') || '模糊'}
             </button>
             <button
               className={`toolbar-btn ${showSyntaxHelp ? 'active' : ''}`}

@@ -94,6 +94,7 @@ export interface ElectronAPI {
   selectDirectory: () => Promise<string | null>
   onScanProgress: (callback: (progress: ScanProgress) => void) => () => void
   searchFiles: (query: string) => Promise<FileRecord[]>
+  searchFilesFuzzy: (query: string, threshold?: number) => Promise<FileRecord[]>
   searchFilesAdvanced: (query: string, options?: SearchOptions) => Promise<FileRecord[]>
   searchDeduplicate: (query: string, options?: SearchOptions) => Promise<FileRecord[]>
   searchByFileName: (query: string, options?: SearchOptions) => Promise<FileRecord[]>
@@ -199,6 +200,8 @@ const electronAPI: ElectronAPI = {
   },
 
   searchFiles: (query: string) => ipcRenderer.invoke('search-files', query),
+
+  searchFilesFuzzy: (query: string, threshold?: number) => ipcRenderer.invoke('search-files-fuzzy', query, threshold),
 
   searchFilesAdvanced: (query: string, options?: SearchOptions) => ipcRenderer.invoke('search-files-advanced', query, options),
 
