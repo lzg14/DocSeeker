@@ -216,4 +216,3 @@ M1.1-M1.7                   M3.1-M3.4          M5.1-M5.10
 ## 附录：参考文档
 
 - 竞品分析报告: `docs/COMPETITION.md`
-- 项目规划原始文档: `docs/superpowers/plans/2026-04-14-roadmap-and-competition-analysis.md`
