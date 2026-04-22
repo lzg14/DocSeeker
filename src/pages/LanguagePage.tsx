@@ -13,6 +13,7 @@ function LanguagePage(): JSX.Element {
   const [monitorEnabled, setMonitorEnabled] = useState(false)
   const [contextMenuEnabled, setContextMenuEnabled] = useState(false)
   const [contextMenuLoading, setContextMenuLoading] = useState(false)
+  const [doubleCtrlEnabled, setDoubleCtrlEnabledLocal] = useState(true)
 
   useEffect(() => {
     window.electron.getGlobalHotkey().then(h => setCurrentHotkey(formatHotkey(h)))
@@ -22,6 +23,8 @@ function LanguagePage(): JSX.Element {
     })
     // Check if context menu is registered
     window.electron.isContextMenuRegistered?.().then(setContextMenuEnabled)
+    // Check double-ctrl enabled
+    window.electron.getDoubleCtrlEnabled?.().then(setDoubleCtrlEnabledLocal)
   }, [])
 
   const handleToggleMonitor = async (checked: boolean) => {
@@ -199,6 +202,19 @@ function LanguagePage(): JSX.Element {
             {hotkeyError && (
               <span style={{ fontSize: '11px', color: '#e74c3c', marginLeft: '8px' }}>{hotkeyError}</span>
             )}
+          </div>
+
+          <div className="settings-divider" />
+
+          <div className="settings-row">
+            <div className="settings-row-info">
+              <div className="settings-row-label">{t('settings.doubleCtrl')}</div>
+              <div className="settings-row-desc">{t('settings.doubleCtrlDesc')}</div>
+            </div>
+            <Toggle checked={doubleCtrlEnabled} onChange={v => {
+              setDoubleCtrlEnabledLocal(v)
+              window.electron.setDoubleCtrlEnabled?.(v)
+            }} />
           </div>
         </div>
       </div>

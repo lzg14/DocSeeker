@@ -5,7 +5,7 @@ import log from 'electron-log/main'
 import { initDatabase, closeDatabase } from './database'
 import { closeAllShards, initShardManager } from './shardManager'
 import { initHotCache, closeHotCache } from './hotCache'
-import { usnWatcher } from './usnWatcher'
+import { usnWatcher, onDoubleCtrl } from './usnWatcher'
 import { registerIpcHandlers } from './ipc'
 import { startUpdater, stopUpdater, handleManualCheck, handleDownloadUpdate, handleQuitAndInstall } from './updater'
 
@@ -300,6 +300,18 @@ app.whenReady().then(async () => {
   initShardManager().then(() => log.info('Shards loaded in background'))
 
   // Start USN realtime monitor if enabled
+  // Register double-ctrl callback to toggle floating window
+  onDoubleCtrl(() => {
+    if (floatingWindow) {
+      if (floatingWindow.isVisible()) {
+        floatingWindow.hide()
+      } else {
+        floatingWindow.show()
+        floatingWindow.focus()
+      }
+    }
+  })
+
   usnWatcher.start().catch((e) => log.error('[UsnWatcher] failed to start:', e))
 
   // Auto updater

@@ -33,7 +33,13 @@ func main() {
 	idleTimer = time.NewTimer(idleTimeout)
 	lastActivity = time.Now()
 
+	// Start file watcher event pump
 	go eventPump()
+
+	// Start keyboard hook (double Ctrl detection)
+	if err := StartKeyboardHook(onDoubleCtrl); err != nil {
+		fmt.Fprintf(os.Stderr, "WARN: keyboard hook failed: %v\n", err)
+	}
 
 	ln, err := net.Listen("tcp", "127.0.0.1:29501")
 	if err != nil {
@@ -48,6 +54,7 @@ func main() {
 	go func() {
 		<-sigCh
 		fmt.Fprintf(os.Stderr, "INFO: received signal, shutting down\n")
+		StopKeyboardHook()
 		os.Exit(0)
 	}()
 
@@ -57,6 +64,18 @@ func main() {
 			continue
 		}
 		go handleConn(conn)
+	}
+}
+
+// onDoubleCtrl is called when double Ctrl is detected
+func onDoubleCtrl() {
+	cw.mu.Lock()
+	conn := cw.conn
+	cw.mu.Unlock()
+	if conn != nil {
+		msg, _ := json.Marshal(map[string]string{"type": "double_ctrl"})
+		msg = append(msg, '\n')
+		conn.Write(msg)
 	}
 }
 
@@ -108,6 +127,7 @@ func eventPump() {
 			writeEvent(ev)
 		case <-idleTimer.C:
 			fmt.Fprintf(os.Stderr, "INFO: idle timeout, exiting\n")
+			StopKeyboardHook()
 			os.Exit(0)
 		}
 	}

@@ -195,6 +195,9 @@ export function getAppSetting<T = unknown>(key: string, defaultValue: T): T {
   if (key === 'realtimeMonitor') {
     return { enabled: false, dirs: [] } as unknown as T
   }
+  if (key === 'doubleCtrlEnabled') {
+    return true as unknown as T
+  }
   return defaultValue
 }
 

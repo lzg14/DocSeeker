@@ -128,6 +128,9 @@ export interface ElectronAPI {
   // Global hotkey
   getGlobalHotkey: () => Promise<string>
   setGlobalHotkey: (hotkey: string) => Promise<void>
+  // Double Ctrl hotkey
+  getDoubleCtrlEnabled: () => Promise<boolean>
+  setDoubleCtrlEnabled: (enabled: boolean) => Promise<void>
   // Scan settings
   getScanSettings: () => Promise<any>
   updateScanSettings: (settings: any) => Promise<void>
@@ -268,6 +271,10 @@ const electronAPI: ElectronAPI = {
   getGlobalHotkey: () => ipcRenderer.invoke('get-global-hotkey'),
 
   setGlobalHotkey: (hotkey: string) => ipcRenderer.invoke('set-global-hotkey', hotkey),
+
+  getDoubleCtrlEnabled: () => ipcRenderer.invoke('get-double-ctrl-enabled'),
+
+  setDoubleCtrlEnabled: (enabled: boolean) => ipcRenderer.invoke('set-double-ctrl-enabled', enabled),
 
   getScanSettings: () => ipcRenderer.invoke('get-scan-settings'),
 

@@ -674,6 +674,16 @@ export function registerIpcHandlers(): void {
     }
   })
 
+  // ── Double Ctrl Hotkey ─────────────────────────────────────────────────────
+  ipcMain.handle('get-double-ctrl-enabled', async (): Promise<boolean> => {
+    return getAppSetting<boolean>('doubleCtrlEnabled', true)
+  })
+
+  ipcMain.handle('set-double-ctrl-enabled', async (_, enabled: boolean): Promise<void> => {
+    setAppSetting('doubleCtrlEnabled', enabled)
+    log.info(`[DoubleCtrl] ${enabled ? 'enabled' : 'disabled'}`)
+  })
+
   // Read thumbnail from disk cache (supports both images and PDF)
   ipcMain.handle('thumb-cache-get', async (_, filePath: string): Promise<string | null> => {
     try {

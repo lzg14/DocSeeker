@@ -2,7 +2,7 @@ import { spawn, ChildProcessWithoutNullStreams } from 'child_process'
 import * as net from 'net'
 import * as path from 'path'
 import log from 'electron-log/main'
-import { app } from 'electron'
+import { app, BrowserWindow } from 'electron'
 import { getAppSetting, setAppSetting } from './config'
 import { handleUsnEvent } from './usnHandler'
 import { getAllScannedFolders } from './meta'
@@ -13,7 +13,7 @@ interface UsnCommand {
 }
 
 interface UsnMessage {
-  type: 'event' | 'ack' | 'err'
+  type: 'event' | 'ack' | 'err' | 'double_ctrl'
   event?: string
   path?: string
   volume?: string
@@ -21,6 +21,14 @@ interface UsnMessage {
   oldPath?: string
   command?: string
   message?: string
+}
+
+// Callback for double Ctrl events
+type DoubleCtrlCallback = () => void
+let doubleCtrlCallback: DoubleCtrlCallback | null = null
+
+export function onDoubleCtrl(callback: DoubleCtrlCallback): void {
+  doubleCtrlCallback = callback
 }
 
 export class UsnWatcher {
@@ -167,6 +175,11 @@ export class UsnWatcher {
       log.debug(`[UsnWatcher] ack: ${msg.command}`)
     } else if (msg.type === 'err') {
       log.error(`[UsnWatcher] Go error: ${msg.message}`)
+    } else if (msg.type === 'double_ctrl') {
+      log.info('[UsnWatcher] double-ctrl detected')
+      if (doubleCtrlCallback) {
+        doubleCtrlCallback()
+      }
     }
   }
 
