@@ -31,7 +31,7 @@ DocSeeker 是一款基于 Electron + React + TypeScript 的本地文档全文搜
 
 | 功能 | 当前状态 | 目标 | 竞品参考 |
 |------|----------|------|----------|
-| 新增文件格式 | ✅ 49 种格式 | 目标 60+（计划见 `docs/FORMAT-EXPANSION.md`） | AnyTXT 60+ |
+| 新增文件格式 | ✅ 77 种格式 | 目标 60+（已完成） | AnyTXT 60+ |
 | 实时文件监控 | ✅ **已实现**（fsnotify + Go 独立进程） | 持续优化 | Everything / AnyTXT |
 | 正则搜索 | ✅ 已支持 `/pattern/` 语法 | 词干提取和字段搜索均已完成 | Everything / AnyTXT |
 | 文件过滤器 | ✅ 已支持类型/大小/日期三重过滤 | — | 所有主流竞品 |
@@ -65,7 +65,7 @@ DocSeeker 是一款基于 Electron + React + TypeScript 的本地文档全文搜
 | 便携版 | ✅ 已完成 | — | Everything / AnyTXT / DocFetcher |
 | **双击 Ctrl 唤起浮层** | ✅ 已完成 | 多显示器支持 | Listary / Everything |
 | **网络驱动器/云盘搜索** | ⚠️ OneDrive 已支持 | NAS / SharePoint / Google Drive | dtSearch / Copernic |
-| **文件格式扩展** | ✅ 49 种 | 目标 60+ | AnyTXT 60+ |
+| **文件格式扩展** | ✅ 77 种 | 目标 60+（已完成） | AnyTXT 60+ |
 | **图片 OCR** | ⏸️ 暂不计划 | 扫描件/截图全文可搜 | Copernic / dtSearch |
 | **模糊搜索/容错** | ❌ 缺失 | 打字错误也能搜 | TextSeek / FileSeek |
 | **CAD 文件（DWG/DXF）** | ⏸️ 暂不计划 | 工程图纸可搜 | Copernic / dtSearch |
