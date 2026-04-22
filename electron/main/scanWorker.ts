@@ -68,6 +68,8 @@ const SUPPORTED_EXTENSIONS = new Set([
   '.msg', '.yaml', '.yml', '.log', '.ini', '.cfg', '.conf', '.srt', '.vtt', '.nfo', '.rst', '.tex',
   // Phase B: Medium complexity formats
   '.mobi', '.azw3', '.fb2', '.vsd', '.vsdx', '.pages',
+  // Phase C: Apple/iWork formats
+  '.numbers', '.key', '.odg', '.odc', '.ots', '.otp',
   // Image / Audio / Video (metadata extraction)
   '.jpg', '.jpeg', '.png', '.gif', '.webp', '.bmp', '.tiff', '.tif',
   '.mp3', '.flac', '.ogg', '.wav', '.aac', '.m4a',
@@ -1119,6 +1121,14 @@ async function extractText(filePath: string, ext: string, fileSize?: number): Pr
       return extractTextFromVsd(filePath)
     case '.pages':
       return extractTextFromPages(filePath)
+    // Phase C: Apple/iWork formats
+    case '.numbers':
+    case '.key':
+    case '.odg':
+    case '.odc':
+    case '.ots':
+    case '.otp':
+      return extractTextFromOdf(filePath)
     default:
       return ''
   }
@@ -1254,6 +1264,8 @@ function getFileType(ext: string): string {
     '.msg': 'email', '.yaml': 'text', '.yml': 'text', '.log': 'text', '.ini': 'text', '.cfg': 'text', '.conf': 'text', '.srt': 'text', '.vtt': 'text', '.nfo': 'text', '.rst': 'text', '.tex': 'text',
     // Phase B: Medium complexity formats
     '.mobi': 'ebook', '.azw3': 'ebook', '.fb2': 'ebook', '.vsd': 'diagram', '.vsdx': 'diagram', '.pages': 'docx',
+    // Phase C: Apple/iWork formats
+    '.numbers': 'xlsx', '.key': 'pptx', '.odg': 'diagram', '.odc': 'chart', '.ots': 'xlsx', '.otp': 'pptx',
     // Image / Audio / Video metadata
     '.jpg': 'image', '.jpeg': 'image', '.png': 'image', '.gif': 'image', '.webp': 'image', '.bmp': 'image', '.tiff': 'image', '.tif': 'image',
     '.mp3': 'media', '.flac': 'media', '.ogg': 'media', '.wav': 'media', '.aac': 'media', '.m4a': 'media',
