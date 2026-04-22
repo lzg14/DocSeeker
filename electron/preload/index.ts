@@ -351,6 +351,14 @@ const electronAPI: ElectronAPI = {
     ipcRenderer.on('context-menu-search', handler)
     return () => ipcRenderer.removeListener('context-menu-search', handler)
   },
+
+  // Monitor status
+  getMonitorStatus: () => ipcRenderer.invoke('get-monitor-status'),
+  onMonitorStatusChanged: (callback: (status: { status: string; message?: string }) => void) => {
+    const handler = (_: any, data: { status: string; message?: string }) => callback(data)
+    ipcRenderer.on('monitor-status-changed', handler)
+    return () => ipcRenderer.removeListener('monitor-status-changed', handler)
+  },
 }
 
 contextBridge.exposeInMainWorld('electron', electronAPI)

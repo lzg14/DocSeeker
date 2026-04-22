@@ -299,6 +299,12 @@ const translations: Record<Language, Record<string, string>> = {
     'tray.showWindow': '显示窗口',
     'tray.globalSearch': '全局搜索',
     'tray.exit': '退出',
+    // Monitor status
+    'monitor.monitoring': '监控中',
+    'monitor.connected': '已连接',
+    'monitor.connecting': '连接中...',
+    'monitor.error': '错误',
+    'monitor.disconnected': '未连接',
     // Status bar
     'status.indexed': '已索引 {count} 个文件',
     'status.loading': '正在加载...',
@@ -541,6 +547,16 @@ const translations: Record<Language, Record<string, string>> = {
     'theme.solarized.desc': 'Warm gray / Writers',
     'theme.system': 'System',
     'theme.system.desc': 'Follow OS light/dark mode',
+    // Tray menu
+    'tray.showWindow': 'Show Window',
+    'tray.globalSearch': 'Global Search',
+    'tray.exit': 'Exit',
+    // Monitor status
+    'monitor.monitoring': 'Monitoring',
+    'monitor.connected': 'Connected',
+    'monitor.connecting': 'Connecting...',
+    'monitor.error': 'Error',
+    'monitor.disconnected': 'Disconnected',
     // Confirm dialog
     'confirm.cancel': 'Cancel',
     'confirm.ok': 'OK',

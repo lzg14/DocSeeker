@@ -4,9 +4,10 @@ import log from 'electron-log/main'
 import { initDatabase, closeDatabase } from './database'
 import { closeAllShards, initShardManager } from './shardManager'
 import { initHotCache, closeHotCache } from './hotCache'
-import { usnWatcher, onDoubleCtrl } from './usnWatcher'
+import { usnWatcher, onDoubleCtrl, onMonitorStatusChange } from './usnWatcher'
 import { registerIpcHandlers } from './ipc'
 import { startUpdater, stopUpdater, handleManualCheck, handleDownloadUpdate, handleQuitAndInstall } from './updater'
+import { getAppSetting } from './config'
 
 // Inline electron-toolkit utils to avoid bundling issue
 const isDev = !app.isPackaged
@@ -209,9 +210,49 @@ function createTray(): void {
   }
   tray = new Tray(icon.resize({ width: 16, height: 16 }))
 
+  updateTrayMenu()
+
+  tray.on('double-click', () => {
+    if (mainWindow) {
+      mainWindow.show()
+      mainWindow.focus()
+    }
+  })
+
+  log.info('System tray created')
+}
+
+function getTrayLabels(): { showWindow: string; globalSearch: string; exit: string } {
+  // Get language from settings
+  const lang = getAppSetting<string>('language', 'zh-CN')
+  if (lang === 'en') {
+    return {
+      showWindow: 'Show Window',
+      globalSearch: 'Global Search',
+      exit: 'Exit'
+    }
+  }
+  return {
+    showWindow: '显示窗口',
+    globalSearch: '全局搜索',
+    exit: '退出'
+  }
+}
+
+function updateTrayMenu(status?: string, message?: string): void {
+  if (!tray) return
+
+  const labels = getTrayLabels()
+  const statusText = message || getDefaultStatusText(status || 'disconnected')
+
   const contextMenu = Menu.buildFromTemplate([
     {
-      label: '显示窗口',
+      label: `${labels.showWindow} (${statusText})`,
+      enabled: false
+    },
+    { type: 'separator' },
+    {
+      label: labels.showWindow,
       click: () => {
         if (mainWindow) {
           mainWindow.show()
@@ -220,7 +261,7 @@ function createTray(): void {
       }
     },
     {
-      label: '全局搜索',
+      label: labels.globalSearch,
       accelerator: currentHotkey,
       click: () => {
         if (floatingWindow) {
@@ -234,7 +275,7 @@ function createTray(): void {
     },
     { type: 'separator' },
     {
-      label: '退出',
+      label: labels.exit,
       click: () => {
         ;(app as any).isQuitting = true
         app.quit()
@@ -242,17 +283,28 @@ function createTray(): void {
     }
   ])
 
-  tray.setToolTip('DocSeeker')
   tray.setContextMenu(contextMenu)
+}
 
-  tray.on('double-click', () => {
-    if (mainWindow) {
-      mainWindow.show()
-      mainWindow.focus()
+function getDefaultStatusText(status: string): string {
+  const lang = getAppSetting<string>('language', 'zh-CN')
+  const texts: Record<string, Record<string, string>> = {
+    'zh-CN': {
+      disconnected: '未连接',
+      connecting: '连接中...',
+      connected: '已连接',
+      monitoring: '监控中',
+      error: '错误'
+    },
+    'en': {
+      disconnected: 'Disconnected',
+      connecting: 'Connecting...',
+      connected: 'Connected',
+      monitoring: 'Monitoring',
+      error: 'Error'
     }
-  })
-
-  log.info('System tray created')
+  }
+  return texts[lang]?.[status] || status
 }
 
 function createWindow(): void {
@@ -327,6 +379,16 @@ function createWindow(): void {
   })
 }
 
+// Global error handlers
+process.on('uncaughtException', (error) => {
+  log.error('[App] Uncaught exception:', error)
+  // Don't exit immediately, try to save state
+})
+
+process.on('unhandledRejection', (reason, promise) => {
+  log.error('[App] Unhandled rejection at:', promise, 'reason:', reason)
+})
+
 app.whenReady().then(async () => {
   log.info('App ready, initializing...')
 
@@ -375,6 +437,13 @@ app.whenReady().then(async () => {
         floatingWindow.focus()
       }
     }
+  })
+
+  // Register monitor status change callback to update tray
+  onMonitorStatusChange((status, message) => {
+    updateTrayMenu(status, message)
+    // Also notify renderer
+    mainWindow?.webContents.send('monitor-status-changed', { status, message })
   })
 
   usnWatcher.start().catch((e) => log.error('[UsnWatcher] failed to start:', e))

@@ -710,6 +710,13 @@ export function registerIpcHandlers(): void {
     log.info(`[DoubleCtrl] ${enabled ? 'enabled' : 'disabled'}`)
   })
 
+  // ── Monitor Status ─────────────────────────────────────────────────────────
+  ipcMain.handle('get-monitor-status', async (): Promise<{ status: string; message?: string }> => {
+    const { getMonitorStatus } = await import('./usnWatcher')
+    const status = getMonitorStatus()
+    return { status, message: '' }
+  })
+
   // Read thumbnail from disk cache (supports both images and PDF)
   ipcMain.handle('thumb-cache-get', async (_, filePath: string): Promise<string | null> => {
     try {

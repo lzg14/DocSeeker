@@ -5,7 +5,6 @@ function LanguagePage(): JSX.Element {
   const { language, setLanguage, theme, setTheme, t } = useLanguage()
   const [currentHotkey, setCurrentHotkey] = useState('Ctrl+Shift+F')
   const [listening, setListening] = useState(false)
-  const [hotkeyError, setHotkeyError] = useState('')
   const [autoLaunch, setAutoLaunch] = useState(false)
   const [minimizeToTray, setMinimizeToTray] = useState(
     () => localStorage.getItem('minimizeToTray') === 'true'
@@ -14,6 +13,7 @@ function LanguagePage(): JSX.Element {
   const [contextMenuEnabled, setContextMenuEnabled] = useState(false)
   const [contextMenuLoading, setContextMenuLoading] = useState(false)
   const [doubleCtrlEnabled, setDoubleCtrlEnabledLocal] = useState(true)
+  const [monitorStatus, setMonitorStatus] = useState<{ status: string; message?: string }>({ status: 'disconnected' })
 
   useEffect(() => {
     window.electron.getGlobalHotkey().then(h => setCurrentHotkey(formatHotkey(h)))
@@ -23,7 +23,32 @@ function LanguagePage(): JSX.Element {
     })
     window.electron.isContextMenuRegistered?.().then(setContextMenuEnabled)
     window.electron.getDoubleCtrlEnabled?.().then(setDoubleCtrlEnabledLocal)
+    // Get initial monitor status
+    window.electron.getMonitorStatus?.().then(setMonitorStatus)
+    // Subscribe to status changes
+    const unsubscribe = window.electron.onMonitorStatusChanged?.(setMonitorStatus)
+    return () => unsubscribe?.()
   }, [])
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'monitoring': return '#4caf50' // Green
+      case 'connected': return '#8bc34a' // Light green
+      case 'connecting': return '#ff9800' // Orange
+      case 'error': return '#f44336' // Red
+      default: return '#9e9e9e' // Gray
+    }
+  }
+
+  const getStatusText = (status: string) => {
+    switch (status) {
+      case 'monitoring': return t('monitor.monitoring') || '监控中'
+      case 'connected': return t('monitor.connected') || '已连接'
+      case 'connecting': return t('monitor.connecting') || '连接中...'
+      case 'error': return t('monitor.error') || '错误'
+      default: return t('monitor.disconnected') || '未连接'
+    }
+  }
 
   const handleToggleMonitor = async (checked: boolean) => {
     setMonitorEnabled(checked)
@@ -190,6 +215,22 @@ function LanguagePage(): JSX.Element {
         <div className="settings-row">
           <div className="settings-label-wrap">
             <span className="settings-label">{t('settings.enableRealtimeMonitor')}</span>
+            <span
+              className="monitor-status"
+              style={{ color: getStatusColor(monitorStatus.status), fontSize: '11px', marginLeft: '8px' }}
+            >
+              <span
+                style={{
+                  display: 'inline-block',
+                  width: '6px',
+                  height: '6px',
+                  borderRadius: '50%',
+                  backgroundColor: getStatusColor(monitorStatus.status),
+                  marginRight: '4px'
+                }}
+              />
+              {getStatusText(monitorStatus.status)}
+            </span>
           </div>
           <Toggle checked={monitorEnabled} onChange={handleToggleMonitor} />
         </div>
