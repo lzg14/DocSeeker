@@ -62,7 +62,7 @@ const SUPPORTED_EXTENSIONS = new Set([
   '.odt', '.ods', '.odp',
   '.epub',
   '.zip', '.rar',
-  '.mbox', '.eml',
+  '.mbox', '.eml', '.pst',
   '.wps', '.wpp', '.et', '.dps',
   // Image / Audio / Video (metadata extraction)
   '.jpg', '.jpeg', '.png', '.gif', '.webp', '.bmp', '.tiff', '.tif',
@@ -410,6 +410,61 @@ async function extractTextFromMbox(filePath: string): Promise<string> {
     }
     return texts.join('\n---\n')
   } catch (error) {
+    return ''
+  }
+}
+
+// Extract text from Outlook PST files (MS Outlook data files)
+async function extractTextFromPst(filePath: string): Promise<string> {
+  try {
+    const { PSTFile, PSTMessage, PSTFolder } = require('pst-extractor')
+    const pstFile = new PSTFile(filePath)
+    const texts: string[] = []
+
+    // Recursively process all folders
+    function processFolder(folder: PSTFolder): void {
+      // Process emails in this folder
+      if (folder.contentCount > 0) {
+        let email: PSTMessage | null = folder.getNextChild()
+        while (email) {
+          const emailData: string[] = []
+
+          // Extract email metadata
+          if (email.subject) emailData.push(`Subject: ${email.subject}`)
+          if (email.senderName) emailData.push(`From: ${email.senderName}`)
+          if (email.recipientTo) emailData.push(`To: ${email.recipientTo}`)
+          if (email.body) emailData.push(email.body)
+
+          // Extract attachments info
+          if (email.numberOfAttachments > 0) {
+            const attachments = email.getAttachments()
+            const attachmentNames = attachments.map((a: { filename: string }) => a.filename).filter(Boolean)
+            if (attachmentNames.length > 0) {
+              emailData.push(`Attachments: ${attachmentNames.join(', ')}`)
+            }
+          }
+
+          if (emailData.length > 0) {
+            texts.push(emailData.join('\n'))
+          }
+
+          email = folder.getNextChild()
+        }
+      }
+
+      // Process subfolders
+      if (folder.hasSubfolders) {
+        for (const child of folder.getSubFolders()) {
+          processFolder(child)
+        }
+      }
+    }
+
+    processFolder(pstFile.getRootFolder())
+    log.info(`[PST] Extracted ${texts.length} emails from: ${filePath}`)
+    return texts.join('\n---\n')
+  } catch (error) {
+    log.warn(`[WARN] PST failed: ${error.message}`)
     return ''
   }
 }
@@ -819,6 +874,8 @@ async function extractText(filePath: string, ext: string, fileSize?: number): Pr
       return extractTextFromChm(filePath)
     case '.eml':
       return extractTextFromEml(filePath)
+    case '.pst':
+      return extractTextFromPst(filePath)
     case '.mbox':
       return extractTextFromMbox(filePath)
     case '.epub':
@@ -1005,7 +1062,7 @@ function getFileType(ext: string): string {
     '.odt': 'odf', '.ods': 'odf', '.odp': 'odf',
     '.epub': 'epub',
     '.zip': 'zip', '.rar': 'rar',
-    '.mbox': 'email', '.eml': 'email',
+    '.mbox': 'email', '.eml': 'email', '.pst': 'email',
     '.wps': 'docx', '.wpp': 'pptx', '.et': 'xlsx', '.dps': 'pptx',
     // Image / Audio / Video metadata
     '.jpg': 'image', '.jpeg': 'image', '.png': 'image', '.gif': 'image', '.webp': 'image', '.bmp': 'image', '.tiff': 'image', '.tif': 'image',
