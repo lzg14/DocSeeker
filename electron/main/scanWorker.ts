@@ -64,6 +64,8 @@ const SUPPORTED_EXTENSIONS = new Set([
   '.zip', '.rar',
   '.mbox', '.eml', '.pst',
   '.wps', '.wpp', '.et', '.dps',
+  // Phase A: Simple formats
+  '.msg', '.yaml', '.yml', '.log', '.ini', '.cfg', '.conf', '.srt', '.vtt', '.nfo', '.rst', '.tex',
   // Image / Audio / Video (metadata extraction)
   '.jpg', '.jpeg', '.png', '.gif', '.webp', '.bmp', '.tiff', '.tif',
   '.mp3', '.flac', '.ogg', '.wav', '.aac', '.m4a',
@@ -933,6 +935,24 @@ async function extractText(filePath: string, ext: string, fileSize?: number): Pr
     case '.flv':
     case '.webm':
       return extractTextFromMedia(filePath)
+    // Phase A: Simple text formats (read as plain text)
+    case '.msg':
+    case '.yaml':
+    case '.yml':
+    case '.log':
+    case '.ini':
+    case '.cfg':
+    case '.conf':
+    case '.srt':
+    case '.vtt':
+    case '.nfo':
+    case '.rst':
+    case '.tex':
+      try {
+        return await fs.readFile(filePath, 'utf-8')
+      } catch {
+        return ''
+      }
     default:
       return ''
   }
@@ -1064,6 +1084,8 @@ function getFileType(ext: string): string {
     '.zip': 'zip', '.rar': 'rar',
     '.mbox': 'email', '.eml': 'email', '.pst': 'email',
     '.wps': 'docx', '.wpp': 'pptx', '.et': 'xlsx', '.dps': 'pptx',
+    // Phase A: Simple formats
+    '.msg': 'email', '.yaml': 'text', '.yml': 'text', '.log': 'text', '.ini': 'text', '.cfg': 'text', '.conf': 'text', '.srt': 'text', '.vtt': 'text', '.nfo': 'text', '.rst': 'text', '.tex': 'text',
     // Image / Audio / Video metadata
     '.jpg': 'image', '.jpeg': 'image', '.png': 'image', '.gif': 'image', '.webp': 'image', '.bmp': 'image', '.tiff': 'image', '.tif': 'image',
     '.mp3': 'media', '.flac': 'media', '.ogg': 'media', '.wav': 'media', '.aac': 'media', '.m4a': 'media',
