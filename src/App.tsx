@@ -3,7 +3,6 @@ import { PageTab } from './types'
 import { AppProvider } from './context/AppContext'
 import { LanguageProvider } from './context/LanguageContext'
 import TitleBar from './components/TitleBar'
-import SideNav from './components/SideNav'
 import StatusBar from './components/StatusBar'
 import UpdateNotification from './components/UpdateNotification'
 import SearchPage from './pages/SearchPage'
@@ -73,15 +72,12 @@ function App(): JSX.Element {
     <AppProvider>
       <LanguageProvider>
         <div className="app">
-          <TitleBar />
-          <div className="main-layout">
-            <SideNav activeTab={activeTab} onTabChange={setActiveTab} />
-            <main className="main-content">
-              <ErrorBoundary>
-                {renderPage()}
-              </ErrorBoundary>
-            </main>
-          </div>
+          <TitleBar activeTab={activeTab} onTabChange={setActiveTab} />
+          <main className="main-content">
+            <ErrorBoundary>
+              {renderPage()}
+            </ErrorBoundary>
+          </main>
           <StatusBar />
           <UpdateNotification />
         </div>

@@ -663,11 +663,50 @@ textarea:focus:not(:focus-visible) {
   flex-shrink: 0;
 }
 
+.title-bar-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  -webkit-app-region: drag;
+}
+
+.title-bar-nav {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  -webkit-app-region: no-drag;
+  padding: 0 8px;
+}
+
+.title-bar-nav-btn {
+  width: 36px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  color: var(--text-secondary);
+  transition: background-color var(--transition-base), color var(--transition-base);
+}
+
+.title-bar-nav-btn:hover {
+  background: rgba(255,255,255,0.08);
+  color: var(--text-primary);
+}
+
+.title-bar-nav-btn.active {
+  color: var(--accent);
+  background: var(--accent-subtle);
+}
+
 .title-bar-title {
   font-size: 13px;
   font-weight: 600;
   color: var(--text-primary);
-  padding: 0 16px 0 8px;
+  padding: 0 8px 0 4px;
 }
 
 .title-bar-icon {
@@ -709,19 +748,13 @@ textarea:focus:not(:focus-visible) {
   color: #fff;
 }
 
-.main-layout {
-  display: flex;
-  flex: 1;
-  overflow: hidden;
-}
-
 .main-content {
   flex: 1;
   overflow-y: auto;
   display: flex;
   flex-direction: column;
   background: var(--bg-primary);
-  width: 100%;
+  height: calc(100vh - var(--titlebar-height) - var(--statusbar-height));
 }
 
 /* === 路由懒加载占位 === */
@@ -779,6 +812,14 @@ textarea:focus:not(:focus-visible) {
   flex-shrink: 0;
   width: 100%;
   position: relative;
+}
+
+/* Search page takes full height */
+.search-page {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
 }
 
 .search-header.drag-over {
