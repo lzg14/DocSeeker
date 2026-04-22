@@ -61,11 +61,13 @@ const SUPPORTED_EXTENSIONS = new Set([
   '.chm',
   '.odt', '.ods', '.odp',
   '.epub',
-  '.zip', '.rar',
+  '.zip', '.rar', '.7z', '.tar', '.gz', '.bz2',
   '.mbox', '.eml', '.pst',
   '.wps', '.wpp', '.et', '.dps',
   // Phase A: Simple formats
   '.msg', '.yaml', '.yml', '.log', '.ini', '.cfg', '.conf', '.srt', '.vtt', '.nfo', '.rst', '.tex',
+  // Phase B: Medium complexity formats
+  '.mobi', '.azw3', '.fb2', '.vsd', '.vsdx', '.pages',
   // Image / Audio / Video (metadata extraction)
   '.jpg', '.jpeg', '.png', '.gif', '.webp', '.bmp', '.tiff', '.tif',
   '.mp3', '.flac', '.ogg', '.wav', '.aac', '.m4a',
@@ -538,6 +540,154 @@ async function extractTextFromEpub(filePath: string, fileSize?: number): Promise
   }
 }
 
+// Phase B: Extract text from archive formats (tar, gz, bz2, 7z)
+async function extractTextFromArchive(filePath: string, ext: string): Promise<string> {
+  try {
+    const targz = require('tar.gz')
+    const data = await fs.readFile(filePath)
+    const texts: string[] = []
+
+    if (ext === '.tar') {
+      // Plain tar - extract and read text files
+      const targzModule = new targz()
+      // For simplicity, just return file info
+      return `[Archive: tar] ${path.basename(filePath)}`
+    } else if (ext === '.gz' && !filePath.endsWith('.tar.gz')) {
+      // Single file gzip - decompress and read
+      const zlib = require('zlib')
+      const content = zlib.gunzipSync(data).toString('utf-8')
+      return content
+    } else if (filePath.endsWith('.tar.gz') || ext === '.gz') {
+      // tar.gz
+      const extract = targz().createExtractStream(filePath)
+      // For simplicity, just return file info
+      return `[Archive: tar.gz] ${path.basename(filePath)}`
+    } else if (ext === '.bz2') {
+      // bzip2
+      const zlib = require('zlib')
+      const content = zlib.brotliDecompressSync(data).toString('utf-8')
+      return content
+    } else if (ext === '.7z') {
+      // 7z - just return info, full extraction needs 7zip-bin
+      return `[Archive: 7z] ${path.basename(filePath)}`
+    }
+
+    return ''
+  } catch (error) {
+    log.warn(`[WARN] Archive extraction failed: ${error.message}`)
+    return ''
+  }
+}
+
+// Phase B: Extract text from Kindle/Mobi ebooks
+async function extractTextFromMobi(filePath: string): Promise<string> {
+  try {
+    const Mobi = require('mobi')
+    const mobi = new Mobi(filePath)
+    const content = mobi.toString()
+    mobi.close()
+    return content || ''
+  } catch (error) {
+    log.warn(`[WARN] MOBI failed: ${error.message}`)
+    return ''
+  }
+}
+
+// Phase B: Extract text from FictionBook (FB2)
+async function extractTextFromFb2(filePath: string): Promise<string> {
+  try {
+    const content = await fs.readFile(filePath, 'utf-8')
+    const texts: string[] = []
+
+    // Extract text from <p> tags and <section> content
+    const bodyMatch = content.match(/<body[^>]*>([\s\S]*)<\/body>/i)
+    if (bodyMatch) {
+      const body = bodyMatch[1]
+      // Extract text from various elements
+      const textMatches = body.match(/<[^>]+>([^<]*)<\/[^>]+>/g) || []
+      for (const m of textMatches) {
+        const text = m.replace(/<[^>]+>/g, '').trim()
+        if (text) texts.push(text)
+      }
+      // Also extract binary descriptions (image filenames)
+      const binMatches = content.match(/<binary[^>]+id="([^"]+)"/g) || []
+      for (const m of binMatches) {
+        const match = m.match(/id="([^"]+)"/)
+        if (match) texts.push(`[Image: ${match[1]}]`)
+      }
+    }
+
+    return texts.join('\n')
+  } catch (error) {
+    log.warn(`[WARN] FB2 failed: ${error.message}`)
+    return ''
+  }
+}
+
+// Phase B: Extract text from Visio diagrams (VSD/VSDX)
+async function extractTextFromVsd(filePath: string): Promise<string> {
+  try {
+    if (filePath.endsWith('.vsdx')) {
+      // VSDX is a ZIP file containing XML
+      const JSZip = require('jszip')
+      const data = await fs.readFile(filePath)
+      if (!isValidZip(data)) return ''
+      const zip = await withTimeout(JSZip.loadAsync(data), TIMEOUT_MS)
+      const texts: string[] = []
+
+      // VSDX contains pages in word/document.xml or drawings
+      for (const [name, file] of Object.entries(zip.files)) {
+        if (file.dir) continue
+        if (name.endsWith('.xml')) {
+          const content = await file.async('string')
+          // Extract text from Shape elements
+          const shapeMatches = content.match(/<a:t>([^<]*)<\/a:t>/gi) || []
+          for (const m of shapeMatches) {
+            const text = m.replace(/<a:t>|<\/a:t>/gi, '').trim()
+            if (text) texts.push(text)
+          }
+        }
+      }
+
+      return texts.join(' | ')
+    } else {
+      // VSD (legacy) - binary format, return filename only
+      return `[Visio Diagram: ${path.basename(filePath)}]`
+    }
+  } catch (error) {
+    log.warn(`[WARN] VSD failed: ${error.message}`)
+    return ''
+  }
+}
+
+// Phase B: Extract text from Apple Pages
+async function extractTextFromPages(filePath: string): Promise<string> {
+  try {
+    const JSZip = require('jszip')
+    const data = await fs.readFile(filePath)
+    if (!isValidZip(data)) return ''
+    const zip = await withTimeout(JSZip.loadAsync(data), TIMEOUT_MS)
+    const texts: string[] = []
+
+    // Pages is a ZIP containing index.xml or document.archive
+    const indexXml = zip.file('index.xml')
+    if (indexXml) {
+      const content = await indexXml.async('string')
+      // Extract text from paragraphs
+      const paraMatches = content.match(/<s[^>]+>([^<]*)<\/s>/g) || []
+      for (const m of paraMatches) {
+        const text = m.replace(/<[^>]+>/g, '').trim()
+        if (text) texts.push(text)
+      }
+    }
+
+    return texts.join('\n')
+  } catch (error) {
+    log.warn(`[WARN] Pages failed: ${error.message}`)
+    return ''
+  }
+}
+
 const MAX_ZIP_DEPTH = 3
 
 async function extractTextFromZip(filePath: string, depth = 0): Promise<string> {
@@ -953,6 +1103,22 @@ async function extractText(filePath: string, ext: string, fileSize?: number): Pr
       } catch {
         return ''
       }
+    // Phase B: Medium complexity formats
+    case '.7z':
+    case '.tar':
+    case '.gz':
+    case '.bz2':
+      return extractTextFromArchive(filePath, ext)
+    case '.mobi':
+    case '.azw3':
+      return extractTextFromMobi(filePath)
+    case '.fb2':
+      return extractTextFromFb2(filePath)
+    case '.vsd':
+    case '.vsdx':
+      return extractTextFromVsd(filePath)
+    case '.pages':
+      return extractTextFromPages(filePath)
     default:
       return ''
   }
@@ -1081,11 +1247,13 @@ function getFileType(ext: string): string {
     '.chm': 'chm',
     '.odt': 'odf', '.ods': 'odf', '.odp': 'odf',
     '.epub': 'epub',
-    '.zip': 'zip', '.rar': 'rar',
+    '.zip': 'zip', '.rar': 'rar', '.7z': 'zip', '.tar': 'zip', '.gz': 'zip', '.bz2': 'zip',
     '.mbox': 'email', '.eml': 'email', '.pst': 'email',
     '.wps': 'docx', '.wpp': 'pptx', '.et': 'xlsx', '.dps': 'pptx',
     // Phase A: Simple formats
     '.msg': 'email', '.yaml': 'text', '.yml': 'text', '.log': 'text', '.ini': 'text', '.cfg': 'text', '.conf': 'text', '.srt': 'text', '.vtt': 'text', '.nfo': 'text', '.rst': 'text', '.tex': 'text',
+    // Phase B: Medium complexity formats
+    '.mobi': 'ebook', '.azw3': 'ebook', '.fb2': 'ebook', '.vsd': 'diagram', '.vsdx': 'diagram', '.pages': 'docx',
     // Image / Audio / Video metadata
     '.jpg': 'image', '.jpeg': 'image', '.png': 'image', '.gif': 'image', '.webp': 'image', '.bmp': 'image', '.tiff': 'image', '.tif': 'image',
     '.mp3': 'media', '.flac': 'media', '.ogg': 'media', '.wav': 'media', '.aac': 'media', '.m4a': 'media',
