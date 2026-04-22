@@ -1,6 +1,5 @@
 import { app, shell, BrowserWindow, ipcMain, dialog, Tray, Menu, nativeImage, globalShortcut } from 'electron'
 import { join } from 'path'
-import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import log from 'electron-log/main'
 import { initDatabase, closeDatabase } from './database'
 import { closeAllShards, initShardManager } from './shardManager'
@@ -8,6 +7,72 @@ import { initHotCache, closeHotCache } from './hotCache'
 import { usnWatcher, onDoubleCtrl } from './usnWatcher'
 import { registerIpcHandlers } from './ipc'
 import { startUpdater, stopUpdater, handleManualCheck, handleDownloadUpdate, handleQuitAndInstall } from './updater'
+
+// Inline electron-toolkit utils to avoid bundling issue
+const isDev = !app.isPackaged
+
+const electronApp = {
+  setAppUserModelId(id: string) {
+    if (process.platform === 'win32') {
+      app.setAppUserModelId(isDev ? process.execPath : id)
+    }
+  },
+  setAutoLaunch(auto: boolean) {
+    if (process.platform === 'linux') return false
+    const isOpenAtLogin = () => app.getLoginItemSettings().openAtLogin
+    if (isOpenAtLogin() !== auto) {
+      app.setLoginItemSettings({ openAtLogin: auto, path: process.execPath })
+      return isOpenAtLogin() === auto
+    }
+    return true
+  },
+  skipProxy() {
+    // @ts-ignore
+    return import('electron').then(({ session }) =>
+      session.defaultSession.setProxy({ mode: 'direct' })
+    )
+  }
+}
+
+const optimizer = {
+  watchWindowShortcuts(window: BrowserWindow, shortcutOptions?: { escToCloseWindow?: boolean; zoom?: boolean }) {
+    if (!window) return
+    const { webContents } = window
+    const { escToCloseWindow = false, zoom = false } = shortcutOptions || {}
+    webContents.on('before-input-event', (event, input) => {
+      if (input.type === 'keyDown') {
+        if (!isDev) {
+          if (input.code === 'KeyR' && (input.control || input.meta)) {
+            event.preventDefault()
+          }
+        } else {
+          if (input.code === 'F12') {
+            if (webContents.isDevToolsOpened()) {
+              webContents.closeDevTools()
+            } else {
+              webContents.openDevTools({ mode: 'undocked' })
+              console.log('Open dev tool...')
+            }
+          }
+        }
+        if (escToCloseWindow) {
+          if (input.code === 'Escape' && input.key !== 'Process') {
+            window.close()
+            event.preventDefault()
+          }
+        }
+        if (!zoom) {
+          if (input.code === 'Minus' && (input.control || input.meta)) {
+            event.preventDefault()
+          }
+          if (input.code === 'Equal' && input.shift && (input.control || input.meta)) {
+            event.preventDefault()
+          }
+        }
+      }
+    })
+  }
+}
 
 // Initialize logging
 log.initialize()
@@ -128,7 +193,7 @@ function createFloatingWindow(): void {
     floatingWindow = null
   })
 
-  if (is.dev && process.env['ELECTRON_RENDERER_URL']) {
+  if (isDev && process.env['ELECTRON_RENDERER_URL']) {
     floatingWindow.loadURL(process.env['ELECTRON_RENDERER_URL'] + '#/floating')
   } else {
     floatingWindow.loadFile(join(__dirname, '../renderer/index.html'), { hash: '/floating' })

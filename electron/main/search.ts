@@ -8,6 +8,7 @@ import { app } from 'electron'
 import { Worker } from 'worker_threads'
 import { join } from 'path'
 import log from 'electron-log/main'
+import Fuse from 'fuse.js'
 
 let searchDb: Database.Database | null = null
 let searchDbPath: string = ''
@@ -209,6 +210,58 @@ export function searchFiles(query: string): FileRecord[] {
   `)
   stmt.bind([ftsQuery])
   return stmt.all() as FileRecord[]
+}
+
+// ─── Fuzzy Search ──────────────────────────────────────────────────────────
+
+export interface FuzzySearchResult {
+  item: FileRecord
+  score: number  // 0 = 完美匹配, 1 = 最差匹配
+}
+
+/**
+ * Fuzzy search using Fuse.js on top of FTS5 results.
+ * First performs FTS5 search, then re-ranks results using fuzzy matching.
+ */
+export function searchFilesFuzzy(query: string, threshold = 0.4): FuzzySearchResult[] {
+  if (!query.trim()) return []
+
+  // Step 1: Get FTS5 results (limit to top 1000 for performance)
+  const ftsQuery = query.trim().split(/\s+/).filter(k => k.length > 0)
+    .map(k => `"${k.replace(/"/g, '""')}"*`).join(' AND ')
+
+  const stmt = getSearchDatabase().prepare(`
+    SELECT f.*, bm25(files_fts) as rank
+    FROM files_fts fts JOIN files f ON fts.rowid = f.id
+    WHERE files_fts MATCH ?
+    ORDER BY rank
+    LIMIT 1000
+  `)
+  stmt.bind([ftsQuery])
+  const ftsResults = stmt.all() as FileRecord[]
+
+  if (ftsResults.length === 0) return []
+
+  // Step 2: Apply Fuse.js fuzzy matching
+  const fuse = new Fuse(ftsResults, {
+    keys: [
+      { name: 'name', weight: 0.7 },
+      { name: 'content_snippet', weight: 0.3 }
+    ],
+    threshold,           // 0.0 = 精确匹配, 1.0 = 任意匹配
+    distance: 100,      // 字符距离
+    ignoreLocation: true,
+    includeScore: true,
+    minMatchCharLength: 2
+  })
+
+  const fuzzyResults = fuse.search(query)
+
+  // Convert Fuse.js score to our format (0-1, lower is better)
+  return fuzzyResults.map(r => ({
+    item: r.item,
+    score: r.score ?? 0
+  }))
 }
 
 export function searchFilesAdvanced(query: string, options?: SearchOptions): FileRecord[] {

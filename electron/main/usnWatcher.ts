@@ -65,13 +65,39 @@ export class UsnWatcher {
       return
     }
 
+    // Spawn process first (non-blocking for UI)
     await this.spawnProcess()
-    await this.connect()
-    // Normalize all dirs to forward slashes for cross-platform consistency
-    const normalizedDirs = config.dirs.map(d => d.replace(/\\/g, '/'))
-    this.send({ type: 'init', dirs: normalizedDirs })
-    this.isRunning = true
-    log.info(`[UsnWatcher] started, monitoring ${config.dirs.length} dirs`)
+
+    // Connect asynchronously, don't block UI
+    this.tryConnect(config.dirs)
+  }
+
+  private async tryConnect(dirs: string[]): Promise<void> {
+    // Retry connection with backoff
+    let attempts = 0
+    const maxAttempts = 10
+
+    const attempt = async (): Promise<void> => {
+      try {
+        await this.connect()
+        // Connected successfully, send init
+        const normalizedDirs = dirs.map(d => d.replace(/\\/g, '/'))
+        this.send({ type: 'init', dirs: normalizedDirs })
+        this.isRunning = true
+        log.info(`[UsnWatcher] connected, monitoring ${dirs.length} dirs`)
+      } catch {
+        attempts++
+        if (attempts < maxAttempts) {
+          log.debug(`[UsnWatcher] connection attempt ${attempts} failed, retrying...`)
+          setTimeout(attempt, 500)
+        } else {
+          log.error('[UsnWatcher] failed to connect after max attempts')
+        }
+      }
+    }
+
+    // Initial delay then start trying
+    setTimeout(attempt, 300)
   }
 
   stop(): void {
