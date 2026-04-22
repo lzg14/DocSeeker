@@ -17,7 +17,7 @@
 
 ## 一、背景与目标
 
-DocSeeker 是一款基于 Electron + React + TypeScript 的本地文档全文搜索工具，使用 SQLite FTS5 + BM25 提供相关性排序。目前核心功能已就绪，但与竞品（AnyTXT 60+ 格式、Copernic 400+ 格式）相比，在文件格式覆盖、高级搜索、实时监控等方面存在明显差距。
+DocSeeker 是一款基于 Electron + React + TypeScript 的本地文档全文搜索工具，使用 SQLite FTS5 + BM25 提供相关性排序。核心功能已就绪，支持 49 种文件格式，目标扩展至 60+ 以匹配 AnyTXT。
 
 **主要竞品：** AnyTXT Searcher（免费/60+格式）、Copernic Desktop Search（收费/企业级）、TextSeek（收费/SQLite FTS5）、dtSearch（收费/企业级）、Recoll（Linux/开源）、FileSeek（收费）、UltraFileSearch（收费）、Lookeen（收费/Outlook 集成）
 
@@ -31,12 +31,12 @@ DocSeeker 是一款基于 Electron + React + TypeScript 的本地文档全文搜
 
 | 功能 | 当前状态 | 目标 | 竞品参考 |
 |------|----------|------|----------|
-| 新增文件格式 | ✅ 29 种格式（含图片/音视频元数据） | 继续增加 WPD、图片/音视频元数据 | AnyTXT 60+ |
-| 实时文件监控 | ✅ **已实现**（NTFS USN Journal API + Go 独立进程） | 重新启用需改用 NTFS USN Journal API | Everything / AnyTXT |
+| 新增文件格式 | ✅ 49 种格式 | 目标 60+（计划见 `docs/FORMAT-EXPANSION.md`） | AnyTXT 60+ |
+| 实时文件监控 | ✅ **已实现**（fsnotify + Go 独立进程） | 持续优化 | Everything / AnyTXT |
 | 正则搜索 | ✅ 已支持 `/pattern/` 语法 | 词干提取和字段搜索均已完成 | Everything / AnyTXT |
 | 文件过滤器 | ✅ 已支持类型/大小/日期三重过滤 | — | 所有主流竞品 |
-| **内容高亮跳转**（打开文件+定位关键词） | ❌ 缺失 | 点击结果直接定位到关键词位置 | AnyTXT / TextSeek / FileSeek 核心功能 |
-| **搜索语法自动补全** | ❌ 缺失 | 输入时智能提示搜索语法 | TextSeek / FileSeek / AnyTXT |
+| **内容高亮跳转**（打开文件+定位关键词） | ✅ 已完成 | — | AnyTXT / TextSeek / FileSeek |
+| **搜索语法自动补全** | ✅ 已完成 | — | TextSeek / FileSeek / AnyTXT |
 
 ### P1 — 体验缺失（尽快补全）
 
@@ -46,15 +46,15 @@ DocSeeker 是一款基于 Electron + React + TypeScript 的本地文档全文搜
 | 保存的搜索 | ✅ 已完成 | — | AnyTXT / Copernic |
 | 搜索语法提示 | ✅ 语法提示面板已完成 | — | Recoll |
 | 去重 UI | ✅ 已完成 | — | 仅 Copernic |
-| 全局快捷键浮层 | ✅ Ctrl+Shift+F 已完成 | 双击 Ctrl 唤起（计划中） | Listary |
+| 全局快捷键浮层 | ✅ Ctrl+Shift+F + 双击Ctrl已完成 | — | Listary |
 | 缩略图预览 | ✅ hover 预览已完成 | — | Copernic / Listary |
 | 拖拽文件搜索 | ✅ 已完成 | — | Listary |
 | **搜索结果导出** | ✅ CSV/HTML/TXT 已完成 | — | Copernic / AnyTXT |
-| **搜索结果批量操作** | ❌ 缺失 | 移动/复制/删除多个结果 | FileSeek / FileSearchy |
-| **右键资源管理器集成** | ❌ 缺失 | "用 DocSeeker 搜索"右键菜单 | AnyTXT / Copernic |
-| **Outlook PST 邮件** | ❌ 缺失 | 解析 Outlook 数据文件 | Copernic / dtSearch / Lookeen / TextSeek |
-| **搜索结果排序自定义** | ❌ 缺失 | 按相关性/大小/修改时间排序 | Copernic / dtSearch / FileSeek |
-| **文件/文件夹标签** | ❌ 缺失 | 用户自定义标签分类 | Copernic / dtSearch / Lookeen |
+| **搜索结果批量操作** | ✅ 移动/复制/删除已完成 | — | FileSeek / FileSearchy |
+| **右键资源管理器集成** | ✅ "用 DocSeeker 搜索"已完成 | — | AnyTXT / Copernic |
+| **Outlook PST 邮件** | ✅ PST 解析已完成 | — | Copernic / dtSearch / Lookeen / TextSeek |
+| **搜索结果排序自定义** | ✅ 按相关性/大小/时间排序已完成 | — | Copernic / dtSearch / FileSeek |
+| **文件/文件夹标签** | ✅ 用户自定义标签已完成 | — | Copernic / dtSearch / Lookeen |
 
 ### P2 — 技术债（逐步优化）
 
@@ -65,6 +65,7 @@ DocSeeker 是一款基于 Electron + React + TypeScript 的本地文档全文搜
 | 便携版 | ✅ 已完成 | — | Everything / AnyTXT / DocFetcher |
 | **双击 Ctrl 唤起浮层** | ✅ 已完成 | 多显示器支持 | Listary / Everything |
 | **网络驱动器/云盘搜索** | ⚠️ OneDrive 已支持 | NAS / SharePoint / Google Drive | dtSearch / Copernic |
+| **文件格式扩展** | ✅ 49 种 | 目标 60+ | AnyTXT 60+ |
 | **图片 OCR** | ⏸️ 暂不计划 | 扫描件/截图全文可搜 | Copernic / dtSearch |
 | **模糊搜索/容错** | ❌ 缺失 | 打字错误也能搜 | TextSeek / FileSeek |
 | **CAD 文件（DWG/DXF）** | ⏸️ 暂不计划 | 工程图纸可搜 | Copernic / dtSearch |
