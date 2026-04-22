@@ -87,8 +87,8 @@ export class UsnWatcher {
 
   private async spawnProcess(): Promise<void> {
     const exePath = app.isPackaged
-      ? path.join(process.resourcesPath!, 'go-usn-monitor.exe')
-      : path.join(__dirname, '../../go/usn-monitor.exe')
+      ? path.join(process.resourcesPath!, 'docseeker-monitor.exe')
+      : path.join(__dirname, '../../go/docseeker-monitor.exe')
 
     log.info('[UsnWatcher] spawning:', exePath)
     this.process = spawn(exePath, [], {

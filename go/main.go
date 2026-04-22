@@ -12,11 +12,11 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/docseeker/usn-monitor/usn"
+	"github.com/docseeker/usn-monitor/watcher"
 )
 
-var watcher usn.FileWatcher
-var notifyCh chan usn.UsnEvent
+var fw watcher.FileWatcher
+var notifyCh chan watcher.UsnEvent
 var idleTimer *time.Timer
 var idleTimeout = 5 * time.Minute
 var lastActivity time.Time
@@ -27,8 +27,8 @@ type Command struct {
 }
 
 func main() {
-	notifyCh = make(chan usn.UsnEvent, 1024)
-	watcher = usn.NewUsnWatcher(notifyCh)
+	notifyCh = make(chan watcher.UsnEvent, 1024)
+	fw = watcher.NewFsnotifyWatcher(notifyCh)
 
 	idleTimer = time.NewTimer(idleTimeout)
 	lastActivity = time.Now()
@@ -89,7 +89,7 @@ func handleConn(conn net.Conn) {
 
 		switch cmd.Type {
 		case "init", "update_dirs":
-			watcher.UpdateDirs(cmd.Dirs)
+			fw.Start(cmd.Dirs)
 			jsonAck(conn, cmd.Type)
 		case "ping":
 			jsonAck(conn, "pong")
@@ -132,7 +132,7 @@ func clearClient() {
 	cw.mu.Unlock()
 }
 
-func writeEvent(ev usn.UsnEvent) {
+func writeEvent(ev watcher.UsnEvent) {
 	cw.mu.Lock()
 	conn := cw.conn
 	cw.mu.Unlock()

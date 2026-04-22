@@ -94,10 +94,10 @@ func getVolumeLetter(fullPath string) string {
 
 // OpenVolume opens a volume by drive letter (e.g. "C:" -> "\\\\.\\C:").
 func OpenVolume(driveLetter string) (windows.Handle, error) {
-	vol := `\\.` + string(driveLetter[0]) + `:`
+	vol := `\\.\` + string(driveLetter[0]) + `:`
 	return windows.CreateFile(
 		windows.StringToUTF16Ptr(vol),
-		windows.GENERIC_READ|windows.GENERIC_WRITE,
+		0,
 		windows.FILE_SHARE_READ|windows.FILE_SHARE_WRITE,
 		nil,
 		windows.OPEN_EXISTING,
@@ -108,22 +108,49 @@ func OpenVolume(driveLetter string) (windows.Handle, error) {
 
 // CreateJournal creates a USN journal on the volume. Idempotent.
 func CreateJournal(h windows.Handle) (*usnJournalData, error) {
-	data := &usnJournalData{AllocationDelta: 8 * 1024 * 1024}
+	// CREATE_USN_JOURNAL_DATA input: MaximumSize (8 bytes) + AllocationDelta (8 bytes)
+	var inputBuf [16]byte
+	binary.LittleEndian.PutUint64(inputBuf[0:8], 4*1024*1024)   // MaximumSize: 4MB
+	binary.LittleEndian.PutUint64(inputBuf[8:16], 1*1024*1024)   // AllocationDelta: 1MB
+
+	var outputBuf [48]byte // USN_JOURNAL_DATA output
 	var bytesReturned uint32
+
 	err := windows.DeviceIoControl(
 		h,
 		FSCTL_CREATE_USN_JOURNAL,
-		nil,
-		0,
-		(*byte)(unsafe.Pointer(data)),
-		uint32(unsafe.Sizeof(*data)),
+		&inputBuf[0],
+		16,
+		&outputBuf[0],
+		48,
 		&bytesReturned,
 		nil,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("FSCTL_CREATE_USN_JOURNAL: %w", err)
 	}
-	return data, nil
+
+	// Parse output
+	journal := &usnJournalData{}
+	if bytesReturned >= 8 {
+		journal.UsnJournalID = binary.LittleEndian.Uint64(outputBuf[0:8])
+	}
+	if bytesReturned >= 16 {
+		journal.FirstUsn = int64(binary.LittleEndian.Uint64(outputBuf[8:16]))
+	}
+	if bytesReturned >= 24 {
+		journal.NextUsn = int64(binary.LittleEndian.Uint64(outputBuf[16:24]))
+	}
+	if bytesReturned >= 32 {
+		journal.LowestValidUsn = int64(binary.LittleEndian.Uint64(outputBuf[24:32]))
+	}
+	if bytesReturned >= 40 {
+		journal.MaxUsn = int64(binary.LittleEndian.Uint64(outputBuf[32:40]))
+	}
+	if bytesReturned >= 48 {
+		journal.AllocationDelta = int64(binary.LittleEndian.Uint64(outputBuf[40:48]))
+	}
+	return journal, nil
 }
 
 // ReadJournalStart reads from the journal. Returns the next USN to read from.
