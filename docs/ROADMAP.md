@@ -1,6 +1,6 @@
 # DocSeeker 开发路线图
 
-> 更新时间: 2026-04-22（完成 M5.1 M5.2 M5.3 M5.4 M5.5 M5.6 M5.7）
+> 更新时间: 2026-04-22（完成 M5.1 M5.2 M5.3 M5.4 M5.5 M5.6 M5.7 M5.8）
 
 ---
 
@@ -63,11 +63,11 @@ DocSeeker 是一款基于 Electron + React + TypeScript 的本地文档全文搜
 | Electron 冷启动 | ✅ 分片架构已完成（启动 <100ms，搜索 DB 后台加载） | 继续优化至毫秒级 | Everything 毫秒级 |
 | 跨平台支持 | 仅 Windows | 评估 macOS/Linux 可行性 | DocFetcher / Recoll |
 | 便携版 | ✅ 已完成 | — | Everything / AnyTXT / DocFetcher |
-| **双击 Ctrl 唤起浮层** | 🔄 计划中（Go USN 进程键盘钩子） | 多显示器支持 | Listary / Everything |
+| **双击 Ctrl 唤起浮层** | ✅ 已完成 | 多显示器支持 | Listary / Everything |
 | **网络驱动器/云盘搜索** | ⚠️ OneDrive 已支持 | NAS / SharePoint / Google Drive | dtSearch / Copernic |
-| **图片 OCR** | ❌ 缺失 | 扫描件/截图全文可搜 | Copernic / dtSearch |
+| **图片 OCR** | ⏸️ 暂不计划 | 扫描件/截图全文可搜 | Copernic / dtSearch |
 | **模糊搜索/容错** | ❌ 缺失 | 打字错误也能搜 | TextSeek / FileSeek |
-| **CAD 文件（DWG/DXF）** | ❌ 缺失 | 工程图纸可搜 | Copernic / dtSearch |
+| **CAD 文件（DWG/DXF）** | ⏸️ 暂不计划 | 工程图纸可搜 | Copernic / dtSearch |
 
 ---
 
@@ -177,15 +177,13 @@ DocSeeker 是一款基于 Electron + React + TypeScript 的本地文档全文搜
 - [x] **M5.5** Outlook PST 邮件支持（解析 Outlook 数据文件，企业核心需求） — ✅ 已完成（2026-04-22）
 - [x] **M5.6** 搜索结果排序自定义（按相关性/大小/修改时间/类型排序） — ✅ 已完成（2026-04-21）
 - [x] **M5.7** 文件/文件夹标签（用户自定义标签分类管理） — ✅ 已完成（2026-04-21）
-- [ ] **M5.8** 双击 Ctrl 唤起浮层（通过 Go USN 进程键盘钩子实现，多显示器支持）
-- [ ] **M5.9** 图片 OCR（扫描件/截图全文可搜）
-- [ ] **M5.10** CAD 文件支持（DWG/DXF 工程图纸）
+- [x] **M5.8** 双击 Ctrl 唤起浮层（通过 Go USN 进程键盘钩子实现，多显示器支持） — ✅ 已完成（2026-04-22）
+- [ ] **M5.9** 图片 OCR（扫描件/截图全文可搜）— ⏸️ 暂不计划
+- [ ] **M5.10** CAD 文件支持（DWG/DXF 工程图纸）— ⏸️ 暂不计划
 
 **技术要点:**
 - 内容跳转：利用现有搜索片段中的关键词位置，通过文件解析器定位到精确行号
-- OCR：Tesseract.js（纯 JS）或 Python 调用 tesseract-ocr
-- Outlook PST：libpst（Python）或使用 `extract-msg` npm 包
-- CAD DWG：TeighaFile（Teigha）或odaXF（Open Design Alliance）
+- Outlook PST：使用 `pst-extractor` npm 包（已实现）
 
 ---
 
