@@ -371,29 +371,35 @@ export function registerIpcHandlers(): void {
   ipcMain.handle('incremental-scan', async (event, folderPath: string): Promise<{ success: boolean; filesProcessed: number; skipped: number; errors: string[] }> => {
     log.info(`IPC: incremental-scan called for ${folderPath}`)
 
+    // Create a unique scanId for this scan to avoid conflicts with other concurrent scans
+    const scanId = `inc-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
+    log.info(`[${scanId}] Starting incremental scan`)
+
     return new Promise((resolve) => {
       const workerPath = join(__dirname, 'scanWorker.js')
 
       try {
         const worker = new Worker(workerPath, {
-          workerData: { dirPath: folderPath, incremental: true }
+          workerData: { dirPath: folderPath, incremental: true, scanId }
         })
 
         let filesProcessed = 0
         let skipped = 0
         const errors: string[] = []
-        let shardId = -1
+        // Use a fresh shardId for this scan, don't reuse from previous scans
+        let scanShardId = -1
 
         worker.on('message', (message) => {
           switch (message.type) {
             case 'progress':
-              event.sender.send('scan-progress', message.data)
+              event.sender.send('scan-progress', { ...message.data, scanId })
               break
             case 'batch': {
               ;(async () => {
                 try {
-                  shardId = await getCurrentShard()
-                  if (shardId < 0) {
+                  // For batch inserts, use a fresh shard selection
+                  scanShardId = await getCurrentShard()
+                  if (scanShardId < 0) {
                     errors.push('No shard available')
                     return
                   }
@@ -408,9 +414,9 @@ export function registerIpcHandlers(): void {
                     is_supported: fileInfo.is_supported ?? 1
                   }))
 
-                  pendingBatches.set(shardId, (pendingBatches.get(shardId) ?? 0) + 1)
-                  const result = await insertFileBatch(shardId, records)
-                  pendingBatches.set(shardId, Math.max(0, (pendingBatches.get(shardId) ?? 1) - 1))
+                  pendingBatches.set(scanShardId, (pendingBatches.get(scanShardId) ?? 0) + 1)
+                  const result = await insertFileBatch(scanShardId, records)
+                  pendingBatches.set(scanShardId, Math.max(0, (pendingBatches.get(scanShardId) ?? 1) - 1))
                   filesProcessed += result.fileCount
                 } catch (err) {
                   log.error('[IPC] Batch insert error:', err)
@@ -421,10 +427,10 @@ export function registerIpcHandlers(): void {
             }
             case 'complete': {
               ;(async () => {
-                log.info(`Incremental scan complete: ${filesProcessed} files, time: ${message.data.totalTime}ms`)
+                log.info(`[${scanId}] Incremental scan complete: ${filesProcessed} files, time: ${message.data.totalTime}ms`)
                 // Wait for all pending batches to be written to shards before querying stats
-                if (shardId >= 0) {
-                  await flushPendingBatches(shardId)
+                if (scanShardId >= 0) {
+                  await flushPendingBatches(scanShardId)
                 }
                 // Sync shard stats back to config.db (the single source of truth)
                 const folder = getScannedFolderByPath(folderPath)
@@ -473,27 +479,32 @@ export function registerIpcHandlers(): void {
       return { success: false, filesProcessed: 0, errors: ['Folder not found in scan records'] }
     }
 
+    // Create a unique scanId for this scan to avoid conflicts with other concurrent scans
+    const scanId = `full-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
+    log.info(`[${scanId}] Starting full rescan`)
+
     return new Promise((resolve) => {
       const workerPath = join(__dirname, 'scanWorker.js')
       try {
         const worker = new Worker(workerPath, {
-          workerData: { dirPath: folderPath }
+          workerData: { dirPath: folderPath, scanId }
         })
 
         let filesProcessed = 0
         const errors: string[] = []
-        let shardId = -1
+        // Use a fresh shardId for this scan
+        let scanShardId = -1
 
         worker.on('message', (message) => {
           switch (message.type) {
             case 'progress':
-              event.sender.send('scan-progress', message.data)
+              event.sender.send('scan-progress', { ...message.data, scanId })
               break
             case 'batch': {
               ;(async () => {
                 try {
-                  shardId = await getCurrentShard()
-                  if (shardId < 0) {
+                  scanShardId = await getCurrentShard()
+                  if (scanShardId < 0) {
                     errors.push('No shard available')
                     return
                   }
@@ -508,13 +519,13 @@ export function registerIpcHandlers(): void {
                     is_supported: fileInfo.is_supported ?? 1
                   }))
 
-                  pendingBatches.set(shardId, (pendingBatches.get(shardId) ?? 0) + 1)
-                  const result = await insertFileBatch(shardId, records)
-                  pendingBatches.set(shardId, Math.max(0, (pendingBatches.get(shardId) ?? 1) - 1))
+                  pendingBatches.set(scanShardId, (pendingBatches.get(scanShardId) ?? 0) + 1)
+                  const result = await insertFileBatch(scanShardId, records)
+                  pendingBatches.set(scanShardId, Math.max(0, (pendingBatches.get(scanShardId) ?? 1) - 1))
                   filesProcessed += result.fileCount
 
                   // Check if shard is full
-                  const shardInfo = getShardInfo().find(s => s.id === shardId)
+                  const shardInfo = getShardInfo().find(s => s.id === scanShardId)
                   const config = getShardConfigInfo()
                   if (shardInfo && config && shardInfo.currentSizeBytes >= (config.maxSizeMB * 1024 * 1024)) {
                     const nextShard = await openNextShard()
@@ -529,10 +540,10 @@ export function registerIpcHandlers(): void {
             }
             case 'complete':
               ;(async () => {
-                log.info(`Full rescan complete: ${filesProcessed} files, time: ${message.data.totalTime}ms`)
+                log.info(`[${scanId}] Full rescan complete: ${filesProcessed} files, time: ${message.data.totalTime}ms`)
                 // Wait for all pending batches to be written to shards before querying stats
-                if (shardId >= 0) {
-                  await flushPendingBatches(shardId)
+                if (scanShardId >= 0) {
+                  await flushPendingBatches(scanShardId)
                 }
                 if (folder && folder.id) {
                   // Sync shard stats back to config.db after full scan
