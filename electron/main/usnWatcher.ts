@@ -43,7 +43,7 @@ export function onMonitorStatusChange(callback: StatusChangeCallback): void {
 }
 
 export function getMonitorStatus(): MonitorStatus {
-  return watcher.getStatus()
+  return usnWatcher.getStatus()
 }
 
 export class UsnWatcher {
