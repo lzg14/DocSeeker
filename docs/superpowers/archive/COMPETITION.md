@@ -9,7 +9,7 @@
 **核心技术栈：**
 - 全文索引：SQLite FTS5 + BM25 相关性排名
 - 内容解析：mammoth (DOCX)、xlsx (Excel)、jszip (PPTX)、pdf-parse (PDF)
-- 图片 OCR：Tesseract.js
+- 图片元数据：exifr
 - 邮件解析：pst-extractor (PST/Outlook)
 - 桌面框架：Electron + React 18 + TypeScript
 - 数据库：better-sqlite3（原生模块）
@@ -30,7 +30,7 @@
 | **邮件 (MSG/PST)** | ✅ | ❌ | ✅ | ✅ (mbox) | ✅ | ❌ |
 | **压缩包 (ZIP/RAR/7Z/TAR/GZ)** | ✅ 5种 | ❌ | ❌ | ✅ | ✅ | ❌ |
 | **源代码 (37种)** | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ |
-| **图片 OCR (9种)** | ✅ | ❌ | ❌ | ❌ | ✅ | ❌ |
+| **图片元数据 (9种)** | ✅ | ❌ | ❌ | ❌ | ✅ | ❌ |
 | **字幕/配置 (7种)** | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ |
 | **ZIP内递归搜索** | ✅ 3层 | ❌ | ❌ | ✅ | ✅ | ❌ |
 | **总计** | **77种** | 0 | 60+ | 50+ | 400+ | 30+ |
@@ -108,7 +108,7 @@
 2. **唯一的中英双语原生支持** - 竞品均无国际化
 3. **77 种格式支持，已全部验证** - 最全面的格式支持
 4. **模糊搜索 (Fuse.js)** - 竞品唯一
-5. **图片 OCR 文字识别** - 仅 Copernic 付费版有
+5. **图片元数据提取** - exifr 解析 EXIF/GPS 等
 6. **Outlook PST/MSG 邮件支持** - 解析大型邮件归档
 7. **词干智能搜索** - 英文词干提取
 8. **NTFS USN Journal 实时监控** - 与 Everything 相同技术
@@ -139,7 +139,7 @@
 | DocFetcher | ZIP 内搜索 | ✅ 已完成 |
 | DocFetcher | 邮件搜索 | ✅ 已完成 |
 | DocFetcher | 便携版 | ✅ 已完成 |
-| Copernic | 图片元数据 | ✅ OCR 已完成 |
+| Copernic | 图片元数据 | ✅ 元数据已完成 |
 | Copernic | 缩略图预览 | ✅ 已完成 |
 | Everything | NTFS USN 监控 | ✅ 已完成 |
 | Everything | 全局快捷键 | ✅ 已完成 |
@@ -152,5 +152,5 @@
 
 | 日期 | 更新内容 |
 |------|---------|
-| 2026-04-23 | 格式 49→77 种；模糊搜索；图片 OCR；PST 邮件；Apple iWork；词干搜索 |
+| 2026-04-23 | 格式 49→77 种；模糊搜索；图片元数据；PST 邮件；Apple iWork；词干搜索 |
 | 2026-04-15 | 初始版本 |
