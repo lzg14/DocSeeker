@@ -69,6 +69,7 @@ func main() {
 
 // onDoubleCtrl is called when double Ctrl is detected
 func onDoubleCtrl() {
+	fmt.Fprintf(os.Stderr, "INFO: double-ctrl callback invoked\n")
 	cw.mu.Lock()
 	conn := cw.conn
 	cw.mu.Unlock()
@@ -111,6 +112,8 @@ func handleConn(conn net.Conn) {
 			fw.Start(cmd.Dirs)
 			jsonAck(conn, cmd.Type)
 		case "ping":
+			lastActivity = time.Now()
+			idleTimer.Reset(idleTimeout)
 			jsonAck(conn, "pong")
 		default:
 			jsonError(conn, fmt.Sprintf("unknown command: %s", cmd.Type))

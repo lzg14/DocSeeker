@@ -1,6 +1,6 @@
 # DocSeeker 开发进度记录
 
-> 最后更新：2026-04-13
+> 最后更新：2026-04-24
 
 ---
 
@@ -78,6 +78,10 @@
 - [x] 系统托盘（最小化到托盘、托盘菜单）
 - [x] 关闭确认对话框
 - [x] 删除确认对话框
+- [x] 浮动搜索窗口（快捷搜索）
+- [x] 全局快捷键（Ctrl+Shift+F）
+- [x] 双击 Ctrl 热键唤起浮动窗口（Windows 专用）
+- [x] ESC 键关闭浮动窗口
 
 ### 帮助页（关于页）
 - [x] 功能介绍（5项核心功能）
@@ -119,6 +123,7 @@
 
 - 前端：React + TypeScript + CSS Variables
 - 后端：Electron + Node.js + better-sqlite3
+- 监控：Go + fsnotify（USN 文件监控 + 双击 Ctrl 热键）
 - 构建：electron-vite + electron-builder
 
 ---
@@ -147,6 +152,8 @@
 | `electron/main/fileWatcher.ts` | 文件监控（增量扫描） |
 | `electron/main/scheduler.ts` | 定时任务调度 |
 | `electron/preload/index.ts` | 预加载脚本 |
+| `go/main.go` | Go 监控进程入口（USN Watcher + 双击 Ctrl） |
+| `go/keyboard_hook.go` | 双击 Ctrl 检测（GetAsyncKeyState 轮询） |
 
 ---
 

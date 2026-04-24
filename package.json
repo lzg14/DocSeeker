@@ -10,7 +10,7 @@
     "url": "https://github.com/lzg14/DocSeeker"
   },
   "scripts": {
-    "dev": "electron-vite dev",
+    "dev": "cross-env ELECTRON_RUN_AS_NODE= electron-vite dev",
     "build": "electron-vite build",
     "preview": "electron-vite preview",
     "postinstall": "npx electron-rebuild -f -w better-sqlite3",
@@ -89,6 +89,7 @@
     "@types/react": "^18.3.12",
     "@types/react-dom": "^18.3.1",
     "@vitejs/plugin-react": "^4.3.4",
+    "cross-env": "^10.1.0",
     "electron": "^33.2.0",
     "electron-builder": "^25.1.8",
     "electron-vite": "^2.3.0",

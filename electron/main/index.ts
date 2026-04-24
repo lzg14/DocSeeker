@@ -197,6 +197,9 @@ function createFloatingWindow(): void {
     }
   })
 
+  // Enable ESC to close the floating window
+  optimizer.watchWindowShortcuts(floatingWindow, { escToCloseWindow: true })
+
   floatingWindow.on('blur', () => {
     floatingWindow?.hide()
   })
