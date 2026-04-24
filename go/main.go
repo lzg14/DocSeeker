@@ -71,12 +71,11 @@ func main() {
 func onDoubleCtrl() {
 	fmt.Fprintf(os.Stderr, "INFO: double-ctrl callback invoked\n")
 	cw.mu.Lock()
-	conn := cw.conn
-	cw.mu.Unlock()
-	if conn != nil {
+	defer cw.mu.Unlock()
+	if cw.conn != nil {
 		msg, _ := json.Marshal(map[string]string{"type": "double_ctrl"})
 		msg = append(msg, '\n')
-		conn.Write(msg)
+		cw.conn.Write(msg)
 	}
 }
 

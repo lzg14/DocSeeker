@@ -38,6 +38,23 @@ import {
   getFolderStatsFromShards,
   type FileRecord as ShardFileRecord
 } from './shardManager'
+
+// Helper function to convert ShardFileRecord to FileRecord
+function mapShardToFileRecord(r: ShardFileRecord, matchType: 'content' | 'filename' | 'fuzzy' = 'content'): FileRecord {
+  return {
+    id: r.id,
+    path: r.path,
+    name: r.name,
+    size: r.size,
+    hash: r.hash,
+    file_type: r.file_type,
+    content: r.content,
+    created_at: r.created_at,
+    updated_at: r.updated_at,
+    is_supported: r.is_supported === 1 ? true : r.is_supported === 0 ? false : undefined,
+    match_type: r.match_type ?? matchType
+  }
+}
 import {
   addScannedFolder,
   getAllScannedFolders,
@@ -109,19 +126,7 @@ export function registerIpcHandlers(): void {
     if (query.trim()) addSearchHistory(query)
     try {
       const results = await searchAllShards(query)
-      return results.map(r => ({
-        id: r.id,
-        path: r.path,
-        name: r.name,
-        size: r.size,
-        hash: r.hash,
-        file_type: r.file_type,
-        content: r.content,
-        created_at: r.created_at,
-        updated_at: r.updated_at,
-        is_supported: r.is_supported === 1 ? true : r.is_supported === 0 ? false : undefined,
-        match_type: r.match_type ?? 'content'
-      }))
+      return results.map(r => mapShardToFileRecord(r, 'content'))
     } catch (err) {
       log.error('[IPC] search-files error:', err)
       return []
@@ -134,17 +139,7 @@ export function registerIpcHandlers(): void {
     try {
       const results = await fuzzySearchAllShards(query, threshold ?? 0.4)
       return results.map(r => ({
-        id: r.id,
-        path: r.path,
-        name: r.name,
-        size: r.size,
-        hash: r.hash,
-        file_type: r.file_type,
-        content: r.content,
-        created_at: r.created_at,
-        updated_at: r.updated_at,
-        is_supported: r.is_supported === 1 ? true : r.is_supported === 0 ? false : undefined,
-        match_type: r.match_type ?? 'fuzzy',
+        ...mapShardToFileRecord(r, 'fuzzy'),
         fuzzyScore: r.fuzzyScore
       }))
     } catch (err) {
@@ -158,19 +153,7 @@ export function registerIpcHandlers(): void {
     if (query.trim()) addSearchHistory(query)
     try {
       const results = await shardSearchByFileName(query, options)
-      return results.map(r => ({
-        id: r.id,
-        path: r.path,
-        name: r.name,
-        size: r.size,
-        hash: r.hash,
-        file_type: r.file_type,
-        content: r.content,
-        created_at: r.created_at,
-        updated_at: r.updated_at,
-        is_supported: r.is_supported === 1 ? true : r.is_supported === 0 ? false : undefined,
-        match_type: r.match_type ?? 'filename'
-      }))
+      return results.map(r => mapShardToFileRecord(r, 'filename'))
     } catch (err) {
       log.error('[IPC] search-by-filename error:', err)
       return []
@@ -182,19 +165,7 @@ export function registerIpcHandlers(): void {
     if (query.trim()) addSearchHistory(query)
     try {
       const results = await searchAllShards(query, options)
-      return results.map(r => ({
-        id: r.id,
-        path: r.path,
-        name: r.name,
-        size: r.size,
-        hash: r.hash,
-        file_type: r.file_type,
-        content: r.content,
-        created_at: r.created_at,
-        updated_at: r.updated_at,
-        is_supported: r.is_supported === 1 ? true : r.is_supported === 0 ? false : undefined,
-        match_type: r.match_type ?? 'content'
-      }))
+      return results.map(r => mapShardToFileRecord(r, 'content'))
     } catch (err) {
       log.error('[IPC] search-files-advanced error:', err)
       return []
@@ -207,19 +178,7 @@ export function registerIpcHandlers(): void {
     try {
       const results = await searchAllShards(query, options)
       const deduped = deduplicateResults(results)
-      return deduped.map(r => ({
-        id: r.id,
-        path: r.path,
-        name: r.name,
-        size: r.size,
-        hash: r.hash,
-        file_type: r.file_type,
-        content: r.content,
-        created_at: r.created_at,
-        updated_at: r.updated_at,
-        is_supported: r.is_supported === 1 ? true : r.is_supported === 0 ? false : undefined,
-        match_type: r.match_type ?? 'content'
-      }))
+      return deduped.map(r => mapShardToFileRecord(r, 'content'))
     } catch (err) {
       log.error('[IPC] search-deduplicate error:', err)
       return []

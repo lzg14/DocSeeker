@@ -9,6 +9,15 @@ import { registerIpcHandlers } from './ipc'
 import { startUpdater, stopUpdater, handleManualCheck, handleDownloadUpdate, handleQuitAndInstall } from './updater'
 import { getAppSetting, setAppSetting } from './config'
 
+// Extend Electron App interface with custom property
+declare global {
+  namespace Electron {
+    interface App {
+      isQuitting?: boolean
+    }
+  }
+}
+
 // Inline electron-toolkit utils to avoid bundling issue
 const isDev = !app.isPackaged
 
@@ -52,7 +61,7 @@ const optimizer = {
               webContents.closeDevTools()
             } else {
               webContents.openDevTools({ mode: 'undocked' })
-              console.log('Open dev tool...')
+              log.info('Open dev tool...')
             }
           }
         }
@@ -291,7 +300,7 @@ export function updateTrayMenu(status?: string, message?: string): void {
     {
       label: labels.exit,
       click: () => {
-        ;(app as any).isQuitting = true
+        ;app.isQuitting = true
         app.quit()
       }
     }
@@ -381,27 +390,23 @@ function createWindow(): void {
   })
 
   mainWindow.on('close', (event) => {
-    if (!(app as any).isQuitting && !isClosingFromIPC) {
+    if (!app.isQuitting && !isClosingFromIPC) {
       event.preventDefault()
       mainWindow?.webContents.send('show-close-confirm')
     }
   })
 
+  // Security: Only allow http/https URLs to be opened externally
   mainWindow.webContents.setWindowOpenHandler((details) => {
-    shell.openExternal(details.url)
+    const url = details.url
+    if (url.startsWith('http://') || url.startsWith('https://')) {
+      shell.openExternal(url)
+    } else {
+      log.warn('Blocked opening non-http(s) URL:', url)
+    }
     return { action: 'deny' }
   })
 }
-
-// Global error handlers
-process.on('uncaughtException', (error) => {
-  log.error('[App] Uncaught exception:', error)
-  // Don't exit immediately, try to save state
-})
-
-process.on('unhandledRejection', (reason, promise) => {
-  log.error('[App] Unhandled rejection at:', promise, 'reason:', reason)
-})
 
 app.whenReady().then(async () => {
   log.info('App ready, initializing...')
@@ -517,7 +522,7 @@ app.on('window-all-closed', () => {
 
 app.on('before-quit', () => {
   log.info('Application quitting...')
-  ;(app as any).isQuitting = true
+  ;app.isQuitting = true
   globalShortcut.unregisterAll()
   stopUpdater()
   usnWatcher.stop()

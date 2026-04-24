@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { useLanguage } from '../context/LanguageContext'
 import { useAppContext } from '../context/AppContext'
 
@@ -7,23 +7,27 @@ function StatusBar(): JSX.Element {
   const [monitorStatus, setMonitorStatus] = useState<{ enabled: boolean; dirs: string[] }>({ enabled: false, dirs: [] })
   const { t: translate } = useLanguage()
   const { isScanning, scanProgress, refreshKey } = useAppContext()
+  const refreshKeyRef = useRef(refreshKey)
+  refreshKeyRef.current = refreshKey
 
-  const loadStats = () => {
+  const loadStats = useCallback(() => {
     window.electron.getFileCount().then((count: number) => {
       setFileCount(count)
     }).catch(() => {
       setFileCount(-1)
     })
-  }
+  }, [])
 
   useEffect(() => {
     loadStats()
-  }, [refreshKey])
+  }, [refreshKey, loadStats])
 
   useEffect(() => {
-    const timer = setInterval(loadStats, 5000)
+    const timer = setInterval(() => {
+      loadStats()
+    }, 5000)
     return () => clearInterval(timer)
-  }, [])
+  }, [loadStats])
 
   useEffect(() => {
     window.electron.usnGetConfig().then(cfg => setMonitorStatus(cfg))

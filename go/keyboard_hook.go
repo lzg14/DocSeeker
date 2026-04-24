@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"os"
+	"sync"
 	"sync/atomic"
 	"syscall"
 	"time"
@@ -21,6 +22,7 @@ type keyboardHook struct {
 	done      chan struct{}
 	isRunning atomic.Bool
 	callback  func()
+	mu        sync.Mutex // Protects timer access
 }
 
 var activeHook *keyboardHook
@@ -51,6 +53,13 @@ func StopKeyboardHook() {
 	if activeHook == nil || !activeHook.isRunning.Load() {
 		return
 	}
+
+	activeHook.mu.Lock()
+	if activeHook.timer != nil {
+		activeHook.timer.Stop()
+	}
+	activeHook.mu.Unlock()
+
 	close(activeHook.done)
 	activeHook.isRunning.Store(false)
 	activeHook = nil
@@ -94,18 +103,22 @@ func (hk *keyboardHook) checkCtrlKey() {
 	} else if !ctrlPressed && prevState == statePressed {
 		// Ctrl just released - check for second press
 		hk.ctrlState.Store(stateWaiting)
+		hk.mu.Lock()
 		if hk.timer != nil {
 			hk.timer.Stop()
 		}
 		hk.timer = time.AfterFunc(DoubleCtrlWindow, func() {
 			hk.ctrlState.Store(stateIdle)
 		})
+		hk.mu.Unlock()
 		fmt.Fprintf(os.Stderr, "DEBUG: Ctrl released, waiting for second press\n")
 	} else if ctrlPressed && prevState == stateWaiting {
 		// Second Ctrl press detected within window!
+		hk.mu.Lock()
 		if hk.timer != nil {
 			hk.timer.Stop()
 		}
+		hk.mu.Unlock()
 		hk.ctrlState.Store(stateIdle)
 		fmt.Fprintf(os.Stderr, "INFO: double-ctrl detected!\n")
 		go hk.callback()

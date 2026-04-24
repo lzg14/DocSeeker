@@ -775,27 +775,11 @@ async function extractTextFromImage(filePath: string): Promise<string> {
 }
 
 // Extract metadata from audio / video files (ID3, Vorbis, etc.)
-async function extractTextFromMedia(filePath: string): Promise<string> {
-  try {
-    const metadata = await parseAudioFile(filePath)
-    const { common, format } = metadata
-    const texts: string[] = []
-    if (common.title) texts.push(`标题: ${common.title}`)
-    if (common.artist) texts.push(`歌手: ${common.artist}`)
-    if (common.album) texts.push(`专辑: ${common.album}`)
-    if (common.year) texts.push(`年份: ${common.year}`)
-    if (common.genre?.length) texts.push(`风格: ${common.genre.join(', ')}`)
-    if (common.track?.no) texts.push(`曲号: ${common.track.no}`)
-    if (common.disk?.no) texts.push(`碟号: ${common.disk.no}`)
-    if (common.label) texts.push(`厂牌: ${common.label}`)
-    if (common.copyright) texts.push(`版权: ${common.copyright}`)
-    if (common.comment) texts.push(`备注: ${common.comment}`)
-    if (format.duration) texts.push(`时长: ${Math.round(format.duration)}秒`)
-    if (format.codec) texts.push(`编码: ${format.codec}`)
-    return texts.join(' | ')
-  } catch {
-    return ''
-  }
+// Note: music-metadata is ESM-only and currently disabled
+async function extractTextFromMedia(_filePath: string): Promise<string> {
+  // TODO: Enable music-metadata when ESM bundling is supported
+  // import { parseFile as parseAudioFile } from 'music-metadata'
+  return ''
 }
 
 async function extractText(filePath: string, ext: string): Promise<string> {

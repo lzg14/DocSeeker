@@ -32,14 +32,26 @@ function FileDetail({ file, formatSize, searchQuery = '' }: FileDetailProps): JS
     return new Date(dateStr).toLocaleString('zh-CN')
   }
 
-  // 高亮关键词的函数
+  // 高亮关键词的函数（带 XSS 防护）
   const highlightText = (text: string, query: string): string => {
-    if (!query.trim() || !text) return text
+    if (!text) return ''
+    if (!query.trim()) {
+      // 没有查询时，HTML 转义原文本
+      return escapeHtml(text)
+    }
     // 转义特殊字符
     const escapedQuery = query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
     // 忽略大小写的高亮
     const regex = new RegExp(`(${escapedQuery})`, 'gi')
-    return text.replace(regex, '<mark class="search-highlight">$1</mark>')
+    // 先转义原文，再添加高亮标记
+    return escapeHtml(text).replace(regex, '<mark class="search-highlight">$1</mark>')
+  }
+
+  // HTML 转义函数，防止 XSS
+  const escapeHtml = (text: string): string => {
+    const div = document.createElement('div')
+    div.textContent = text
+    return div.innerHTML
   }
 
   // 查找关键词所在行号
