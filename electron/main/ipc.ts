@@ -339,6 +339,24 @@ export function registerIpcHandlers(): void {
       schedule_enabled: 0
     }
     addScannedFolder(folder)
+
+    // Sync new folder to realtimeMonitor config
+    const monitorConfig = getAppSetting<{ enabled: boolean; dirs: string[] }>('realtimeMonitor', {
+      enabled: false,
+      dirs: []
+    })
+    if (monitorConfig.enabled && !monitorConfig.dirs.includes(folderPath)) {
+      setAppSetting('realtimeMonitor', {
+        enabled: true,
+        dirs: [...monitorConfig.dirs, folderPath]
+      })
+      // Update the watcher with new directory
+      if (usnWatcher) {
+        const allDirs = getAllScannedFolders().map(f => f.path.replace(/\\/g, '/'))
+        usnWatcher.send({ type: 'update_dirs', dirs: allDirs })
+      }
+    }
+
     return getScannedFolderByPath(folderPath) ?? null
   })
 
@@ -347,6 +365,25 @@ export function registerIpcHandlers(): void {
     const folder = getAllScannedFolders().find(f => f.id === id)
     if (folder) {
       deleteFilesByFolderPrefixFromAllShards(folder.path)
+
+      // Remove deleted folder from realtimeMonitor config
+      const monitorConfig = getAppSetting<{ enabled: boolean; dirs: string[] }>('realtimeMonitor', {
+        enabled: false,
+        dirs: []
+      })
+      if (monitorConfig.enabled) {
+        const newDirs = monitorConfig.dirs.filter(d => d !== folder.path)
+        setAppSetting('realtimeMonitor', {
+          enabled: newDirs.length > 0,
+          dirs: newDirs
+        })
+        // Update the watcher
+        if (usnWatcher && newDirs.length > 0) {
+          usnWatcher.send({ type: 'update_dirs', dirs: newDirs.map(d => d.replace(/\\/g, '/')) })
+        } else if (usnWatcher) {
+          usnWatcher.stop()
+        }
+      }
     }
     deleteScannedFolder(id)
   })
