@@ -238,3 +238,18 @@ docSeeker/
 2. **README.md**：如果功能影响用户使用，更新 README 相关描述
 3. **CHANGELOG.md**：在 CHANGELOG 中添加本次更新内容（如果没有则新建）
 - 下载完成后点击「立即重启安装」
+
+---
+
+## 竞品对比
+
+与主流竞品对比分析，详见 [竞品分析报告](./docs/superpowers/archive/COMPETITION.md)。
+
+**DocSeeker 核心优势：**
+- 免费 + MIT 许可证
+- 77 种文档格式（免费竞品最多）
+- 唯一中英双语原生支持
+- 唯一模糊搜索（Fuse.js）
+- NTFS USN Journal 实时监控
+- 7 种主题 + 暗色模式
+
