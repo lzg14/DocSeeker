@@ -1,16 +1,12 @@
-import { useState, useRef, useEffect } from 'react'
+import { useState, useEffect } from 'react'
 import { useLanguage } from '../context/LanguageContext'
 import { useAppContext } from '../context/AppContext'
-import { themes } from '../context/LanguageContext'
-import type { ThemeId } from '../context/LanguageContext'
 
 function StatusBar(): JSX.Element {
   const [fileCount, setFileCount] = useState<number | null>(null)
   const [monitorStatus, setMonitorStatus] = useState<{ enabled: boolean; dirs: string[] }>({ enabled: false, dirs: [] })
-  const { t: translate, theme, setTheme } = useLanguage()
+  const { t: translate } = useLanguage()
   const { isScanning, scanProgress, refreshKey } = useAppContext()
-  const [themeMenuOpen, setThemeMenuOpen] = useState(false)
-  const menuRef = useRef<HTMLDivElement>(null)
 
   const loadStats = () => {
     window.electron.getFileCount().then((count: number) => {
@@ -38,16 +34,6 @@ function StatusBar(): JSX.Element {
       window.electron.usnGetConfig().then(cfg => setMonitorStatus(cfg))
     })
     return unsub
-  }, [])
-
-  useEffect(() => {
-    const handleClickOutside = (e: MouseEvent) => {
-      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
-        setThemeMenuOpen(false)
-      }
-    }
-    document.addEventListener('mousedown', handleClickOutside)
-    return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [])
 
   if (isScanning) {
@@ -86,38 +72,6 @@ function StatusBar(): JSX.Element {
         {!monitorStatus.enabled && (
           <span className="status-monitor-off">⚫ {translate('status.monitorOff')}</span>
         )}
-        {/* 主题快捷切换 */}
-        <div className="statusbar-theme-switcher" ref={menuRef}>
-          <button
-            className="theme-dot-btn"
-            onClick={() => setThemeMenuOpen(!themeMenuOpen)}
-            title={translate('theme.switch')}
-            style={{ '--dot-color': themes.find(th => th.id === theme)?.preview.accent || '#2563eb' } as React.CSSProperties}
-          >
-            <span className="theme-dot" />
-          </button>
-          {themeMenuOpen && (
-            <div className="theme-menu">
-              {themes.map((themeItem) => (
-                <button
-                  key={themeItem.id}
-                  className={`theme-option ${theme === themeItem.id ? 'active' : ''}`}
-                  onClick={() => {
-                    setTheme(themeItem.id)
-                    setThemeMenuOpen(false)
-                  }}
-                >
-                  <span
-                    className="theme-option-dot"
-                    style={{ background: themeItem.preview.accent }}
-                  />
-                  {translate(themeItem.labelKey)}
-                  {theme === themeItem.id && <span className="check-icon">✓</span>}
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
       </div>
     </div>
   )

@@ -31,7 +31,7 @@ A desktop full-text search tool built with Electron + React + TypeScript, design
 
 ### 4. Language & Theme Settings
 - Support for Simplified Chinese and English, instant switch
-- 7 themes: Light, Dark, Blue, Nordic, Warm, Sunrise, Follow System
+- 3 themes: Light, Dark, Follow System
 - Follow system mode to automatically match Windows/macOS light/dark theme
 
 ### 5. Floating Search Window
@@ -193,7 +193,7 @@ For detailed competitive analysis, see [Competition Analysis Report](./docs/supe
 - Only tool with native Chinese/English bilingual support
 - Only tool with fuzzy search (Fuse.js)
 - NTFS USN Journal real-time monitoring
-- 7 themes + dark mode
+- 3 themes: Light, Dark, Follow System
 
 ---
 

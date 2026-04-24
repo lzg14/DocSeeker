@@ -2,7 +2,7 @@ import React, { createContext, useContext, useState, useEffect, ReactNode } from
 
 type Language = 'zh-CN' | 'en'
 
-export type ThemeId = 'light' | 'dark' | 'ocean' | 'nord' | 'warm' | 'solarized' | 'system'
+export type ThemeId = 'light' | 'dark' | 'system'
 
 export interface ThemeMeta {
   id: ThemeId
@@ -33,30 +33,6 @@ export const themes: ThemeMeta[] = [
     labelKey: 'theme.dark',
     descKey: 'theme.dark.desc',
     preview: { bg: '#0d1117', bgSecondary: '#161b22', accent: '#388bfd' },
-  },
-  {
-    id: 'ocean',
-    labelKey: 'theme.ocean',
-    descKey: 'theme.ocean.desc',
-    preview: { bg: '#0a192f', bgSecondary: '#0d2137', accent: '#32968f' },
-  },
-  {
-    id: 'nord',
-    labelKey: 'theme.nord',
-    descKey: 'theme.nord.desc',
-    preview: { bg: '#2e3440', bgSecondary: '#3b4252', accent: '#81a1c1' },
-  },
-  {
-    id: 'warm',
-    labelKey: 'theme.warm',
-    descKey: 'theme.warm.desc',
-    preview: { bg: '#fdf8f3', bgSecondary: '#f5ebe0', accent: '#c9a96e' },
-  },
-  {
-    id: 'solarized',
-    labelKey: 'theme.solarized',
-    descKey: 'theme.solarized.desc',
-    preview: { bg: '#fdf6e3', bgSecondary: '#eee8d5', accent: '#268bd2' },
   },
 ]
 
@@ -234,7 +210,7 @@ const translations: Record<Language, Record<string, string>> = {
     'guide.feature2': '高级过滤器：按文件类型、大小范围、修改日期精确筛选结果',
     'guide.feature3': '搜索历史 + 保存搜索：快速复用历史查询，命名收藏常用搜索条件',
     'guide.feature4': 'Ctrl+Shift+F 全局快捷键：随时唤起搜索浮层',
-    'guide.feature5': '语言 + 主题：简体中文/English，7 种主题随时切换，跟随系统亮/暗模式',
+    'guide.feature5': '语言 + 主题：简体中文/English，3 种主题（浅色/深色/跟随系统）',
     'guide.feature6': '开机自启 + 静默启动 + 最小化到托盘：后台静默运行，系统托盘随时呼出',
     'guide.feature7': '纯本地运行：数据不上传云端，隐私安全',
     'guide.feature8': '图片预览缩略图：JPG/PNG/GIF/WebP 等格式图片文件在详情面板即时预览',
@@ -276,15 +252,7 @@ const translations: Record<Language, Record<string, string>> = {
     'theme.light.desc': '白天 / 办公环境',
     'theme.dark': '深色',
     'theme.dark.desc': '夜间 / 专注场景',
-    'theme.ocean': '蓝调',
-    'theme.ocean.desc': '长时间盯屏 / 冷色偏好',
-    'theme.nord': '北欧',
-    'theme.nord.desc': '清新冷淡风',
-    'theme.warm': '暖色',
-    'theme.warm.desc': '夜间阅读 / 眼睛舒适',
-    'theme.solarized': '日出',
-    'theme.solarized.desc': '暖灰 / 专业写作者',
-    'theme.system': '系统',
+    'theme.system': '跟随系统',
     'theme.system.desc': '自动匹配系统亮色/暗色模式',
     // Tray menu
     'tray.showWindow': '显示窗口',
@@ -471,7 +439,7 @@ const translations: Record<Language, Record<string, string>> = {
     'guide.feature2': 'Advanced filters: Filter by file type, size range, and modification date',
     'guide.feature3': 'Search history & saved searches: Quick access to history, named saved searches',
     'guide.feature4': 'Global hotkey: Press Ctrl+Shift+F anywhere to open the search popup',
-    'guide.feature5': 'Language + Theme: zh-CN/English with 7 themes + follow system light/dark mode',
+    'guide.feature5': 'Language + Theme: zh-CN/English with 3 themes (Light/Dark/Follow System)',
     'guide.feature6': 'Auto-start, silent launch & tray: Run silently in background, summon from system tray anytime',
     'guide.feature7': 'Pure local: No cloud upload, complete privacy',
     'guide.feature8': 'Image thumbnail preview: JPG/PNG/GIF/WebP images show instant preview in detail panel',
@@ -514,20 +482,11 @@ const translations: Record<Language, Record<string, string>> = {
     'status.monitoring': 'Monitoring',
     'status.monitorOff': 'Monitor off',
     // Theme
-    'theme.switch': 'Switch theme',
     'theme.light': 'Light',
     'theme.light.desc': 'Daytime / Office',
     'theme.dark': 'Dark',
     'theme.dark.desc': 'Night / Focus',
-    'theme.ocean': 'Ocean',
-    'theme.ocean.desc': 'Long screen time / Cool tone',
-    'theme.nord': 'Nord',
-    'theme.nord.desc': 'Fresh & minimal',
-    'theme.warm': 'Warm',
-    'theme.warm.desc': 'Night reading / Eye comfort',
-    'theme.solarized': 'Solarized',
-    'theme.solarized.desc': 'Warm gray / Writers',
-    'theme.system': 'System',
+    'theme.system': 'Follow System',
     'theme.system.desc': 'Follow OS light/dark mode',
     // Tray menu
     'tray.showWindow': 'Show Window',
