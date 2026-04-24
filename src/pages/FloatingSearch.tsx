@@ -233,7 +233,7 @@ function FloatingSearch(): JSX.Element {
 
       {/* Footer hint */}
       <div style={{ padding: '5px 16px', fontSize: '10px', color: 'var(--text-muted, #999)', borderTop: '1px solid var(--border, #e0e0e0)', flexShrink: 0, display: 'flex', justifyContent: 'space-between' }}>
-        <span>↑↓ {t('search.filters') || '选择'} · Enter {t('detail.showInFolder') || '定位'} · 右键 {t('detail.openFile') || '打开文件'}</span>
+        <span>↑↓ {t('search.select')} · Enter {t('detail.showInFolder')} · {t('search.rightClick')} {t('detail.openFile')}</span>
       </div>
     </div>
   )
