@@ -129,6 +129,8 @@ export interface ElectronAPI {
   // Global hotkey
   getGlobalHotkey: () => Promise<string>
   setGlobalHotkey: (hotkey: string) => Promise<void>
+  disableHotkey: () => Promise<void>
+  enableHotkey: () => Promise<void>
   // Double Ctrl hotkey
   getDoubleCtrlEnabled: () => Promise<boolean>
   setDoubleCtrlEnabled: (enabled: boolean) => Promise<void>
@@ -172,11 +174,10 @@ export interface ElectronAPI {
   tagsAddToFile: (filePath: string, tagId: number) => Promise<void>
   tagsRemoveFromFile: (filePath: string, tagId: number) => Promise<void>
   tagsGetAllFileTags: () => Promise<Record<string, Tag[]>>
-  // Context menu integration
-  registerContextMenu: () => Promise<{ success: boolean; error?: string }>
-  unregisterContextMenu: () => Promise<{ success: boolean; error?: string }>
-  isContextMenuRegistered: () => Promise<boolean>
-  onContextMenuSearch: (callback: (query: string) => void) => () => void
+  // Language settings
+  getLanguage: () => Promise<string>
+  setLanguage: (lang: string) => Promise<void>
+  onLanguageChanged: (callback: (lang: string) => void) => () => void
 }
 
 export interface Tag {
@@ -275,6 +276,10 @@ const electronAPI: ElectronAPI = {
 
   setGlobalHotkey: (hotkey: string) => ipcRenderer.invoke('set-global-hotkey', hotkey),
 
+  disableHotkey: () => ipcRenderer.invoke('disable-hotkey'),
+
+  enableHotkey: () => ipcRenderer.invoke('enable-hotkey'),
+
   getDoubleCtrlEnabled: () => ipcRenderer.invoke('get-double-ctrl-enabled'),
 
   setDoubleCtrlEnabled: (enabled: boolean) => ipcRenderer.invoke('set-double-ctrl-enabled', enabled),
@@ -341,16 +346,8 @@ const electronAPI: ElectronAPI = {
   tagsRemoveFromFile: (filePath: string, tagId: number) => ipcRenderer.invoke('tags-remove-from-file', filePath, tagId),
   tagsGetAllFileTags: () => ipcRenderer.invoke('tags-get-all-file-tags'),
 
-  // Context menu integration
-  registerContextMenu: () => ipcRenderer.invoke('register-context-menu'),
-  unregisterContextMenu: () => ipcRenderer.invoke('unregister-context-menu'),
-  isContextMenuRegistered: () => ipcRenderer.invoke('is-context-menu-registered'),
-
-  onContextMenuSearch: (callback) => {
-    const handler = (_: any, query: string) => callback(query)
-    ipcRenderer.on('context-menu-search', handler)
-    return () => ipcRenderer.removeListener('context-menu-search', handler)
-  },
+  getLanguage: () => ipcRenderer.invoke("get-language"),
+  setLanguage: (lang: string) => ipcRenderer.invoke("set-language", lang),
 
   // Monitor status
   getMonitorStatus: () => ipcRenderer.invoke('get-monitor-status'),
@@ -358,6 +355,13 @@ const electronAPI: ElectronAPI = {
     const handler = (_: any, data: { status: string; message?: string }) => callback(data)
     ipcRenderer.on('monitor-status-changed', handler)
     return () => ipcRenderer.removeListener('monitor-status-changed', handler)
+  },
+
+  // Language change events (for floating search window)
+  onLanguageChanged: (callback: (lang: string) => void) => {
+    const handler = (_: any, lang: string) => callback(lang)
+    ipcRenderer.on('language-changed', handler)
+    return () => ipcRenderer.removeListener('language-changed', handler)
   },
 }
 

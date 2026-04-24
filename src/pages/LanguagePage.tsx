@@ -10,9 +10,8 @@ function LanguagePage(): JSX.Element {
     () => localStorage.getItem('minimizeToTray') === 'true'
   )
   const [monitorEnabled, setMonitorEnabled] = useState(false)
-  const [contextMenuEnabled, setContextMenuEnabled] = useState(false)
-  const [contextMenuLoading, setContextMenuLoading] = useState(false)
   const [doubleCtrlEnabled, setDoubleCtrlEnabledLocal] = useState(true)
+  const [hotkeyError, setHotkeyError] = useState('')
   const [monitorStatus, setMonitorStatus] = useState<{ status: string; message?: string }>({ status: 'disconnected' })
 
   useEffect(() => {
@@ -21,7 +20,6 @@ function LanguagePage(): JSX.Element {
     window.electron.usnGetConfig?.().then(cfg => {
       if (cfg) setMonitorEnabled(cfg.enabled)
     })
-    window.electron.isContextMenuRegistered?.().then(setContextMenuEnabled)
     window.electron.getDoubleCtrlEnabled?.().then(setDoubleCtrlEnabledLocal)
     // Get initial monitor status
     window.electron.getMonitorStatus?.().then(setMonitorStatus)
@@ -61,39 +59,25 @@ function LanguagePage(): JSX.Element {
     }
   }
 
-  const handleToggleContextMenu = async () => {
-    setContextMenuLoading(true)
-    try {
-      if (contextMenuEnabled) {
-        const result = await window.electron.unregisterContextMenu?.()
-        if (result?.success) {
-          setContextMenuEnabled(false)
-        } else {
-          alert(t('settings.contextMenu.unregisterFailed') || 'Failed to unregister')
-        }
-      } else {
-        const result = await window.electron.registerContextMenu?.()
-        if (result?.success) {
-          setContextMenuEnabled(true)
-        } else if (result?.error === 'PERMISSION_DENIED') {
-          alert(t('settings.contextMenu.adminWarning') || '需要管理员权限才能修改注册表，请右键选择"以管理员身份运行"')
-        } else {
-          alert(t('settings.contextMenu.registerFailed') || 'Failed to register')
-        }
-      }
-    } catch (err) {
-      console.error('Context menu toggle failed:', err)
-    } finally {
-      setContextMenuLoading(false)
-    }
-  }
-
   const formatHotkey = (hk: string) =>
     hk.replace('CommandOrControl', 'Ctrl').replace(/\+/g, ' + ')
 
   const listenForHotkey = async () => {
     setListening(true)
     setHotkeyError('')
+    // Blur the button to ensure keydown events go to window
+    ;(document.activeElement as HTMLElement)?.blur()
+    // Disable current hotkey temporarily so it won't trigger during setting
+    await window.electron.disableHotkey?.()
+
+    const MODIFIER_KEYS = new Set(['Control', 'Shift', 'Alt', 'Meta', 'OS'])
+
+    const cleanup = () => {
+      window.removeEventListener('keydown', handler)
+      // Re-enable hotkey when exiting listening mode
+      window.electron.enableHotkey?.()
+    }
+
     const handler = (e: KeyboardEvent) => {
       e.preventDefault()
       const modifiers: string[] = []
@@ -101,17 +85,28 @@ function LanguagePage(): JSX.Element {
       if (e.shiftKey) modifiers.push('Shift')
       if (e.altKey) modifiers.push('Alt')
       if (e.metaKey) modifiers.push('Meta')
+
       const key = e.key
-      const MODIFIER_KEYS = new Set(['Control', 'Shift', 'Alt', 'Meta', 'OS'])
+      // Skip if it's just a modifier key
       if (MODIFIER_KEYS.has(key)) return
+
+      // Get the final key (uppercase for single chars, or the key name)
       const finalKey = key.length === 1 ? key.toUpperCase() : key
-      if (modifiers.length > 0 && finalKey) {
+
+      // Require at least one key and either a modifier or a special key
+      if (finalKey) {
         const hotkey = [...modifiers, finalKey].join('+')
-        window.electron.setGlobalHotkey(hotkey)
-        setCurrentHotkey(formatHotkey(hotkey))
-        setHotkeyError('')
-        setListening(false)
-        window.removeEventListener('keydown', handler)
+        console.log('[Hotkey] Setting:', hotkey)
+        window.electron.setGlobalHotkey(hotkey).then(() => {
+          setCurrentHotkey(formatHotkey(hotkey))
+          setHotkeyError('')
+        }).catch((err) => {
+          console.error('[Hotkey] Failed:', err)
+          setHotkeyError('Failed to set hotkey')
+        }).finally(() => {
+          setListening(false)
+          cleanup()
+        })
       }
     }
     window.addEventListener('keydown', handler)
@@ -120,6 +115,8 @@ function LanguagePage(): JSX.Element {
   const handleLanguageChange = (newLang: string) => {
     setLanguage(newLang as 'zh-CN' | 'en')
     document.documentElement.setAttribute('lang', newLang)
+    // Sync to config.json so tray menu shows correct language
+    window.electron.setLanguage(newLang)
   }
 
   const Toggle = ({ checked, onChange }: { checked: boolean; onChange: (v: boolean) => void }) => (
@@ -185,6 +182,11 @@ function LanguagePage(): JSX.Element {
             {listening ? t('settings.pressKey') : currentHotkey}
           </button>
         </div>
+        {hotkeyError && (
+          <div style={{ color: '#f44336', fontSize: '12px', marginTop: '4px' }}>
+            {hotkeyError}
+          </div>
+        )}
         <div className="settings-row">
           <span className="settings-label">{t('settings.doubleCtrl')}</span>
           <Toggle checked={doubleCtrlEnabled} onChange={v => {
@@ -233,21 +235,6 @@ function LanguagePage(): JSX.Element {
             </span>
           </div>
           <Toggle checked={monitorEnabled} onChange={handleToggleMonitor} />
-        </div>
-      </div>
-
-      <div className="settings-group">
-        <div className="settings-row">
-          <div className="settings-label-wrap">
-            <span className="settings-label">{t('settings.contextMenu.enable')}</span>
-          </div>
-          <button
-            className="btn btn-secondary"
-            onClick={handleToggleContextMenu}
-            disabled={contextMenuLoading}
-          >
-            {contextMenuLoading ? '...' : contextMenuEnabled ? t('settings.contextMenu.disable') : t('settings.contextMenu.enable')}
-          </button>
         </div>
       </div>
     </div>

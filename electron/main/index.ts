@@ -7,7 +7,7 @@ import { initHotCache, closeHotCache } from './hotCache'
 import { usnWatcher, onDoubleCtrl, onMonitorStatusChange } from './usnWatcher'
 import { registerIpcHandlers } from './ipc'
 import { startUpdater, stopUpdater, handleManualCheck, handleDownloadUpdate, handleQuitAndInstall } from './updater'
-import { getAppSetting } from './config'
+import { getAppSetting, setAppSetting } from './config'
 
 // Inline electron-toolkit utils to avoid bundling issue
 const isDev = !app.isPackaged
@@ -168,6 +168,17 @@ function registerGlobalShortcut(hotkey: string): void {
   }
 }
 
+function unregisterCurrentHotkey(): void {
+  globalShortcut.unregisterAll()
+  log.info('Global shortcut unregistered (for hotkey setting mode)')
+}
+
+function restoreHotkey(): void {
+  // Restore the saved hotkey from config
+  const savedHotkey = getAppSetting<string>('hotkey', 'CommandOrControl+Shift+F')
+  registerGlobalShortcut(savedHotkey)
+}
+
 function createFloatingWindow(): void {
   floatingWindow = new BrowserWindow({
     width: 600,
@@ -239,7 +250,7 @@ function getTrayLabels(): { showWindow: string; globalSearch: string; exit: stri
   }
 }
 
-function updateTrayMenu(status?: string, message?: string): void {
+export function updateTrayMenu(status?: string, message?: string): void {
   if (!tray) return
 
   const labels = getTrayLabels()
@@ -453,12 +464,25 @@ app.whenReady().then(async () => {
   try { createTray() } catch (e) { log.error('createTray failed:', e) }
   try { createFloatingWindow() } catch (e) { log.error('createFloatingWindow failed:', e) }
 
-  registerGlobalShortcut('CommandOrControl+Shift+F')
+  // Load saved hotkey from config, or use default
+  const savedHotkey = getAppSetting<string>('hotkey', 'CommandOrControl+Shift+F')
+  registerGlobalShortcut(savedHotkey)
 
   ipcMain.handle('get-global-hotkey', () => currentHotkey)
 
   ipcMain.handle('set-global-hotkey', (_, hotkey: string) => {
     registerGlobalShortcut(hotkey)
+    setAppSetting('hotkey', hotkey)
+  })
+
+  // Disable hotkey temporarily (when user is setting a new hotkey)
+  ipcMain.handle('disable-hotkey', () => {
+    unregisterCurrentHotkey()
+  })
+
+  // Enable/restpre hotkey
+  ipcMain.handle('enable-hotkey', () => {
+    restoreHotkey()
   })
 
   ipcMain.handle('update-check', async () => {
