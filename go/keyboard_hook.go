@@ -126,7 +126,11 @@ func (hk *keyboardHook) onCtrlDown() {
 	if !hk.isRunning.Load() {
 		return
 	}
-	hk.ctrlState.Store(statePressed)
+	// Don't overwrite stateWaiting - we're in the window waiting for release
+	prev := hk.ctrlState.Load()
+	if prev != stateWaiting {
+		hk.ctrlState.Store(statePressed)
+	}
 }
 
 func (hk *keyboardHook) onCtrlUp() {
@@ -135,7 +139,6 @@ func (hk *keyboardHook) onCtrlUp() {
 	}
 	prev := hk.ctrlState.Swap(stateIdle)
 	if prev == stateWaiting {
-		hk.ctrlState.Store(stateIdle)
 		if hk.timer != nil {
 			hk.timer.Stop()
 		}
