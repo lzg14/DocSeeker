@@ -119,6 +119,7 @@ function SearchPage(): JSX.Element {
   const dedupEnabledRef = useRef(false)
   const fuzzyEnabledRef = useRef(false)
   const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const searchCounterRef = useRef(0)
 
   // Derived filtered files based on secondary filter
   const filteredFiles = secondaryFilter.trim()
@@ -233,6 +234,11 @@ function SearchPage(): JSX.Element {
   }
 
   const performSearch = useCallback(async (query: string, opts?: SearchOptions) => {
+    // Increment search counter to track this search request
+    const searchId = ++searchCounterRef.current
+
+    // 使用最新的 filters（避免闭包问题）
+    const searchOpts = opts ?? filters
     if (!query.trim()) {
       setFiles([])
       setHasSearched(false)
@@ -257,6 +263,8 @@ function SearchPage(): JSX.Element {
         try {
           new RegExp(regexPattern)
         } catch {
+          // Discard if a newer search has started
+          if (searchId !== searchCounterRef.current) return
           setFiles([])
           setHasSearched(true)
           setSnippets({})
@@ -266,39 +274,52 @@ function SearchPage(): JSX.Element {
         }
 
         // Use bare query for FTS search (filename), then filter with JS regex
-        const hasFilters = opts &&
-          (opts.fileTypes?.length || opts.sizeMin || opts.sizeMax || opts.dateFrom || opts.dateTo)
+        const hasFilters = searchOpts &&
+          (searchOpts.fileTypes?.length || searchOpts.sizeMin || searchOpts.sizeMax || searchOpts.dateFrom || searchOpts.dateTo)
 
-        const ftsResults = hasFilters
-          ? (scope === 'filename'
-            ? await window.electron.searchByFileName(bareQuery, opts)
+        let ftsResults: FileRecord[]
+        if (hasFilters) {
+          ftsResults = scope === 'filename'
+            ? await window.electron.searchByFileName(bareQuery, searchOpts)
             : dedupEnabledRef.current
-              ? await window.electron.searchDeduplicate(bareQuery, opts)
-              : await window.electron.searchFilesAdvanced(bareQuery, opts))
-          : bareQuery
-            ? fuzzyEnabledRef.current
-              ? await window.electron.searchFilesFuzzy(bareQuery)
-              : await window.electron.searchFiles(bareQuery)
-            : hasFilters ? await window.electron.searchFilesAdvanced('', opts) : []
+              ? await window.electron.searchDeduplicate(bareQuery, searchOpts)
+              : await window.electron.searchFilesAdvanced(bareQuery, searchOpts)
+        } else if (bareQuery) {
+          ftsResults = fuzzyEnabledRef.current
+            ? await window.electron.searchFilesFuzzy(bareQuery)
+            : await window.electron.searchFiles(bareQuery)
+        } else if (hasFilters) {
+          ftsResults = await window.electron.searchFilesAdvanced('', searchOpts)
+        } else {
+          ftsResults = []
+        }
+
+        // Discard if a newer search has started
+        if (searchId !== searchCounterRef.current) return
 
         // Filter results by regex against path and content
         const re = new RegExp(regexPattern, 'i')
         result = ftsResults.filter(f => re.test(f.path || '') || re.test(f.content || ''))
         snippetQuery = bareQuery || query
       } else {
-        const hasFilters = opts &&
-          (opts.fileTypes?.length || opts.sizeMin || opts.sizeMax || opts.dateFrom || opts.dateTo)
+        const hasFilters = searchOpts &&
+          (searchOpts.fileTypes?.length || searchOpts.sizeMin || searchOpts.sizeMax || searchOpts.dateFrom || searchOpts.dateTo)
 
-        result = hasFilters
-          ? (scope === 'filename'
-            ? await window.electron.searchByFileName(query, opts)
+        if (hasFilters) {
+          result = scope === 'filename'
+            ? await window.electron.searchByFileName(query, searchOpts)
             : dedupEnabledRef.current
-              ? await window.electron.searchDeduplicate(query, opts)
-              : await window.electron.searchFilesAdvanced(query, opts))
-          : fuzzyEnabledRef.current
+              ? await window.electron.searchDeduplicate(query, searchOpts)
+              : await window.electron.searchFilesAdvanced(query, searchOpts)
+        } else {
+          result = fuzzyEnabledRef.current
             ? await window.electron.searchFilesFuzzy(query)
             : await window.electron.searchFiles(query)
+        }
       }
+
+      // Discard if a newer search has started
+      if (searchId !== searchCounterRef.current) return
 
       setFiles(result)
       setHasSearched(true)
@@ -306,6 +327,8 @@ function SearchPage(): JSX.Element {
       if (result.length > 0 && snippetQuery.trim()) {
         const paths = result.filter(f => f.path).map(f => f.path!)
         const s = await window.electron.getSearchSnippets(snippetQuery, paths)
+        // Final discard check after async operation
+        if (searchId !== searchCounterRef.current) return
         setSnippets(s)
       } else {
         setSnippets({})
@@ -314,7 +337,10 @@ function SearchPage(): JSX.Element {
     } catch (error) {
       console.error('Failed to search files:', error)
     } finally {
-      setIsSearching(false)
+      // Only clear searching state if this is still the current search
+      if (searchId === searchCounterRef.current) {
+        setIsSearching(false)
+      }
     }
   }, [])
 
@@ -497,7 +523,6 @@ function SearchPage(): JSX.Element {
     setFilters(newFilters)
     // Trigger re-search with new filters if there's an active search
     if (searchQuery.trim()) {
-      console.log('[Search] handleFilterChange: triggering search with fileTypes:', newFilters.fileTypes)
       performSearch(searchQuery, newFilters)
     }
   }
