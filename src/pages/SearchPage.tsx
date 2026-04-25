@@ -495,6 +495,10 @@ function SearchPage(): JSX.Element {
 
   const handleFilterChange = (newFilters: SearchOptions) => {
     setFilters(newFilters)
+    // Trigger re-search with new filters if there's an active search
+    if (searchQuery.trim()) {
+      performSearch(searchQuery, newFilters)
+    }
   }
 
   const handleLoadPending = async () => {
