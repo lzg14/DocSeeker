@@ -497,6 +497,7 @@ function SearchPage(): JSX.Element {
     setFilters(newFilters)
     // Trigger re-search with new filters if there's an active search
     if (searchQuery.trim()) {
+      console.log('[Search] handleFilterChange: triggering search with fileTypes:', newFilters.fileTypes)
       performSearch(searchQuery, newFilters)
     }
   }
