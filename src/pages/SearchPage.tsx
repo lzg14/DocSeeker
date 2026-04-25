@@ -513,10 +513,12 @@ function SearchPage(): JSX.Element {
   }
 
   const toggleFileType = (type: string) => {
+    console.log('[Search] toggleFileType called with:', type)
     const current = filters.fileTypes || []
     const updated = current.includes(type)
       ? current.filter(t => t !== type)
       : [...current, type]
+    console.log('[Search] toggleFileType: current filters:', current, '-> updated:', updated)
     handleFilterChange({ ...filters, fileTypes: updated.length ? updated : undefined })
   }
 
