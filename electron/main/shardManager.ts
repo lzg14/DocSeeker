@@ -679,9 +679,6 @@ function searchShardDb(
   options?: SearchOptions,
   shardId?: number
 ): SearchResult[] {
-  if (options?.fileTypes?.length) {
-    log.info(`[Search] searchShardDb called with fileTypes: ${JSON.stringify(options.fileTypes)}`)
-  }
   const whereClauses: string[] = ['shard_files_fts MATCH ?']
   const params: (string | number)[] = [ftsQuery]
 
@@ -689,7 +686,6 @@ function searchShardDb(
     const placeholders = options.fileTypes.map(() => '?').join(', ')
     whereClauses.push(`f.file_type IN (${placeholders})`)
     params.push(...options.fileTypes)
-    log.info(`[Search] fileTypes filter applied: ${JSON.stringify(options.fileTypes)}`)
   }
 
   if (options?.sizeMin !== undefined && options.sizeMin > 0) {
