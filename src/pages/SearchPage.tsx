@@ -239,6 +239,7 @@ function SearchPage(): JSX.Element {
 
     // 使用最新的 filters（避免闭包问题）
     const searchOpts = opts ?? filters
+    console.log('[DEBUG] performSearch called, query:', JSON.stringify(query), 'opts:', JSON.stringify(opts), 'searchOpts:', JSON.stringify(searchOpts))
     if (!query.trim()) {
       setFiles([])
       setHasSearched(false)
@@ -520,10 +521,14 @@ function SearchPage(): JSX.Element {
   }
 
   const handleFilterChange = (newFilters: SearchOptions) => {
+    console.log('[DEBUG] handleFilterChange called, searchQuery:', JSON.stringify(searchQuery), 'filters:', JSON.stringify(newFilters))
     setFilters(newFilters)
     // Trigger re-search with new filters if there's an active search
     if (searchQuery.trim()) {
+      console.log('[DEBUG] Calling performSearch with filters:', JSON.stringify(newFilters))
       performSearch(searchQuery, newFilters)
+    } else {
+      console.log('[DEBUG] No searchQuery, skipping performSearch')
     }
   }
 
