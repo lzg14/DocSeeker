@@ -111,10 +111,8 @@ function SearchPage(): JSX.Element {
   const [sortBy, setSortBy] = useState<'relevance' | 'name' | 'size' | 'modified'>('relevance')
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc')
 
-  // Batch selection state
+  // Batch selection state (for checkboxes)
   const [selectedFiles, setSelectedFiles] = useState<Set<number>>(new Set())
-  const [showBatchMenu, setShowBatchMenu] = useState(false)
-  const batchMenuRef = useRef<HTMLDivElement>(null)
 
   // Autocomplete state
   const [showAutocomplete, setShowAutocomplete] = useState(false)
@@ -409,78 +407,6 @@ function SearchPage(): JSX.Element {
     } else {
       setSelectedFiles(new Set())
     }
-  }
-
-  const handleBatchOpenFolder = () => {
-    // Open first selected file in folder
-    const selected = sortedFiles.find(f => selectedFiles.has(f.id!))
-    if (selected) {
-      window.electron.showInFolder(selected.path)
-    }
-    setShowBatchMenu(false)
-  }
-
-  const handleBatchCopy = async () => {
-    // Copy selected files to a directory using dialog
-    try {
-      const targetDir = await window.electron.selectDirectory()
-      if (!targetDir) return
-
-      for (const fileId of selectedFiles) {
-        const file = sortedFiles.find(f => f.id === fileId)
-        if (file) {
-          await window.electron.batchCopyFile(file.path, targetDir)
-        }
-      }
-      alert(t('batch.copySuccess') || `已复制 ${selectedFiles.size} 个文件`)
-    } catch (error) {
-      console.error('Batch copy failed:', error)
-      alert(t('batch.copyFailed') || '复制失败')
-    }
-    setShowBatchMenu(false)
-  }
-
-  const handleBatchMove = async () => {
-    try {
-      const targetDir = await window.electron.selectDirectory()
-      if (!targetDir) return
-
-      for (const fileId of selectedFiles) {
-        const file = sortedFiles.find(f => f.id === fileId)
-        if (file) {
-          await window.electron.batchMoveFile(file.path, targetDir)
-        }
-      }
-      alert(t('batch.moveSuccess') || `已移动 ${selectedFiles.size} 个文件`)
-    } catch (error) {
-      console.error('Batch move failed:', error)
-      alert(t('batch.moveFailed') || '移动失败')
-    }
-    setShowBatchMenu(false)
-  }
-
-  const handleBatchDelete = async () => {
-    if (!confirm(t('batch.deleteConfirm') || `确定要删除选中的 ${selectedFiles.size} 个文件吗？此操作不可恢复。`)) {
-      setShowBatchMenu(false)
-      return
-    }
-
-    try {
-      for (const fileId of selectedFiles) {
-        const file = sortedFiles.find(f => f.id === fileId)
-        if (file) {
-          await window.electron.deleteFile(file.path)
-        }
-      }
-      setSelectedFiles(new Set())
-      // Refresh search results
-      performSearch(searchQuery, filters)
-      alert(t('batch.deleteSuccess') || `已删除 ${selectedFiles.size} 个文件`)
-    } catch (error) {
-      console.error('Batch delete failed:', error)
-      alert(t('batch.deleteFailed') || '删除失败')
-    }
-    setShowBatchMenu(false)
   }
 
   const handleHistoryClick = (query: string) => {
@@ -1164,30 +1090,6 @@ function SearchPage(): JSX.Element {
             <button className="usn-banner-btn usn-banner-btn-dismiss" onClick={handleDismissPending}>
               {t('search.dismiss')}
             </button>
-          </div>
-        )}
-
-        {/* Batch operation toolbar */}
-        {selectedFiles.size > 0 && (
-          <div className="batch-toolbar">
-            <span className="batch-count">{selectedFiles.size} 个文件</span>
-            <div className="batch-actions">
-              <button className="batch-btn" onClick={handleBatchOpenFolder} title="在文件夹中显示">
-                📁
-              </button>
-              <button className="batch-btn" onClick={handleBatchCopy} title="复制到...">
-                📋
-              </button>
-              <button className="batch-btn" onClick={handleBatchMove} title="移动到...">
-                📦
-              </button>
-              <button className="batch-btn danger" onClick={handleBatchDelete} title="删除">
-                🗑️
-              </button>
-              <button className="batch-btn" onClick={() => setSelectedFiles(new Set())} title="取消选择">
-                ✕
-              </button>
-            </div>
           </div>
         )}
 
