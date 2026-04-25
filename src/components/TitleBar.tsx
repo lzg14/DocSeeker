@@ -104,40 +104,39 @@ function TitleBar({ activeTab, onTabChange }: TitleBarProps): JSX.Element {
     <>
       <div className="title-bar">
         <div className="title-bar-left">
-          <img src="build/icon.png" className="title-bar-icon" alt="DocSeeker" />
-          <span className="title-bar-title">DocSeeker</span>
-        </div>
+          <img src="build/icon.png?v=2" className="title-bar-icon" alt="DocSeeker" />
 
-        {/* Compact navigation buttons */}
-        <div className="title-bar-nav">
-          <button
-            className={`title-bar-nav-btn ${activeTab === 'search' ? 'active' : ''}`}
-            onClick={() => handleNavClick('search')}
-            title={t('nav.search')}
-          >
-            <SearchIcon />
-          </button>
-          <button
-            className={`title-bar-nav-btn ${activeTab === 'scan' ? 'active' : ''}`}
-            onClick={() => handleNavClick('scan')}
-            title={t('nav.scan')}
-          >
-            <ScanIcon />
-          </button>
-          <button
-            className={`title-bar-nav-btn ${activeTab === 'language' ? 'active' : ''}`}
-            onClick={() => handleNavClick('language')}
-            title={t('nav.settings')}
-          >
-            <SettingsIcon />
-          </button>
-          <button
-            className={`title-bar-nav-btn ${activeTab === 'guide' ? 'active' : ''}`}
-            onClick={() => handleNavClick('guide')}
-            title={t('nav.guide')}
-          >
-            <HelpIcon />
-          </button>
+          {/* Navigation buttons */}
+          <div className="title-bar-nav">
+            <button
+              className={`title-bar-nav-btn ${activeTab === 'search' ? 'active' : ''}`}
+              onClick={() => handleNavClick('search')}
+              title={t('nav.search')}
+            >
+              <SearchIcon />
+            </button>
+            <button
+              className={`title-bar-nav-btn ${activeTab === 'scan' ? 'active' : ''}`}
+              onClick={() => handleNavClick('scan')}
+              title={t('nav.scan')}
+            >
+              <ScanIcon />
+            </button>
+            <button
+              className={`title-bar-nav-btn ${activeTab === 'language' ? 'active' : ''}`}
+              onClick={() => handleNavClick('language')}
+              title={t('nav.settings')}
+            >
+              <SettingsIcon />
+            </button>
+            <button
+              className={`title-bar-nav-btn ${activeTab === 'guide' ? 'active' : ''}`}
+              onClick={() => handleNavClick('guide')}
+              title={t('nav.guide')}
+            >
+              <HelpIcon />
+            </button>
+          </div>
         </div>
 
         <div className="title-bar-controls">

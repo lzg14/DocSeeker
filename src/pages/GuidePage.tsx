@@ -12,8 +12,6 @@ function GuidePage({ onNavigate }: GuidePageProps): JSX.Element {
 
   return (
     <div className="settings-page">
-      <h2 className="page-title">{t('guide.title')}</h2>
-
       {/* Overview */}
       <div className="settings-section">
         <div className="settings-section-title">{t('guide.overview')}</div>

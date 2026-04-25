@@ -304,6 +304,7 @@ export function updateTrayMenu(): void {
 }
 
 function createWindow(): void {
+  const iconPath = join(__dirname, '../../build/icon.png')
   mainWindow = new BrowserWindow({
     width: 1200,
     height: 800,
@@ -312,6 +313,7 @@ function createWindow(): void {
     show: false,
     autoHideMenuBar: true,
     frame: false,
+    icon: iconPath,
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),
       sandbox: false,

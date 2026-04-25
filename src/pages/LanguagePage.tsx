@@ -125,7 +125,6 @@ function LanguagePage(): JSX.Element {
   return (
     <div className="settings-page">
       <div className="settings-group">
-        <div className="settings-group-title">{t('settings.theme')}</div>
         <div className="settings-row">
           <span className="settings-label">{t('settings.themeLabel')}</span>
           <div className="theme-cards">
