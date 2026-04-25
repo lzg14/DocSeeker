@@ -3,6 +3,7 @@ import { BrowserWindow } from 'electron'
 import path from 'path'
 import fs from 'fs'
 import crypto from 'crypto'
+import { extractContent } from './scanner'
 import {
   deleteFileFromAllShards,
   renameFileInAllShards,
@@ -12,6 +13,7 @@ import {
   openNextShard,
   insertFileBatch,
 } from './shardManager'
+import { extractContent } from './scanner'
 
 type UsnEventType =
   | 'created' | 'modified' | 'deleted' | 'renamed'
@@ -95,9 +97,23 @@ export async function handleUsnEvent(ev: UsnEvent): Promise<void> {
   notifyRenderer(ev)
 }
 
+// Simple/exts that should be extracted synchronously (immediately)
+const SIMPLE_EXTS = new Set(['.txt', '.md', '.markdown', '.json'])
+
 async function handleCreated(filePath: string): Promise<void> {
   const fileInfo = await processFileSimple(filePath)
   if (!fileInfo) return
+  // If the file is a simple text-like file, extract content immediately
+  const ext = path.extname(filePath).toLowerCase()
+  if (SIMPLE_EXTS.has(ext)) {
+    try {
+      const content = await extractContent(filePath)
+      fileInfo.content = content ?? null
+    } catch {
+      // Ignore extraction failure and fall back to metadata only
+      fileInfo.content = null
+    }
+  }
   const shard = await openNextShard()
   if (!shard) return
   await insertFileBatch(shard.id, [fileInfo])
@@ -177,8 +193,12 @@ async function processFileSimple(filePath: string): Promise<SimpleFileInfo | nul
   return info
 }
 
-async function extractContentSimple(_filePath: string): Promise<string | null> {
-  // Content extraction is expensive; handled asynchronously by scanWorker.
-  // Returning null here — the file will be re-extracted on next full scan.
-  return null
+async function extractContentSimple(filePath: string): Promise<string | null> {
+  try {
+    const content = await extractContent(filePath)
+    return content || null
+  } catch (error) {
+    log.warn(`[usnHandler] Failed to extract content: ${filePath}`, error)
+    return null
+  }
 }
