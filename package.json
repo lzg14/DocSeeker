@@ -29,6 +29,13 @@
       "out/**/*",
       "build/**/*"
     ],
+    "extraResources": [
+      {
+        "from": "go/docseeker-monitor",
+        "to": "docseeker-monitor",
+        "filter": ["**/*"]
+      }
+    ],
     "win": {
       "target": [
         {
@@ -54,6 +61,16 @@
     },
     "portable": {
       "artifactName": "${productName}-${version}-portable.${ext}"
+    },
+    "mac": {
+      "category": "public.app-category.productivity",
+      "hardenedRuntime": true,
+      "target": [
+        {
+          "target": "dmg",
+          "arch": ["x64", "arm64"]
+        }
+      ]
     },
     "publish": {
       "provider": "github",

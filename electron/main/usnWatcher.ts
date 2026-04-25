@@ -218,11 +218,16 @@ export class UsnWatcher {
   }
 
   private async spawnProcess(): Promise<void> {
-    const exePath = app.isPackaged
-      ? path.join(process.resourcesPath!, 'docseeker-monitor.exe')
-      : path.join(__dirname, '../../go/docseeker-monitor.exe')
+    // Use platform-specific binary name
+    const binaryName = process.platform === 'win32'
+      ? 'docseeker-monitor.exe'
+      : 'docseeker-monitor'
 
-    log.info('[UsnWatcher] spawning:', exePath)
+    const exePath = app.isPackaged
+      ? path.join(process.resourcesPath!, binaryName)
+      : path.join(__dirname, '../../go', binaryName)
+
+    log.info('[UsnWatcher] spawning:', exePath, '(platform:', process.platform + ')')
 
     return new Promise((resolve, reject) => {
       this.process = spawn(exePath, [], {

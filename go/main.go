@@ -8,6 +8,7 @@ import (
 	"net"
 	"os"
 	"os/signal"
+	"runtime"
 	"sync"
 	"syscall"
 	"time"
@@ -36,9 +37,13 @@ func main() {
 	// Start file watcher event pump
 	go eventPump()
 
-	// Start keyboard hook (double Ctrl detection)
-	if err := StartKeyboardHook(onDoubleCtrl); err != nil {
-		fmt.Fprintf(os.Stderr, "WARN: keyboard hook failed: %v\n", err)
+	// Start keyboard hook (double Ctrl detection) - Windows only
+	if runtime.GOOS == "windows" {
+		if err := StartKeyboardHook(onDoubleCtrl); err != nil {
+			fmt.Fprintf(os.Stderr, "WARN: keyboard hook failed: %v\n", err)
+		}
+	} else {
+		fmt.Fprintf(os.Stderr, "INFO: keyboard hook skipped (not Windows)\n")
 	}
 
 	ln, err := net.Listen("tcp", "127.0.0.1:29501")
@@ -54,7 +59,9 @@ func main() {
 	go func() {
 		<-sigCh
 		fmt.Fprintf(os.Stderr, "INFO: received signal, shutting down\n")
-		StopKeyboardHook()
+		if runtime.GOOS == "windows" {
+			StopKeyboardHook()
+		}
 		os.Exit(0)
 	}()
 
@@ -129,7 +136,9 @@ func eventPump() {
 			writeEvent(ev)
 		case <-idleTimer.C:
 			fmt.Fprintf(os.Stderr, "INFO: idle timeout, exiting\n")
-			StopKeyboardHook()
+			if runtime.GOOS == "windows" {
+				StopKeyboardHook()
+			}
 			os.Exit(0)
 		}
 	}
