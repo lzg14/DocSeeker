@@ -87,7 +87,6 @@ A desktop full-text search tool built with Electron + React + TypeScript, design
 - **Database**: SQLite (better-sqlite3) with FTS5 full-text search
 - **Document Parsing**: mammoth (docx), xlsx (Excel), pdf-parse (PDF), jszip (PPTX)
 - **Hash**: MD5
-- **Auto Update**: electron-updater
 
 ## Development
 
@@ -148,7 +147,6 @@ docseeker/
 │   │   ├── database.ts     # SQLite operations (FTS5 + BM25)
 │   │   ├── scanner.ts      # File scanning logic
 │   │   ├── scanWorker.ts    # Worker thread scanning
-│   │   └── updater.ts       # Auto-update detection
 │   └── preload/             # Preload script
 │       └── index.ts         # API bridge
 ├── electron-builder.yml      # Packaging config (electron-builder)

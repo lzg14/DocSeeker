@@ -22,9 +22,9 @@ docs/
     │   ├── integration-plan.md              # 功能整合规划
     │   ├── 2026-04-12-ui-redesign.md       # UI 重设计
     │   ├── 2026-04-15-multi-theme.md       # 多主题系统
-    │   ├── 2026-04-16-auto-update.md       # 自动更新
     │   └── ...其他计划文档
     └── archive/                     # 已归档（废弃或已完成）
+        ├── 2026-04-16-auto-update.md       # 自动更新（已移除）
         ├── 2026-04-18-startup-tray.md            # 窗口行为优化（已实现）
         ├── 2026-04-18-phase3-realtime-preview.md  # 实时预览（暂缓）
         └── COMPETITION.md                        # 竞品分析报告（旧版）

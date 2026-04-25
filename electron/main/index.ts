@@ -6,7 +6,6 @@ import { closeAllShards, initShardManager } from './shardManager'
 import { initHotCache, closeHotCache } from './hotCache'
 import { usnWatcher, onDoubleCtrl, onMonitorStatusChange } from './usnWatcher'
 import { registerIpcHandlers } from './ipc'
-import { startUpdater, stopUpdater, handleManualCheck, handleDownloadUpdate, handleQuitAndInstall } from './updater'
 import { getAppSetting, setAppSetting } from './config'
 
 // Extend Electron App interface with custom property
@@ -441,8 +440,7 @@ app.whenReady().then(async () => {
 
   usnWatcher.start().catch((e) => log.error('[UsnWatcher] failed to start:', e))
 
-  // Auto updater
-  try { startUpdater(mainWindow!) } catch (e) { log.error('startUpdater failed:', e) }
+  // Initialize tray and floating window
   try { createTray() } catch (e) { log.error('createTray failed:', e) }
   try { createFloatingWindow() } catch (e) { log.error('createFloatingWindow failed:', e) }
 
@@ -465,18 +463,6 @@ app.whenReady().then(async () => {
   // Enable/restpre hotkey
   ipcMain.handle('enable-hotkey', () => {
     restoreHotkey()
-  })
-
-  ipcMain.handle('update-check', async () => {
-    return handleManualCheck()
-  })
-
-  ipcMain.handle('update-download', async () => {
-    await handleDownloadUpdate()
-  })
-
-  ipcMain.handle('update-install', async () => {
-    handleQuitAndInstall()
   })
 
   app.on('activate', function () {

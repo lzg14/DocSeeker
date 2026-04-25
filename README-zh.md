@@ -68,7 +68,6 @@
 - **数据库**: SQLite (better-sqlite3)，支持 FTS5 全文索引
 - **文档解析**: mammoth (docx), xlsx (Excel), pdf-parse (PDF), jszip (PPTX)
 - **哈希计算**: MD5
-- **自动升级**: electron-updater
 
 ## 开发
 
@@ -129,7 +128,6 @@ docseeker/
 │   │   ├── database.ts     # SQLite 数据库操作（FTS5 + BM25）
 │   │   ├── scanner.ts      # 文件扫描逻辑
 │   │   ├── scanWorker.ts    # Worker 线程扫描
-│   │   └── updater.ts       # 自动升级检测
 │   └── preload/             # 预加载脚本
 │       └── index.ts         # API 桥接
 ├── electron-builder.yml      # 打包配置（electron-builder）

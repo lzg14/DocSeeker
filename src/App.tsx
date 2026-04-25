@@ -4,7 +4,6 @@ import { AppProvider } from './context/AppContext'
 import { LanguageProvider } from './context/LanguageContext'
 import TitleBar from './components/TitleBar'
 import StatusBar from './components/StatusBar'
-import UpdateNotification from './components/UpdateNotification'
 import SearchPage from './pages/SearchPage'
 import FloatingSearch from './pages/FloatingSearch'
 
@@ -79,7 +78,6 @@ function App(): JSX.Element {
             </ErrorBoundary>
           </main>
           <StatusBar />
-          <UpdateNotification />
         </div>
       </LanguageProvider>
     </AppProvider>

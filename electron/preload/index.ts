@@ -288,22 +288,6 @@ const electronAPI: ElectronAPI = {
 
   updateScanSettings: (settings: any) => ipcRenderer.invoke('update-scan-settings', settings),
 
-  checkForUpdate: () => ipcRenderer.invoke('update-check'),
-
-  downloadUpdate: () => ipcRenderer.invoke('update-download'),
-
-  quitAndInstall: () => ipcRenderer.invoke('update-install'),
-
-  onUpdateStatus: (callback) => {
-    const handler = (_: Electron.IpcRendererEvent, info: { status: string; version?: string; error?: string }) => {
-      callback(info)
-    }
-    ipcRenderer.on('update-status', handler)
-    return () => {
-      ipcRenderer.removeListener('update-status', handler)
-    }
-  },
-
   isDatabaseReady: () => ipcRenderer.invoke('db-is-ready'),
 
   minimizeToTray: () => ipcRenderer.invoke('window-minimize-to-tray'),

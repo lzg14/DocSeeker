@@ -2574,61 +2574,6 @@ button, input, select {
   to { transform: rotate(360deg); }
 }
 
-/* Update notification */
-.update-notification {
-  position: fixed;
-  bottom: 24px;
-  right: 24px;
-  z-index: 1000;
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 12px 16px;
-  background: var(--surface-elevated);
-  border: 1px solid var(--border-default);
-  border-radius: 8px;
-  box-shadow: var(--shadow-lg);
-  font-size: 14px;
-  animation: slide-in-up 0.2s ease-out;
-}
-
-.update-notification[data-type='error'] {
-  border-color: var(--color-error);
-}
-
-.update-notification-actions {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.update-notification-spinner {
-  display: inline-block;
-  width: 16px;
-  height: 16px;
-  border: 2px solid var(--border-default);
-  border-top-color: var(--color-primary);
-  border-radius: 50%;
-  animation: spin 0.8s linear infinite;
-}
-
-@keyframes slide-in-up {
-  from {
-    opacity: 0;
-    transform: translateY(8px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-@keyframes spin {
-  to {
-    transform: rotate(360deg);
-  }
-}
-
 /* === 右键菜单 === */
 .context-menu {
   position: fixed;
