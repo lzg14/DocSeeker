@@ -192,7 +192,7 @@ export function detectMachineProfile(): MachineProfile {
  */
 export function computeShardConfig(profile: MachineProfile): ShardConfig {
   // Shard size limit: ensure it can be loaded within 2 seconds
-  const maxSizeMB = Math.max(50, Math.min(profile.diskReadSpeedMBps * 2, 2000))
+  const maxSizeMB = Math.max(50, Math.min(profile.diskReadSpeedMBps * 2, 1024))
 
   // Parallel workers: leave 1 core for main thread, cap at 8
   const parallelWorkers = Math.min(Math.max(profile.cpuCores - 1, 1), 8)
@@ -285,14 +285,61 @@ let initPromise: Promise<void> | null = null
 let totalFilesInserted = 0
 
 interface WorkerResult {
-  type: 'ready' | 'loaded' | 'batch-complete' | 'closed' | 'error'
+  type: 'ready' | 'loaded' | 'batch-complete' | 'update-complete' | 'delete-complete' | 'rename-complete' | 'cleanup-complete' | 'closed' | 'error'
   shardId: number
   fileCount?: number
+  changes?: number
   error?: string
   loadTime?: number
 }
 
 // ============ Shard Loading ============
+
+// 根据操作类型获取超时时间
+function getTimeoutForOperation(msg: object): number {
+  if ('type' in msg) {
+    if (msg.type === 'delete-folder') {
+      return 120000 // 删除文件夹可能涉及大量文件，120秒
+    }
+    if (msg.type === 'rename-folder') {
+      return 120000 // 重命名文件夹可能涉及大量文件，120秒
+    }
+  }
+  return 30000 // 默认 30 秒
+}
+
+function sendToWorker(shardId: number, msg: object, customTimeout?: number): Promise<WorkerResult> {
+  return new Promise((resolve, reject) => {
+    const worker = shardWorkers.get(shardId)
+    if (!worker) {
+      reject(new Error(`No worker for shard ${shardId}`))
+      return
+    }
+
+    const timeout = customTimeout ?? getTimeoutForOperation(msg)
+    const timeoutId = setTimeout(() => {
+      cleanup()
+      log.warn(`[ShardManager] Worker timeout (${timeout}ms) for shard ${shardId}, operation: ${(msg as { type?: string }).type}`)
+      reject(new Error(`Worker message timeout for shard ${shardId}`))
+    }, timeout)
+
+    function cleanup() {
+      pendingWorkerResults.delete(shardId)
+      clearTimeout(timeoutId)
+    }
+
+    function handler(result: WorkerResult) {
+      if (result.shardId === shardId) {
+        cleanup()
+        worker.off('message', handler)
+        resolve(result)
+      }
+    }
+
+    worker.on('message', handler)
+    worker.postMessage(msg)
+  })
+}
 
 function loadShardWorker(shardId: number, dbPath: string): Promise<WorkerResult> {
   return new Promise((resolve, reject) => {
@@ -310,7 +357,7 @@ function loadShardWorker(shardId: number, dbPath: string): Promise<WorkerResult>
           resolve(result)
         } else if (result.type === 'error') {
           resolve(result) // Resolve with error, don't reject
-        } else if (result.type === 'batch-complete' || result.type === 'closed') {
+        } else if (result.type === 'batch-complete' || result.type === 'update-complete' || result.type === 'delete-complete' || result.type === 'rename-complete' || result.type === 'closed') {
           pendingWorkerResults.set(result.shardId, result)
         }
       })
@@ -1123,137 +1170,171 @@ export function getTotalFileCount(): number {
   return shards.reduce((sum, s) => sum + s.fileCount, 0)
 }
 
+// ============ Write Operations (delegated to workers) ============
+
 /**
- * Delete a single file from all shards by path.
- * Returns the number of shards that had and deleted the file.
+ * Delete a single file from all shards via workers.
  */
-export function deleteFileFromAllShards(filePath: string): number {
-  let deletedCount = 0
+export async function deleteFileFromAllShardsAsync(filePath: string): Promise<number> {
   const readyShards = getReadyShards()
-  for (const shard of readyShards) {
-    try {
-      const db = new Database(shard.dbPath)
-      const stmt = db.prepare('DELETE FROM shard_files WHERE path = ?')
-      const result = stmt.run(filePath)
-      if (result.changes > 0) {
-        const countRow = db.prepare('SELECT COUNT(*) as count FROM shard_files').get() as { count: number } | undefined
-        shard.fileCount = countRow?.count ?? shard.fileCount
-        log.info(`[ShardManager] Deleted file ${filePath} from shard ${shard.id}`)
-      }
-      db.close()
-      if (result.changes > 0) deletedCount++
-    } catch (err) {
-      log.warn(`[ShardManager] Failed to delete file ${filePath} from shard ${shard.id}:`, err)
-    }
-  }
-  return deletedCount
+  const promises = readyShards.map(shard => {
+    return sendToWorker(shard.id, { type: 'delete-file', shardId: shard.id, path: filePath })
+      .then(result => {
+        if (result.type === 'delete-complete') {
+          // 更新内存中的 fileCount
+          if (result.fileCount !== undefined) {
+            shard.fileCount = result.fileCount
+          }
+          log.info(`[ShardManager] Deleted file ${filePath} from shard ${shard.id}`)
+          return 1
+        }
+        return 0
+      })
+      .catch(err => {
+        log.warn(`[ShardManager] Failed to delete file ${filePath} from shard ${shard.id}:`, err)
+        return 0
+      })
+  })
+  const results = await Promise.all(promises)
+  return results.reduce((sum, count) => sum + count, 0)
 }
 
 /**
- * Delete all files whose path starts with the given folder path prefix,
- * from all shards. Returns the total number of files deleted.
+ * Delete all files under a folder from all shards via workers.
  */
-export function deleteFilesByFolderPrefixFromAllShards(folderPath: string): number {
-  let totalDeleted = 0
-  const prefix = folderPath.replace(/\\/g, '/').replace(/\/$/, '') + '/'
+export async function deleteFilesByFolderPrefixFromAllShardsAsync(folderPath: string): Promise<number> {
   const readyShards = getReadyShards()
-  for (const shard of readyShards) {
-    try {
-      const db = new Database(shard.dbPath)
-      const stmt = db.prepare("DELETE FROM shard_files WHERE path LIKE ? || '%'")
-      const result = stmt.run(prefix)
-      db.close()
-      if (result.changes > 0) {
-        totalDeleted += result.changes
-        // Refresh fileCount so status bar reflects accurate total
-        const countRow = db.prepare('SELECT COUNT(*) as count FROM shard_files').get() as { count: number } | undefined
-        shard.fileCount = countRow?.count ?? shard.fileCount
-        log.info(`[ShardManager] Deleted ${result.changes} files under ${folderPath} from shard ${shard.id}`)
-      }
-    } catch (err) {
-      log.warn(`[ShardManager] Failed to delete files under ${folderPath} from shard ${shard.id}:`, err)
-    }
-  }
-  return totalDeleted
+  const promises = readyShards.map(shard => {
+    return sendToWorker(shard.id, { type: 'delete-folder', shardId: shard.id, folderPath })
+      .then(result => {
+        if (result.type === 'delete-complete' && result.changes) {
+          // 更新内存中的 fileCount
+          if (result.fileCount !== undefined) {
+            shard.fileCount = result.fileCount
+          }
+          log.info(`[ShardManager] Deleted ${result.changes} files under ${folderPath} from shard ${shard.id}`)
+          return result.changes
+        }
+        return 0
+      })
+      .catch(err => {
+        log.warn(`[ShardManager] Failed to delete files under ${folderPath} from shard ${shard.id}:`, err)
+        return 0
+      })
+  })
+  const results = await Promise.all(promises)
+  return results.reduce((sum, count) => sum + count, 0)
 }
 
 /**
- * Rename a file across all shards: update path and name fields.
- * Used when a file is renamed on disk (not moved between folders).
+ * Update file content in all shards via workers.
+ * Only updates if content is non-empty.
  */
-export function renameFileInAllShards(oldPath: string, newPath: string): number {
-  let renamedCount = 0
-  const newName = newPath.replace(/\\/g, '/').split('/').pop() || ''
-  const readyShards = getReadyShards()
-  for (const shard of readyShards) {
-    try {
-      const db = new Database(shard.dbPath)
-      const result = db.prepare(`
-        UPDATE shard_files
-        SET path = ?, name = ?, updated_at = datetime('now')
-        WHERE path = ?
-      `).run(newPath, newName, oldPath.replace(/\\/g, '/'))
-      renamedCount += result.changes
-      db.close()
-    } catch (e) {
-      log.error(`[shardManager] renameFileInAllShards error on shard ${shard.id}:`, e)
-    }
+export async function updateFileContentInAllShardsAsync(filePath: string, content: string | null): Promise<number> {
+  // 空内容不更新（避免无效写入）
+  if (!content || content.trim() === '') {
+    return 0
   }
-  return renamedCount
+
+  const readyShards = getReadyShards()
+  const promises = readyShards.map(shard => {
+    return sendToWorker(shard.id, { type: 'update-content', shardId: shard.id, path: filePath, content })
+      .then(result => {
+        if (result.type === 'update-complete' && result.changes) {
+          return 1
+        }
+        return 0
+      })
+      .catch(err => {
+        log.warn(`[ShardManager] Failed to update content for ${filePath} in shard ${shard.id}:`, err)
+        return 0
+      })
+  })
+  const results = await Promise.all(promises)
+  return results.reduce((sum, count) => sum + count, 0)
 }
 
 /**
- * Update file content (re-extract after file modification).
+ * Rename a file in all shards via workers.
  */
-export function updateFileContentInAllShards(filePath: string, content: string | null): number {
-  let updatedCount = 0
-  const normalizedPath = filePath.replace(/\\/g, '/')
+export async function renameFileInAllShardsAsync(oldPath: string, newPath: string): Promise<number> {
   const readyShards = getReadyShards()
-  for (const shard of readyShards) {
-    try {
-      const db = new Database(shard.dbPath)
-      const result = db.prepare(`
-        UPDATE shard_files
-        SET content = ?, updated_at = datetime('now')
-        WHERE path = ?
-      `).run(content, normalizedPath)
-      updatedCount += result.changes
-      db.close()
-    } catch (e) {
-      log.error(`[shardManager] updateFileContentInAllShards error on shard ${shard.id}:`, e)
-    }
-  }
-  return updatedCount
+  const promises = readyShards.map(shard => {
+    return sendToWorker(shard.id, { type: 'rename-file', shardId: shard.id, oldPath, newPath })
+      .then(result => {
+        if (result.type === 'rename-complete' && result.changes) {
+          log.info(`[ShardManager] Renamed file ${oldPath} → ${newPath} in shard ${shard.id}`)
+          return 1
+        }
+        return 0
+      })
+      .catch(err => {
+        log.warn(`[ShardManager] Failed to rename file in shard ${shard.id}:`, err)
+        return 0
+      })
+  })
+  const results = await Promise.all(promises)
+  return results.reduce((sum, count) => sum + count, 0)
 }
 
 /**
- * Rename all files under a folder prefix (used when folder is renamed).
- * Uses SQLite string concatenation on path prefix for efficiency.
+ * Rename all files under a folder in all shards via workers.
  */
-export function renameFolderContentsInAllShards(oldFolderPath: string, newFolderPath: string): number {
-  let totalUpdated = 0
-  const oldPrefix = oldFolderPath.replace(/\\/g, '/').replace(/\/$/, '') + '/'
-  const newPrefix = newFolderPath.replace(/\\/g, '/').replace(/\/$/, '') + '/'
-  const oldFolderName = oldFolderPath.replace(/\\/g, '/').split('/').pop() || ''
-  const newFolderName = newFolderPath.replace(/\\/g, '/').split('/').pop() || ''
+export async function renameFolderContentsInAllShardsAsync(oldFolderPath: string, newFolderPath: string): Promise<number> {
   const readyShards = getReadyShards()
-  for (const shard of readyShards) {
-    try {
-      const db = new Database(shard.dbPath)
-      const result = db.prepare(`
-        UPDATE shard_files
-        SET path = (? || SUBSTR(path, ?)),
-            name = (? || SUBSTR(name, ?)),
-            updated_at = datetime('now')
-        WHERE path LIKE ?
-      `).run(newPrefix, oldPrefix.length + 1, newFolderName, oldFolderName.length + 1, oldPrefix + '%')
-      totalUpdated += result.changes
-      db.close()
-    } catch (e) {
-      log.error(`[shardManager] renameFolderContentsInAllShards error on shard ${shard.id}:`, e)
-    }
+  const promises = readyShards.map(shard => {
+    return sendToWorker(shard.id, { type: 'rename-folder', shardId: shard.id, oldFolderPath, newFolderPath })
+      .then(result => {
+        if (result.type === 'rename-complete' && result.changes) {
+          log.info(`[ShardManager] Renamed ${result.changes} files under ${oldFolderPath} in shard ${shard.id}`)
+          return result.changes
+        }
+        return 0
+      })
+      .catch(err => {
+        log.warn(`[ShardManager] Failed to rename folder in shard ${shard.id}:`, err)
+        return 0
+      })
+  })
+  const results = await Promise.all(promises)
+  return results.reduce((sum, count) => sum + count, 0)
+}
+
+/**
+ * Cleanup orphaned files from all shards.
+ * Deletes files whose path doesn't start with any of the valid prefixes.
+ */
+export async function cleanupOrphanedFilesAsync(validPrefixes: string[]): Promise<number> {
+  if (validPrefixes.length === 0) {
+    return 0
   }
-  return totalUpdated
+
+  // 归一化前缀
+  const normalizedPrefixes = validPrefixes.map(p => p.replace(/\\/g, '/').replace(/\/$/, '') + '/')
+
+  const readyShards = getReadyShards()
+  const promises = readyShards.map(shard => {
+    return sendToWorker(shard.id, { type: 'cleanup-orphaned', shardId: shard.id, validPrefixes: normalizedPrefixes })
+      .then(result => {
+        if (result.type === 'cleanup-complete') {
+          // 更新内存中的 fileCount
+          if (result.fileCount !== undefined) {
+            shard.fileCount = result.fileCount
+          }
+          if (result.changes) {
+            log.info(`[ShardManager] Cleanup removed ${result.changes} orphaned files from shard ${shard.id}`)
+          }
+          return result.changes ?? 0
+        }
+        return 0
+      })
+      .catch(err => {
+        log.warn(`[ShardManager] Failed to cleanup orphaned files in shard ${shard.id}:`, err)
+        return 0
+      })
+  })
+  const results = await Promise.all(promises)
+  return results.reduce((sum, count) => sum + count, 0)
 }
 
 /**

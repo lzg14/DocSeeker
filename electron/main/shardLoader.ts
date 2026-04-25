@@ -34,12 +34,52 @@ interface CloseMessage {
   shardId: number
 }
 
-type WorkerMessage = InsertBatchMessage | CloseMessage
+interface UpdateContentMessage {
+  type: 'update-content'
+  shardId: number
+  path: string
+  content: string
+}
+
+interface DeleteFileMessage {
+  type: 'delete-file'
+  shardId: number
+  path: string
+}
+
+interface DeleteFolderMessage {
+  type: 'delete-folder'
+  shardId: number
+  folderPath: string
+}
+
+interface RenameFileMessage {
+  type: 'rename-file'
+  shardId: number
+  oldPath: string
+  newPath: string
+}
+
+interface RenameFolderMessage {
+  type: 'rename-folder'
+  shardId: number
+  oldFolderPath: string
+  newFolderPath: string
+}
+
+interface CleanupOrphanedMessage {
+  type: 'cleanup-orphaned'
+  shardId: number
+  validPrefixes: string[]  // 扫描目录前缀列表
+}
+
+type WorkerMessage = InsertBatchMessage | CloseMessage | UpdateContentMessage | DeleteFileMessage | DeleteFolderMessage | RenameFileMessage | RenameFolderMessage | CleanupOrphanedMessage
 
 interface WorkerResult {
-  type: 'ready' | 'loaded' | 'batch-complete' | 'closed' | 'error'
+  type: 'ready' | 'loaded' | 'batch-complete' | 'closed' | 'error' | 'update-complete' | 'delete-complete' | 'rename-complete' | 'cleanup-complete'
   shardId: number
   fileCount?: number
+  changes?: number
   error?: string
   loadTime?: number
 }
@@ -211,6 +251,18 @@ function handleMessage(msg: WorkerMessage): void {
     }
   } else if (msg.type === 'close') {
     handleClose(msg.shardId)
+  } else if (msg.type === 'update-content') {
+    handleUpdateContent(msg.shardId, msg.path, msg.content)
+  } else if (msg.type === 'delete-file') {
+    handleDeleteFile(msg.shardId, msg.path)
+  } else if (msg.type === 'delete-folder') {
+    handleDeleteFolder(msg.shardId, msg.folderPath)
+  } else if (msg.type === 'rename-file') {
+    handleRenameFile(msg.shardId, msg.oldPath, msg.newPath)
+  } else if (msg.type === 'rename-folder') {
+    handleRenameFolder(msg.shardId, msg.oldFolderPath, msg.newFolderPath)
+  } else if (msg.type === 'cleanup-orphaned') {
+    handleCleanupOrphaned(msg.shardId, msg.validPrefixes)
   }
 }
 
@@ -223,6 +275,141 @@ function handleClose(shardId: number): void {
     sendResult({ type: 'closed', shardId })
   } catch (err) {
     const error = err instanceof Error ? err.message : String(err)
+    sendResult({ type: 'error', shardId, error })
+  }
+}
+
+function handleUpdateContent(shardId: number, path: string, content: string): void {
+  if (!currentDb) {
+    sendResult({ type: 'error', shardId, error: 'No database connection' })
+    return
+  }
+  try {
+    const normalizedPath = path.replace(/\\/g, '/')
+    const result = currentDb.prepare(`
+      UPDATE shard_files
+      SET content = ?, updated_at = datetime('now')
+      WHERE path = ?
+    `).run(content, normalizedPath)
+    sendResult({ type: 'update-complete', shardId, changes: result.changes })
+  } catch (err) {
+    const error = err instanceof Error ? err.message : String(err)
+    log.error(`[ShardLoader:${shardId}] Update content failed:`, err)
+    sendResult({ type: 'error', shardId, error })
+  }
+}
+
+function handleDeleteFile(shardId: number, path: string): void {
+  if (!currentDb) {
+    sendResult({ type: 'error', shardId, error: 'No database connection' })
+    return
+  }
+  try {
+    const normalizedPath = path.replace(/\\/g, '/')
+    const result = currentDb.prepare('DELETE FROM shard_files WHERE path = ?').run(normalizedPath)
+    const fileCount = getFileCount(currentDb)
+    sendResult({ type: 'delete-complete', shardId, changes: result.changes, fileCount })
+  } catch (err) {
+    const error = err instanceof Error ? err.message : String(err)
+    log.error(`[ShardLoader:${shardId}] Delete file failed:`, err)
+    sendResult({ type: 'error', shardId, error })
+  }
+}
+
+function handleDeleteFolder(shardId: number, folderPath: string): void {
+  if (!currentDb) {
+    sendResult({ type: 'error', shardId, error: 'No database connection' })
+    return
+  }
+  try {
+    const prefix = folderPath.replace(/\\/g, '/').replace(/\/$/, '') + '/'
+    const result = currentDb.prepare("DELETE FROM shard_files WHERE path LIKE ? || '%'").run(prefix)
+    const fileCount = getFileCount(currentDb)
+    sendResult({ type: 'delete-complete', shardId, changes: result.changes, fileCount })
+  } catch (err) {
+    const error = err instanceof Error ? err.message : String(err)
+    log.error(`[ShardLoader:${shardId}] Delete folder failed:`, err)
+    sendResult({ type: 'error', shardId, error })
+  }
+}
+
+function handleRenameFile(shardId: number, oldPath: string, newPath: string): void {
+  if (!currentDb) {
+    sendResult({ type: 'error', shardId, error: 'No database connection' })
+    return
+  }
+  try {
+    const normalizedOldPath = oldPath.replace(/\\/g, '/')
+    const normalizedNewPath = newPath.replace(/\\/g, '/')
+    const newName = normalizedNewPath.split('/').pop() || ''
+    const result = currentDb.prepare(`
+      UPDATE shard_files
+      SET path = ?, name = ?, updated_at = datetime('now')
+      WHERE path = ?
+    `).run(normalizedNewPath, newName, normalizedOldPath)
+    sendResult({ type: 'rename-complete', shardId, changes: result.changes })
+  } catch (err) {
+    const error = err instanceof Error ? err.message : String(err)
+    log.error(`[ShardLoader:${shardId}] Rename file failed:`, err)
+    sendResult({ type: 'error', shardId, error })
+  }
+}
+
+function handleRenameFolder(shardId: number, oldFolderPath: string, newFolderPath: string): void {
+  if (!currentDb) {
+    sendResult({ type: 'error', shardId, error: 'No database connection' })
+    return
+  }
+  try {
+    const oldPrefix = oldFolderPath.replace(/\\/g, '/').replace(/\/$/, '') + '/'
+    const newPrefix = newFolderPath.replace(/\\/g, '/').replace(/\/$/, '') + '/'
+    const oldFolderName = oldFolderPath.replace(/\\/g, '/').split('/').pop() || ''
+    const newFolderName = newFolderPath.replace(/\\/g, '/').split('/').pop() || ''
+    const result = currentDb.prepare(`
+      UPDATE shard_files
+      SET path = (? || SUBSTR(path, ?)),
+          name = (? || SUBSTR(name, ?)),
+          updated_at = datetime('now')
+      WHERE path LIKE ?
+    `).run(newPrefix, oldPrefix.length + 1, newFolderName, oldFolderName.length + 1, oldPrefix + '%')
+    sendResult({ type: 'rename-complete', shardId, changes: result.changes })
+  } catch (err) {
+    const error = err instanceof Error ? err.message : String(err)
+    log.error(`[ShardLoader:${shardId}] Rename folder failed:`, err)
+    sendResult({ type: 'error', shardId, error })
+  }
+}
+
+function handleCleanupOrphaned(shardId: number, validPrefixes: string[]): void {
+  if (!currentDb) {
+    sendResult({ type: 'error', shardId, error: 'No database connection' })
+    return
+  }
+
+  try {
+    // 如果没有有效前缀，不清理任何文件
+    if (validPrefixes.length === 0) {
+      sendResult({ type: 'cleanup-complete', shardId, changes: 0 })
+      return
+    }
+
+    // 构建 SQL：删除路径不以任何有效前缀开头的文件
+    const conditions = validPrefixes.map(() => "path NOT LIKE ? || '%'").join(' AND ')
+    const deleteSql = `DELETE FROM shard_files WHERE ${conditions}`
+
+    // 使用 transaction 保证一致性
+    const transaction = currentDb.transaction(() => {
+      const result = currentDb.prepare(deleteSql).run(...validPrefixes)
+      return result.changes
+    })
+
+    const deletedCount = transaction()
+    const fileCount = getFileCount(currentDb)
+    log.info(`[ShardLoader:${shardId}] Cleanup: deleted ${deletedCount} orphaned files, ${fileCount} remaining`)
+    sendResult({ type: 'cleanup-complete', shardId, changes: deletedCount, fileCount })
+  } catch (err) {
+    const error = err instanceof Error ? err.message : String(err)
+    log.error(`[ShardLoader:${shardId}] Cleanup orphaned failed:`, err)
     sendResult({ type: 'error', shardId, error })
   }
 }

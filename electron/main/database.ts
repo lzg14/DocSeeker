@@ -18,8 +18,8 @@ import {
   searchAllShards,
   getSearchSnippets as shardGetSearchSnippets,
   getTotalFileCount,
-  deleteFileFromAllShards,
-  deleteFilesByFolderPrefixFromAllShards,
+  deleteFileFromAllShardsAsync,
+  deleteFilesByFolderPrefixFromAllShardsAsync,
   closeAllShards,
   getFolderStatsFromShards,
   type SearchOptions,
@@ -140,8 +140,8 @@ export function deleteFile(id: number): void {
   log.warn('[Database] deleteFile not yet implemented in shard mode')
 }
 
-export function deleteFileByPath(filePath: string): void {
-  const count = deleteFileFromAllShards(filePath)
+export async function deleteFileByPath(filePath: string): Promise<void> {
+  const count = await deleteFileFromAllShardsAsync(filePath)
   if (count > 0) {
     log.info(`[Database] Deleted file ${filePath} from ${count} shard(s)`)
   }
@@ -221,8 +221,8 @@ export async function getSearchSnippetsAsync(filePaths: string[], query: string)
   return shardGetSearchSnippets(query, filePaths)
 }
 
-export function removeFilesByFolderPath(folderPath: string): void {
-  const total = deleteFilesByFolderPrefixFromAllShards(folderPath)
+export async function removeFilesByFolderPath(folderPath: string): Promise<void> {
+  const total = await deleteFilesByFolderPrefixFromAllShardsAsync(folderPath)
   if (total > 0) {
     log.info(`[Database] Deleted ${total} files under ${folderPath}`)
   }

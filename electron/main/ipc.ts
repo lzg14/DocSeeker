@@ -39,8 +39,9 @@ import {
   getSearchSnippets as shardGetSearchSnippets,
   getShardInfo,
   getShardConfigInfo,
-  deleteFileFromAllShards,
-  deleteFilesByFolderPrefixFromAllShards,
+  deleteFileFromAllShardsAsync,
+  deleteFilesByFolderPrefixFromAllShardsAsync,
+  cleanupOrphanedFilesAsync,
   getFolderStatsFromShards,
   type FileRecord as ShardFileRecord
 } from './shardManager'
@@ -230,7 +231,7 @@ export function registerIpcHandlers(): void {
   ipcMain.handle('delete-file', async (_, filePath: string): Promise<boolean> => {
     try {
       await shell.trashItem(filePath)
-      deleteFileFromAllShards(filePath)
+      await deleteFileFromAllShardsAsync(filePath)
       return true
     } catch (error) {
       log.error('[IPC] Failed to delete file:', error)
@@ -261,7 +262,7 @@ export function registerIpcHandlers(): void {
       const targetPath = join(targetDir, basename(sourcePath))
       await fs.promises.rename(sourcePath, targetPath)
       // Update index after move
-      deleteFileFromAllShards(sourcePath)
+      await deleteFileFromAllShardsAsync(sourcePath)
       log.info(`[IPC] Moved ${sourcePath} to ${targetPath}`)
       return true
     } catch (error) {
@@ -297,6 +298,16 @@ export function registerIpcHandlers(): void {
 
   // Add or update a scanned folder
   ipcMain.handle('add-scanned-folder', async (_, folderPath: string): Promise<MetaScannedFolder | null> => {
+    // 扫描前先清理孤立文件
+    const folders = getAllScannedFolders()
+    const prefixes = folders.map(f => f.path)
+    if (prefixes.length > 0) {
+      const cleaned = await cleanupOrphanedFilesAsync(prefixes)
+      if (cleaned > 0) {
+        log.info(`[IPC] Cleaned up ${cleaned} orphaned files before adding new folder`)
+      }
+    }
+
     const existing = getScannedFolderByPath(folderPath)
     if (existing) return existing
     const name = folderPath.split(/[/\\]/).pop() || folderPath
@@ -323,7 +334,7 @@ export function registerIpcHandlers(): void {
   ipcMain.handle('delete-scanned-folder', async (_, id: number): Promise<void> => {
     const folder = getAllScannedFolders().find(f => f.id === id)
     if (folder) {
-      deleteFilesByFolderPrefixFromAllShards(folder.path)
+      await deleteFilesByFolderPrefixFromAllShardsAsync(folder.path)
 
       // Update watcher with remaining directories (if monitor is enabled)
       const monitorEnabled = getAppSetting<boolean>('realtimeMonitor', false)
@@ -467,6 +478,16 @@ export function registerIpcHandlers(): void {
     const folder = getScannedFolderByPath(folderPath)
     if (!folder) {
       return { success: false, filesProcessed: 0, errors: ['Folder not found in scan records'] }
+    }
+
+    // 全量扫描前先清理孤立文件（扫描所有已注册的目录）
+    const allFolders = getAllScannedFolders()
+    const prefixes = allFolders.map(f => f.path)
+    if (prefixes.length > 0) {
+      const cleaned = await cleanupOrphanedFilesAsync(prefixes)
+      if (cleaned > 0) {
+        log.info(`[IPC] Cleaned up ${cleaned} orphaned files before full rescan`)
+      }
     }
 
     // Create a unique scanId for this scan to avoid conflicts with other concurrent scans

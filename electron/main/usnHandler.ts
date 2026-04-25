@@ -6,11 +6,11 @@ import crypto from 'crypto'
 import { Worker } from 'worker_threads'
 import { join } from 'path'
 import {
-  deleteFileFromAllShards,
-  renameFileInAllShards,
-  updateFileContentInAllShards,
-  renameFolderContentsInAllShards,
-  deleteFilesByFolderPrefixFromAllShards,
+  deleteFileFromAllShardsAsync,
+  renameFileInAllShardsAsync,
+  updateFileContentInAllShardsAsync,
+  renameFolderContentsInAllShardsAsync,
+  deleteFilesByFolderPrefixFromAllShardsAsync,
   openNextShard,
   insertFileBatch,
 } from './shardManager'
@@ -69,6 +69,9 @@ let flushTimer: NodeJS.Timeout | null = null
 let contentWorker: Worker | null = null
 const FLUSH_INTERVAL_MS = 15 * 60 * 1000 // 15分钟
 
+// 正在处理的队列（用于崩溃恢复）
+let currentProcessingFiles: string[] = []
+
 function scheduleFlush(): void {
   if (flushTimer) return
 
@@ -81,8 +84,18 @@ function scheduleFlush(): void {
 function flushPendingUpdates(): void {
   if (pendingContentUpdates.size === 0) return
 
+  // 如果已经有worker在运行，跳过这次调度
+  if (contentWorker) {
+    log.info(`[usnHandler] Worker already running, skipping this flush`)
+    return
+  }
+
   const files = Array.from(pendingContentUpdates)
   pendingContentUpdates.clear()
+
+  // 记录正在处理的文件，用于崩溃恢复
+  currentProcessingFiles = files
+
   log.info(`[usnHandler] Starting batch content update for ${files.length} files`)
 
   // 使用 worker 处理内容提取
@@ -90,23 +103,35 @@ function flushPendingUpdates(): void {
     workerData: { filePaths: files }
   })
 
-  contentWorker.on('message', (msg) => {
+  contentWorker.on('message', async (msg) => {
     if (msg.type === 'progress') {
       log.debug(`[usnHandler] Content update progress: ${msg.data.current}/${msg.data.total}`)
     } else if (msg.type === 'complete') {
       const results = msg.data as { path: string; content: string }[]
       log.info(`[usnHandler] Content extracted for ${results.length} files, updating database`)
 
-      // 更新数据库
-      for (const result of results) {
-        updateFileContentInAllShards(result.path, result.content)
-      }
+      // 清空处理中的队列
+      currentProcessingFiles = []
+
+      // 并行更新数据库（通过 worker）
+      await Promise.all(results.map(r =>
+        updateFileContentInAllShardsAsync(r.path, r.content)
+      ))
       log.info(`[usnHandler] Batch content update complete`)
 
       contentWorker?.terminate()
       contentWorker = null
     } else if (msg.type === 'error') {
       log.error(`[usnHandler] Content worker error:`, msg.data)
+      // 崩溃恢复：重新将未处理的文件加入队列
+      if (currentProcessingFiles.length > 0) {
+        log.info(`[usnHandler] Recovering ${currentProcessingFiles.length} files to queue`)
+        for (const f of currentProcessingFiles) {
+          pendingContentUpdates.add(f)
+        }
+        currentProcessingFiles = []
+        scheduleFlush()
+      }
       contentWorker?.terminate()
       contentWorker = null
     }
@@ -114,6 +139,15 @@ function flushPendingUpdates(): void {
 
   contentWorker.on('error', (err) => {
     log.error(`[usnHandler] Content worker crashed:`, err)
+    // 崩溃恢复：重新将未处理的文件加入队列
+    if (currentProcessingFiles.length > 0) {
+      log.info(`[usnHandler] Recovering ${currentProcessingFiles.length} files to queue`)
+      for (const f of currentProcessingFiles) {
+        pendingContentUpdates.add(f)
+      }
+      currentProcessingFiles = []
+      scheduleFlush()
+    }
     contentWorker = null
   })
 }
@@ -184,27 +218,27 @@ function handleModified(filePath: string): void {
   scheduleFlush()
 }
 
-function handleDeleted(filePath: string): void {
+async function handleDeleted(filePath: string): Promise<void> {
   pendingContentUpdates.delete(filePath)
-  const count = deleteFileFromAllShards(filePath)
+  const count = await deleteFileFromAllShardsAsync(filePath)
   if (count > 0) log.info(`[usnHandler] deleted from ${count} shard(s): ${filePath}`)
 }
 
-function handleRenamed(oldPath: string, newPath: string): void {
+async function handleRenamed(oldPath: string, newPath: string): Promise<void> {
   pendingContentUpdates.delete(oldPath)
-  renameFileInAllShards(oldPath, newPath)
+  await renameFileInAllShardsAsync(oldPath, newPath)
   pendingContentUpdates.add(newPath)
   scheduleFlush()
   log.info(`[usnHandler] renamed: ${oldPath} → ${newPath}`)
 }
 
-function handleFolderDeleted(folderPath: string): void {
-  const count = deleteFilesByFolderPrefixFromAllShards(folderPath)
+async function handleFolderDeleted(folderPath: string): Promise<void> {
+  const count = await deleteFilesByFolderPrefixFromAllShardsAsync(folderPath)
   log.info(`[usnHandler] cascade deleted ${count} files under: ${folderPath}`)
 }
 
-function handleFolderRenamed(oldPath: string, newPath: string): void {
-  const count = renameFolderContentsInAllShards(oldPath, newPath)
+async function handleFolderRenamed(oldPath: string, newPath: string): Promise<void> {
+  const count = await renameFolderContentsInAllShardsAsync(oldPath, newPath)
   log.info(`[usnHandler] renamed ${count} files under folder: ${oldPath} → ${newPath}`)
 }
 

@@ -83,7 +83,7 @@ DocSeeker 是一款基于 Electron + React + TypeScript 的本地文档全文搜
 - [x] **M1.1** 新增 RTF 文件格式支持
 - [x] **M1.2** 新增 CHM 帮助文档格式支持
 - [x] **M1.3** 新增 ODF 系列格式支持（ODT / ODS / ODP）
-- [x] **M1.4** 实时文件监控（FileWatcher 接口抽象 + Windows NTFS USN Journal 实现） — ✅ 已实现
+- [x] **M1.4** 实时文件监控（FileWatcher 接口抽象 + Windows NTFS USN Journal 实现 + Worker 线程异步处理内容更新 + 崩溃自动恢复） — ✅ 已实现
 - [x] **M1.5** 搜索历史功能（记录与快速复用）
 - [x] **M1.6** 保存的搜索（收藏夹与命名搜索）
 - [x] **M1.7** 移除 / 大幅提高结果上限（200 条限制）

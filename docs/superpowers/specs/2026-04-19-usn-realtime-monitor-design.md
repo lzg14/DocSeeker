@@ -496,3 +496,83 @@ UI：开关 toggle + 目录列表管理（添加/移除监控目录）。
 2. 再实现 USN 监控，两个功能共用 `usnHandler.ts`，互为依赖
 
 若 USN 监控先于文件夹名称索引上线，`folder_created/deleted/renamed` 事件可暂时忽略，后续无缝接入。
+
+---
+
+## 十一、文件内容更新队列（Worker 线程）
+
+> 新增日期：2026-04-25
+> 状态：已实现
+
+### 11.1 背景
+
+文件内容可能频繁变化（如编辑 Word 时频繁保存），每次保存都触发内容重新提取会严重影响性能。采用队列机制，先记录变化，每 15 分钟批量处理。
+
+### 11.2 架构设计
+
+```
+┌──────────────────────────────────────────────────────────────────┐
+│  Electron 主进程                                                    │
+│                                                                     │
+│  usnHandler.ts                                                      │
+│  ┌────────────────┐   ┌──────────────────┐                        │
+│  │ 变更事件队列    │──►│ Worker 线程      │                        │
+│  │ (Set 去重)     │   │ contentWorker    │                        │
+│  └────────────────┘   └──────────────────┘                        │
+│         │                      │                                    │
+│         ▼                      ▼                                    │
+│  pendingContentUpdates    主线程消息                                │
+│  (15分钟定时 flush)        ↓                                        │
+│                           解析文件内容                               │
+│                           写入数据库                                 │
+└──────────────────────────────────────────────────────────────────┘
+```
+
+### 11.3 队列机制
+
+| 组件 | 说明 |
+|------|------|
+| `pendingContentUpdates` | `Set<string>` 存储待处理的文件路径，自动去重 |
+| `flushTimer` | 15 分钟定时器，队列达到条件后触发批量处理 |
+| `currentProcessingFiles` | 记录正在处理的文件，用于崩溃恢复 |
+| `contentWorker` | Worker 线程，执行内容提取（不阻塞主线程） |
+
+### 11.4 崩溃恢复
+
+Worker 崩溃时（`on('error')` 或收到 `error` 消息类型），会将 `currentProcessingFiles` 中的文件重新加入队列，并重新调度下一次 flush。
+
+```typescript
+// 崩溃时恢复
+contentWorker.on('error', (err) => {
+  if (currentProcessingFiles.length > 0) {
+    for (const f of currentProcessingFiles) {
+      pendingContentUpdates.add(f)  // 重新加入队列
+    }
+    currentProcessingFiles = []
+    scheduleFlush()  // 重新调度
+  }
+  contentWorker = null
+})
+```
+
+### 11.5 防重复调度
+
+如果当前已有 Worker 在运行（`contentWorker !== null`），新的 flush 调用会跳过，避免 15 分钟内重复启动。
+
+### 11.6 支持的文件类型
+
+Worker 支持以下格式的内容提取：
+- 纯文本：`.txt`, `.md`
+- 结构化：`.json`, `.xml`, `.csv`
+- Office：`.docx`, `.xlsx`, `.pptx`, `.doc`, `.xls`, `.ppt`
+- PDF：`.pdf`
+- RTF：`.rtf`
+- 其他：`.html`, `.epub`
+
+### 11.7 实现文件
+
+| 文件 | 职责 |
+|------|------|
+| `electron/main/usnHandler.ts` | 队列管理、崩溃恢复、定时调度 |
+| `electron/main/contentWorker.ts` | Worker 线程，内容提取 |
+| `electron.vite.config.ts` | 构建配置，包含 contentWorker |
