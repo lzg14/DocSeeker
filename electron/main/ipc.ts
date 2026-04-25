@@ -2,6 +2,12 @@ import { app, ipcMain, dialog, shell, BrowserWindow } from 'electron'
 import log from 'electron-log/main'
 import { Worker } from 'worker_threads'
 import { join, extname } from 'path'
+
+// 调试开关：开发时设为 true，正式发布设为 false
+const DEBUG = false
+const debugLog = (...args: unknown[]) => {
+  if (DEBUG) log.info('[DEBUG]', ...args)
+}
 import {
   deleteFileByPath,
   removeFilesByFolderPath,
@@ -164,7 +170,10 @@ export function registerIpcHandlers(): void {
   ipcMain.handle('search-files-advanced', async (_, query: string, options?: SearchOptions): Promise<FileRecord[]> => {
     if (query.trim()) addSearchHistory(query)
     try {
+      // 调试日志
+      log.info(`[IPC] search-files-advanced: query="${query}", options=${JSON.stringify(options)}`)
       const results = await searchAllShards(query, options)
+      log.info(`[IPC] search-files-advanced: returned ${results.length} results, types=${JSON.stringify(results.slice(0,5).map(r => r.file_type))}`)
       return results.map(r => mapShardToFileRecord(r, 'content'))
     } catch (err) {
       log.error('[IPC] search-files-advanced error:', err)
