@@ -926,8 +926,14 @@ function searchShardDbNameOnly(
   options?: SearchOptions,
   shardId?: number
 ): SearchResult[] {
-  // For filename-only search: use name column restriction in FTS query
-  const nameFtsQuery = `name:${ftsQuery}`
+  // For filename-only search: need to prefix each term with name:
+  // ftsQuery format: "word1"* AND "word2"* (with wildcards)
+  // We need: name:"word1"* AND name:"word2"* (each term prefixed)
+  const nameFtsQuery = ftsQuery
+    .split(/\s+AND\s+/i)
+    .map(term => `name:${term.trim()}`)
+    .join(' AND ')
+
   const whereClauses: string[] = ['shard_files_fts MATCH ?']
   const params: (string | number)[] = [nameFtsQuery]
 
