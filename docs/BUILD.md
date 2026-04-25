@@ -7,7 +7,29 @@
 - Node.js 18+
 - npm
 - electron-builder v25+
+- Go 1.21+
 - Python 3（用于某些构建辅助脚本）
+
+### Go 监控进程构建
+
+先构建 Go 监控进程（二进制文件会打包进应用中）：
+
+```bash
+cd go
+
+# Windows
+go build -o docseeker-monitor.exe .
+
+# macOS
+GOOS=darwin GOARCH=amd64 CGO_ENABLED=1 go build -o docseeker-monitor .
+
+# Linux
+GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -o docseeker-monitor-linux .
+
+# 或使用脚本构建所有平台
+chmod +x build.sh
+./build.sh all
+```
 
 ### winCodeSign 工具（签名与资源编辑）
 
@@ -36,8 +58,15 @@
 ## 构建命令
 
 ```bash
-# 完整构建（先编译后打包）
-npm run build:win
+# Windows 构建
+npm run build:win           # NSIS 安装包 + 便携版
+npm run build:win:portable  # 仅便携版
+
+# macOS 构建
+npm run build:mac           # DMG 安装包
+
+# Linux 构建
+npm run build:linux         # tar.gz
 
 # 仅重新打包（不重新编译）
 npx electron-builder --win nsis portable --config
@@ -49,9 +78,22 @@ npx electron-builder --win nsis portable --config
 
 | 文件 | 说明 |
 |------|------|
-| `DocSeeker Setup 1.0.0.exe` | NSIS 安装包 |
-| `DocSeeker-1.0.0-portable.exe` | 便携版（直接运行） |
-| `win-unpacked/` | 解压后的应用目录 |
+| `DocSeeker Setup *.exe` | Windows NSIS 安装包 |
+| `DocSeeker-*-portable.exe` | Windows 便携版 |
+| `DocSeeker-*.dmg` | macOS DMG 安装包 |
+| `DocSeeker-*-mac.zip` | macOS ZIP 包 |
+| `DocSeeker-*-linux-x64.tar.gz` | Linux tar.gz 包 |
+| `win-unpacked/` | Windows 解压后的应用目录 |
+| `mac-arm64/` | macOS ARM64 应用 |
+
+## 平台差异
+
+| 功能 | Windows | macOS | Linux |
+|------|---------|-------|-------|
+| 文件监控 | fsnotify | fsnotify | fsnotify |
+| 双击 Ctrl | ✅ | ❌ | ❌ |
+| 全局快捷键 | ✅ | ✅ | ✅ |
+| 系统托盘 | ✅ | ✅ (Menu Bar) | ✅ |
 
 ## 构建配置说明
 
