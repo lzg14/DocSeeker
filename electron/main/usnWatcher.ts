@@ -109,32 +109,26 @@ export class UsnWatcher {
   }
 
   private initMonitor(): void {
-    const config = getAppSetting<{ enabled: boolean; dirs: string[] }>('realtimeMonitor', {
-      enabled: false,
-      dirs: [],
-    })
+    // 只读取 enabled 开关，目录直接从 scanned_folders 读取
+    const enabled = getAppSetting<boolean>('realtimeMonitor', false)
 
-    if (config.enabled && config.dirs.length > 0) {
-      const normalizedDirs = config.dirs.map(d => d.replace(/\\/g, '/'))
-      this.send({ type: 'init', dirs: normalizedDirs })
-      this.updateStatus('monitoring', `Monitoring ${config.dirs.length} directories`)
-    } else if (config.enabled && config.dirs.length === 0) {
-      try {
-        const folders = getAllScannedFolders()
-        if (folders.length > 0) {
-          const normalizedDirs = folders.map(f => f.path.replace(/\\/g, '/'))
-          this.send({ type: 'init', dirs: normalizedDirs })
-          setAppSetting('realtimeMonitor', { enabled: true, dirs: folders.map(f => f.path) })
-          this.updateStatus('monitoring', `Monitoring ${folders.length} directories`)
-        } else {
-          this.updateStatus('connected', 'Ready (no directories)')
-        }
-      } catch (e) {
-        log.error('[UsnWatcher] failed to get scanned folders:', e)
-        this.updateStatus('connected', 'Ready')
+    if (!enabled) {
+      this.updateStatus('connected', 'Monitor disabled')
+      return
+    }
+
+    try {
+      const folders = getAllScannedFolders()
+      if (folders.length > 0) {
+        const normalizedDirs = folders.map(f => f.path.replace(/\\/g, '/'))
+        this.send({ type: 'init', dirs: normalizedDirs })
+        this.updateStatus('monitoring', `Monitoring ${folders.length} directories`)
+      } else {
+        this.updateStatus('connected', 'Ready (no directories)')
       }
-    } else {
-      this.updateStatus('connected', 'Double-ctrl ready')
+    } catch (e) {
+      log.error('[UsnWatcher] failed to get scanned folders:', e)
+      this.updateStatus('connected', 'Ready')
     }
   }
 

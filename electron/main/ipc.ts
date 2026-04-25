@@ -300,21 +300,11 @@ export function registerIpcHandlers(): void {
     }
     addScannedFolder(folder)
 
-    // Sync new folder to realtimeMonitor config
-    const monitorConfig = getAppSetting<{ enabled: boolean; dirs: string[] }>('realtimeMonitor', {
-      enabled: false,
-      dirs: []
-    })
-    if (monitorConfig.enabled && !monitorConfig.dirs.includes(folderPath)) {
-      setAppSetting('realtimeMonitor', {
-        enabled: true,
-        dirs: [...monitorConfig.dirs, folderPath]
-      })
-      // Update the watcher with new directory
-      if (usnWatcher) {
-        const allDirs = getAllScannedFolders().map(f => f.path.replace(/\\/g, '/'))
-        usnWatcher.send({ type: 'update_dirs', dirs: allDirs })
-      }
+    // Update watcher with new directory (if monitor is enabled)
+    const monitorEnabled = getAppSetting<boolean>('realtimeMonitor', false)
+    if (monitorEnabled && usnWatcher) {
+      const allDirs = getAllScannedFolders().map(f => f.path.replace(/\\/g, '/'))
+      usnWatcher.send({ type: 'update_dirs', dirs: allDirs })
     }
 
     return getScannedFolderByPath(folderPath) ?? null
@@ -326,21 +316,15 @@ export function registerIpcHandlers(): void {
     if (folder) {
       deleteFilesByFolderPrefixFromAllShards(folder.path)
 
-      // Remove deleted folder from realtimeMonitor config
-      const monitorConfig = getAppSetting<{ enabled: boolean; dirs: string[] }>('realtimeMonitor', {
-        enabled: false,
-        dirs: []
-      })
-      if (monitorConfig.enabled) {
-        const newDirs = monitorConfig.dirs.filter(d => d !== folder.path)
-        setAppSetting('realtimeMonitor', {
-          enabled: newDirs.length > 0,
-          dirs: newDirs
-        })
-        // Update the watcher
-        if (usnWatcher && newDirs.length > 0) {
-          usnWatcher.send({ type: 'update_dirs', dirs: newDirs.map(d => d.replace(/\\/g, '/')) })
-        } else if (usnWatcher) {
+      // Update watcher with remaining directories (if monitor is enabled)
+      const monitorEnabled = getAppSetting<boolean>('realtimeMonitor', false)
+      if (monitorEnabled && usnWatcher) {
+        const remainingDirs = getAllScannedFolders()
+          .filter(f => f.id !== id)
+          .map(f => f.path.replace(/\\/g, '/'))
+        if (remainingDirs.length > 0) {
+          usnWatcher.send({ type: 'update_dirs', dirs: remainingDirs })
+        } else {
           usnWatcher.stop()
         }
       }
@@ -685,26 +669,27 @@ export function registerIpcHandlers(): void {
 
   // ── USN Realtime Monitor ────────────────────────────────────────────────────
   ipcMain.handle('usn-get-config', async (): Promise<{ enabled: boolean; dirs: string[] }> => {
-    return getAppSetting<{ enabled: boolean; dirs: string[] }>('realtimeMonitor', {
-      enabled: false,
-      dirs: [],
-    })
+    const enabled = getAppSetting<boolean>('realtimeMonitor', false)
+    // dirs 从 scanned_folders 读取，不再存储在 config 中
+    const folders = getAllScannedFolders()
+    return {
+      enabled,
+      dirs: folders.map(f => f.path)
+    }
   })
 
-  ipcMain.handle('usn-set-config', async (_, config: { enabled?: boolean; dirs?: string[] }): Promise<void> => {
-    const current = getAppSetting<{ enabled: boolean; dirs: string[] }>('realtimeMonitor', {
-      enabled: false,
-      dirs: [],
-    })
-    const dirs = config.dirs ?? current.dirs
-
-    const updated = { ...current, ...config, dirs }
-    setAppSetting('realtimeMonitor', updated)
-
-    if (updated.enabled && updated.dirs.length > 0) {
-      await usnWatcher.start()
-    } else {
-      usnWatcher.stop()
+  ipcMain.handle('usn-set-config', async (_, config: { enabled?: boolean }): Promise<void> => {
+    if (config.enabled !== undefined) {
+      setAppSetting('realtimeMonitor', config.enabled)
+      if (config.enabled) {
+        // 启用时，从 scanned_folders 获取目录并启动监控
+        const folders = getAllScannedFolders()
+        if (folders.length > 0) {
+          await usnWatcher.start()
+        }
+      } else {
+        usnWatcher.stop()
+      }
     }
   })
 

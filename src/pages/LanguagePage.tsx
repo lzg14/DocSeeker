@@ -50,13 +50,7 @@ function LanguagePage(): JSX.Element {
 
   const handleToggleMonitor = async (checked: boolean) => {
     setMonitorEnabled(checked)
-    if (checked) {
-      const folders = await window.electron.getScannedFolders?.()
-      const dirs = folders ? folders.map((f: { path: string }) => f.path) : []
-      await window.electron.usnSetConfig?.({ enabled: true, dirs })
-    } else {
-      await window.electron.usnSetConfig?.({ enabled: false })
-    }
+    await window.electron.usnSetConfig?.({ enabled: checked })
   }
 
   const formatHotkey = (hk: string) =>

@@ -161,7 +161,7 @@ export interface ElectronAPI {
   clipboardWriteText: (text: string) => Promise<{ success: boolean }>
   // USN Realtime Monitor
   usnGetConfig: () => Promise<{ enabled: boolean; dirs: string[] }>
-  usnSetConfig: (config: { enabled?: boolean; dirs?: string[] }) => Promise<void>
+  usnSetConfig: (config: { enabled?: boolean }) => Promise<void>
   onUsnUpdate: (callback: (ev: UsnEvent) => void) => () => void
   // Platform (for renderer to choose PDF thumbnail strategy)
   getPlatform: () => Promise<string>
