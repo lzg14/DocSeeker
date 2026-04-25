@@ -10,7 +10,8 @@ export default defineConfig({
         input: {
           index: resolve(__dirname, 'electron/main/index.ts'),
           scanWorker: resolve(__dirname, 'electron/main/scanWorker.ts'),
-          shardLoader: resolve(__dirname, 'electron/main/shardLoader.ts')
+          shardLoader: resolve(__dirname, 'electron/main/shardLoader.ts'),
+          contentWorker: resolve(__dirname, 'electron/main/contentWorker.ts')
         }
       }
     }

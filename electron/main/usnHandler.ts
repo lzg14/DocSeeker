@@ -1,8 +1,10 @@
 import log from 'electron-log/main'
-import { BrowserWindow } from 'electron'
+import { BrowserWindow, ipcMain } from 'electron'
 import path from 'path'
 import fs from 'fs'
 import crypto from 'crypto'
+import { Worker } from 'worker_threads'
+import { join } from 'path'
 import {
   deleteFileFromAllShards,
   renameFileInAllShards,
@@ -12,7 +14,6 @@ import {
   openNextShard,
   insertFileBatch,
 } from './shardManager'
-import { extractContent } from './scanner'
 
 type UsnEventType =
   | 'created' | 'modified' | 'deleted' | 'renamed'
@@ -62,6 +63,74 @@ function notifyRenderer(ev: UsnEvent): void {
   win.webContents.send('usn-update', ev)
 }
 
+// ============ 文件变化队列 ============
+const pendingContentUpdates = new Set<string>()
+let flushTimer: NodeJS.Timeout | null = null
+let contentWorker: Worker | null = null
+const FLUSH_INTERVAL_MS = 15 * 60 * 1000 // 15分钟
+
+function scheduleFlush(): void {
+  if (flushTimer) return
+
+  flushTimer = setTimeout(() => {
+    flushTimer = null
+    flushPendingUpdates()
+  }, FLUSH_INTERVAL_MS)
+}
+
+function flushPendingUpdates(): void {
+  if (pendingContentUpdates.size === 0) return
+
+  const files = Array.from(pendingContentUpdates)
+  pendingContentUpdates.clear()
+  log.info(`[usnHandler] Starting batch content update for ${files.length} files`)
+
+  // 使用 worker 处理内容提取
+  contentWorker = new Worker(join(__dirname, 'contentWorker.js'), {
+    workerData: { filePaths: files }
+  })
+
+  contentWorker.on('message', (msg) => {
+    if (msg.type === 'progress') {
+      log.debug(`[usnHandler] Content update progress: ${msg.data.current}/${msg.data.total}`)
+    } else if (msg.type === 'complete') {
+      const results = msg.data as { path: string; content: string }[]
+      log.info(`[usnHandler] Content extracted for ${results.length} files, updating database`)
+
+      // 更新数据库
+      for (const result of results) {
+        updateFileContentInAllShards(result.path, result.content)
+      }
+      log.info(`[usnHandler] Batch content update complete`)
+
+      contentWorker?.terminate()
+      contentWorker = null
+    } else if (msg.type === 'error') {
+      log.error(`[usnHandler] Content worker error:`, msg.data)
+      contentWorker?.terminate()
+      contentWorker = null
+    }
+  })
+
+  contentWorker.on('error', (err) => {
+    log.error(`[usnHandler] Content worker crashed:`, err)
+    contentWorker = null
+  })
+}
+
+// ============ 导出函数 ============
+
+export function registerUsnHandlerIpc(): void {
+  ipcMain.handle('flush-pending-updates', async () => {
+    flushPendingUpdates()
+    return true
+  })
+
+  ipcMain.handle('get-pending-update-count', async () => {
+    return pendingContentUpdates.size
+  })
+}
+
 export async function handleUsnEvent(ev: UsnEvent): Promise<void> {
   log.debug(`[usnHandler] ${ev.event}: ${ev.path}`)
 
@@ -71,22 +140,21 @@ export async function handleUsnEvent(ev: UsnEvent): Promise<void> {
         await handleCreated(ev.path)
         break
       case 'modified':
-        await handleModified(ev.path)
+        handleModified(ev.path)
         break
       case 'deleted':
         handleDeleted(ev.path)
         break
       case 'renamed':
-        await handleRenamed(ev.oldPath!, ev.path)
+        handleRenamed(ev.oldPath!, ev.path)
         break
       case 'folder_created':
-        // folder name index is a separate feature, ignore here
         break
       case 'folder_deleted':
         handleFolderDeleted(ev.path)
         break
       case 'folder_renamed':
-        await handleFolderRenamed(ev.oldPath!, ev.path)
+        handleFolderRenamed(ev.oldPath!, ev.path)
         break
     }
   } catch (e) {
@@ -96,44 +164,37 @@ export async function handleUsnEvent(ev: UsnEvent): Promise<void> {
   notifyRenderer(ev)
 }
 
-// Simple/exts that should be extracted synchronously (immediately)
-const SIMPLE_EXTS = new Set(['.txt', '.md', '.markdown', '.json'])
-
 async function handleCreated(filePath: string): Promise<void> {
   const fileInfo = await processFileSimple(filePath)
   if (!fileInfo) return
-  // If the file is a simple text-like file, extract content immediately
-  const ext = path.extname(filePath).toLowerCase()
-  if (SIMPLE_EXTS.has(ext)) {
-    try {
-      const content = await extractContent(filePath)
-      fileInfo.content = content ?? null
-    } catch {
-      // Ignore extraction failure and fall back to metadata only
-      fileInfo.content = null
-    }
-  }
+
   const shard = await openNextShard()
   if (!shard) return
   await insertFileBatch(shard.id, [fileInfo])
+
+  // 新文件加入待更新队列
+  pendingContentUpdates.add(filePath)
+  scheduleFlush()
+
   log.info(`[usnHandler] indexed new file: ${filePath}`)
 }
 
-async function handleModified(filePath: string): Promise<void> {
-  const content = await extractContentSimple(filePath)
-  updateFileContentInAllShards(filePath, content)
-  log.debug(`[usnHandler] updated content: ${filePath}`)
+function handleModified(filePath: string): void {
+  pendingContentUpdates.add(filePath)
+  scheduleFlush()
 }
 
 function handleDeleted(filePath: string): void {
+  pendingContentUpdates.delete(filePath)
   const count = deleteFileFromAllShards(filePath)
   if (count > 0) log.info(`[usnHandler] deleted from ${count} shard(s): ${filePath}`)
 }
 
-async function handleRenamed(oldPath: string, newPath: string): Promise<void> {
+function handleRenamed(oldPath: string, newPath: string): void {
+  pendingContentUpdates.delete(oldPath)
   renameFileInAllShards(oldPath, newPath)
-  const content = await extractContentSimple(newPath)
-  updateFileContentInAllShards(newPath, content)
+  pendingContentUpdates.add(newPath)
+  scheduleFlush()
   log.info(`[usnHandler] renamed: ${oldPath} → ${newPath}`)
 }
 
@@ -142,7 +203,7 @@ function handleFolderDeleted(folderPath: string): void {
   log.info(`[usnHandler] cascade deleted ${count} files under: ${folderPath}`)
 }
 
-async function handleFolderRenamed(oldPath: string, newPath: string): Promise<void> {
+function handleFolderRenamed(oldPath: string, newPath: string): void {
   const count = renameFolderContentsInAllShards(oldPath, newPath)
   log.info(`[usnHandler] renamed ${count} files under folder: ${oldPath} → ${newPath}`)
 }
@@ -190,14 +251,4 @@ async function processFileSimple(filePath: string): Promise<SimpleFileInfo | nul
   }
 
   return info
-}
-
-async function extractContentSimple(filePath: string): Promise<string | null> {
-  try {
-    const content = await extractContent(filePath)
-    return content || null
-  } catch (error) {
-    log.warn(`[usnHandler] Failed to extract content: ${filePath}`, error)
-    return null
-  }
 }
