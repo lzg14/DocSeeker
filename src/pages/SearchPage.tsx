@@ -1202,6 +1202,7 @@ function SearchPage(): JSX.Element {
             selectedFiles={selectedFiles}
             onToggleSelect={handleToggleSelect}
             onSelectAll={handleSelectAll}
+            searchQuery={searchQuery}
           />
         </div>
         {selectedFile && (

@@ -19,6 +19,7 @@ interface FileListProps {
   selectedFiles: Set<number>
   onToggleSelect: (fileId: number) => void
   onSelectAll: (select: boolean) => void
+  searchQuery?: string  // 搜索关键词，用于高亮文件名
 }
 
 function FileList({
@@ -30,11 +31,37 @@ function FileList({
   snippets = {},
   selectedFiles,
   onToggleSelect,
-  onSelectAll
+  onSelectAll,
+  searchQuery = ''
 }: FileListProps): JSX.Element {
   const { t } = useLanguage()
   const [contextMenu, setContextMenu] = useState<ContextMenuState>({ visible: false, x: 0, y: 0, file: null })
   const menuRef = useRef<HTMLDivElement>(null)
+
+  // 高亮文件名中的搜索词
+  const highlightName = (name: string, query: string): React.ReactNode => {
+    if (!query.trim()) return name
+
+    // 提取搜索关键词（支持 AND, OR, NOT, 引号等语法）
+    const keywords = query
+      .replace(/[""]/g, '')  // 移除引号
+      .replace(/\b(AND|OR|NOT)\b/gi, ' ')  // 移除布尔操作符
+      .trim()
+      .split(/\s+/)
+      .filter(k => k.length > 0)
+
+    if (keywords.length === 0) return name
+
+    // 构建正则表达式（不区分大小写）
+    const pattern = keywords.map(k => k.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|')
+    const regex = new RegExp(`(${pattern})`, 'gi')
+
+    // 分割并高亮
+    const parts = name.split(regex)
+    return parts.map((part, i) =>
+      regex.test(part) ? <mark key={i} style={{ backgroundColor: 'var(--mark-bg, #fff3cd)', padding: '0 2px' }}>{part}</mark> : part
+    )
+  }
 
   // 关闭右键菜单（点击其他区域或滚动时）
   useEffect(() => {
@@ -180,7 +207,7 @@ function FileList({
                 <span>{getFileIcon(file.is_supported === false ? 'unsupported' : file.file_type)}</span>
                 <div className="file-name-info">
                   <span className="file-name-text" title={file.path}>
-                    {file.name}
+                    {highlightName(file.name, searchQuery)}
                     <MatchTypeBadge matchType={file.match_type} />
                   </span>
                   {snippets[file.path] && (
