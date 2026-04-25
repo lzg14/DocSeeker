@@ -111,9 +111,6 @@ function SearchPage(): JSX.Element {
   const [sortBy, setSortBy] = useState<'relevance' | 'name' | 'size' | 'modified'>('relevance')
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc')
 
-  // Batch selection state (for checkboxes)
-  const [selectedFiles, setSelectedFiles] = useState<Set<number>>(new Set())
-
   // Autocomplete state
   const [showAutocomplete, setShowAutocomplete] = useState(false)
   const [autocompleteSuggestions, setAutocompleteSuggestions] = useState<AutocompleteSuggestion[]>([])
@@ -386,27 +383,6 @@ function SearchPage(): JSX.Element {
   const handleExport = (format: ExportFormat) => {
     exportResults({ query: searchQuery, files, snippets, formatSize }, format)
     setShowExportMenu(false)
-  }
-
-  // Batch selection handlers
-  const handleToggleSelect = (fileId: number) => {
-    setSelectedFiles(prev => {
-      const next = new Set(prev)
-      if (next.has(fileId)) {
-        next.delete(fileId)
-      } else {
-        next.add(fileId)
-      }
-      return next
-    })
-  }
-
-  const handleSelectAll = (select: boolean) => {
-    if (select) {
-      setSelectedFiles(new Set(sortedFiles.filter(f => f.id).map(f => f.id!)))
-    } else {
-      setSelectedFiles(new Set())
-    }
   }
 
   const handleHistoryClick = (query: string) => {
@@ -1101,9 +1077,6 @@ function SearchPage(): JSX.Element {
             formatSize={formatSize}
             hasSearched={hasSearched}
             snippets={snippets}
-            selectedFiles={selectedFiles}
-            onToggleSelect={handleToggleSelect}
-            onSelectAll={handleSelectAll}
             searchQuery={searchQuery}
           />
         </div>

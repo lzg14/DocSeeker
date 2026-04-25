@@ -950,7 +950,7 @@ textarea:focus:not(:focus-visible) {
 /* === 文件表格 - 紧凑Linear风格 === */
 .file-table-header {
   display: grid;
-  grid-template-columns: 28px minmax(0, 1fr) 56px 56px 96px;
+  grid-template-columns: minmax(0, 1fr) 56px 56px 96px;
   background: var(--bg-primary);
   padding: 0 16px;
   height: 32px;
@@ -968,7 +968,7 @@ textarea:focus:not(:focus-visible) {
 
 .file-row {
   display: grid;
-  grid-template-columns: 28px minmax(0, 1fr) 56px 56px 96px;
+  grid-template-columns: minmax(0, 1fr) 56px 56px 96px;
   padding: 0 16px;
   height: 40px;
   align-items: center;

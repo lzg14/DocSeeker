@@ -16,9 +16,6 @@ interface FileListProps {
   formatSize: (bytes: number) => string
   hasSearched: boolean
   snippets?: Record<string, string>
-  selectedFiles: Set<number>
-  onToggleSelect: (fileId: number) => void
-  onSelectAll: (select: boolean) => void
   searchQuery?: string  // 搜索关键词，用于高亮文件名
 }
 
@@ -29,9 +26,6 @@ function FileList({
   formatSize,
   hasSearched,
   snippets = {},
-  selectedFiles,
-  onToggleSelect,
-  onSelectAll,
   searchQuery = ''
 }: FileListProps): JSX.Element {
   const { t } = useLanguage()
@@ -174,17 +168,7 @@ function FileList({
   return (
         <>
           <div className="file-table-header">
-            <div className="file-checkbox-cell">
-              <input
-                type="checkbox"
-                checked={selectedFiles.size === files.length && files.length > 0}
-                ref={(el) => {
-                  if (el) el.indeterminate = selectedFiles.size > 0 && selectedFiles.size < files.length
-                }}
-                onChange={(e) => onSelectAll(e.target.checked)}
-              />
-            </div>
-            <div>{t('filelist.name')}</div>
+            <div className="file-name-header">{t('filelist.name')}</div>
             <div>{t('filelist.type')}</div>
             <div>{t('filelist.size')}</div>
             <div>{t('filelist.modified')}</div>
@@ -192,17 +176,10 @@ function FileList({
           {files.map((file) => (
             <div
               key={file.id}
-              className={`file-row ${selectedFile?.id === file.id ? 'selected' : ''} ${selectedFiles.has(file.id!) ? 'checked' : ''}`}
+              className={`file-row ${selectedFile?.id === file.id ? 'selected' : ''}`}
               onClick={() => onSelectFile(file)}
               onContextMenu={(e) => handleContextMenu(e, file)}
             >
-              <div className="file-checkbox-cell" onClick={(e) => e.stopPropagation()}>
-                <input
-                  type="checkbox"
-                  checked={selectedFiles.has(file.id!)}
-                  onChange={() => file.id && onToggleSelect(file.id)}
-                />
-              </div>
               <div className="file-name-cell">
                 <span>{getFileIcon(file.is_supported === false ? 'unsupported' : file.file_type)}</span>
                 <div className="file-name-info">
