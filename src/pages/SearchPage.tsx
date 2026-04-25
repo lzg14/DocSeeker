@@ -7,7 +7,7 @@ import { formatSize } from '../utils/format'
 import { exportResults, ExportFormat } from '../utils/exportResults'
 
 // 调试开关：开发时设为 true，正式发布设为 false
-const DEBUG = true
+const DEBUG = false
 const debugLog = (...args: unknown[]) => {
   if (DEBUG) console.log('[DEBUG]', ...args)
 }
@@ -95,6 +95,11 @@ function SearchPage(): JSX.Element {
   const [isDragging, setIsDragging] = useState(false)
   const [isExtracting, setIsExtracting] = useState(false)
   const [searchScope, setSearchScope] = useState<'all' | 'filename'>('all')
+
+  // 调试：追踪 files 状态变化
+  useEffect(() => {
+    debugLog('files state changed: count=', files.length, 'types=', files.slice(0,5).map(f => f.file_type))
+  }, [files])
   const [dedupEnabled, setDedupEnabled] = useState(false)
   const [fuzzyEnabled, setFuzzyEnabled] = useState(false)
   const [secondaryFilter, setSecondaryFilter] = useState('')
@@ -126,6 +131,12 @@ function SearchPage(): JSX.Element {
   const fuzzyEnabledRef = useRef(false)
   const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const searchCounterRef = useRef(0)
+  const filtersRef = useRef(filters)
+
+  // Keep filtersRef in sync with filters state
+  useEffect(() => {
+    filtersRef.current = filters
+  }, [filters])
 
   // Derived filtered files based on secondary filter
   const filteredFiles = secondaryFilter.trim()
@@ -137,6 +148,7 @@ function SearchPage(): JSX.Element {
 
   // Sort files based on sort criteria
   const sortedFiles = useMemo(() => {
+    debugLog('sortedFiles computed: filteredFiles count=', filteredFiles.length)
     if (sortBy === 'relevance') {
       return filteredFiles // Keep original order (BM25 relevance)
     }
@@ -243,9 +255,10 @@ function SearchPage(): JSX.Element {
     // Increment search counter to track this search request
     const searchId = ++searchCounterRef.current
 
-    // 使用最新的 filters（避免闭包问题）
-    // 合并 opts 和 filters，确保有过滤条件时使用新值，没有时使用当前 filters
-    const searchOpts = { ...filters, ...opts }
+    // 使用最新的 filters（通过 ref 避免闭包问题）
+    const currentFilters = filtersRef.current
+    // 合并 opts 和 currentFilters，确保有过滤条件时使用新值，没有时使用当前 filters
+    const searchOpts = { ...currentFilters, ...opts }
     debugLog('performSearch called, query:', JSON.stringify(query), 'opts:', JSON.stringify(opts), 'searchOpts:', JSON.stringify(searchOpts))
     if (!query.trim()) {
       setFiles([])
@@ -327,8 +340,12 @@ function SearchPage(): JSX.Element {
       }
 
       // Discard if a newer search has started
-      if (searchId !== searchCounterRef.current) return
+      if (searchId !== searchCounterRef.current) {
+        debugLog('setFiles discarded: searchId', searchId, 'current', searchCounterRef.current)
+        return
+      }
 
+      debugLog('setFiles called: result.length=', result.length, 'fileTypes=', result.slice(0,3).map(f => f.file_type))
       setFiles(result)
       setHasSearched(true)
       // Fetch highlighted snippets for the results
@@ -529,6 +546,8 @@ function SearchPage(): JSX.Element {
 
   const handleFilterChange = (newFilters: SearchOptions) => {
     debugLog('handleFilterChange called, searchQuery:', JSON.stringify(searchQuery), 'filters:', JSON.stringify(newFilters))
+    // 立即更新 ref，确保 performSearch 使用最新的 filters
+    filtersRef.current = newFilters
     setFilters(newFilters)
     // Trigger re-search with new filters if there's an active search
     if (searchQuery.trim()) {
@@ -1171,7 +1190,7 @@ function SearchPage(): JSX.Element {
           </div>
         )}
 
-        <div className="file-list-wrapper">
+        <div className="file-list-wrapper" key={`fl-${searchQuery}-${sortedFiles.length}`}>
           <FileList
             files={sortedFiles}
             selectedFile={selectedFile}

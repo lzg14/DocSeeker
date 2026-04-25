@@ -123,19 +123,28 @@ function FileList({
     return date.toLocaleString('zh-CN')
   }
 
+  // 如果还没有搜索，显示提示
+  if (!hasSearched) {
+    return (
+      <div className="file-list-empty">
+        <div style={{ fontSize: 32, marginBottom: 8 }}>🔍</div>
+        <div>{t('search.noQuery')}</div>
+      </div>
+    )
+  }
+
+  // 如果没有结果
+  if (files.length === 0) {
+    return (
+      <div className="file-list-empty">
+        <div style={{ fontSize: 32, marginBottom: 8 }}>📭</div>
+        <div>{t('search.noResult')}</div>
+      </div>
+    )
+  }
+
+  // 渲染文件列表（不再包 wrapper，由 SearchPage 决定包装）
   return (
-    <div className="file-list-wrapper">
-      {!hasSearched ? (
-        <div className="file-list-empty">
-          <div style={{ fontSize: 32, marginBottom: 8 }}>🔍</div>
-          <div>{t('search.noQuery')}</div>
-        </div>
-      ) : files.length === 0 ? (
-        <div className="file-list-empty">
-          <div style={{ fontSize: 32, marginBottom: 8 }}>📭</div>
-          <div>{t('search.noResult')}</div>
-        </div>
-      ) : (
         <>
           <div className="file-table-header">
             <div className="file-checkbox-cell">
@@ -187,33 +196,36 @@ function FileList({
               <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>{formatDate(file.updated_at)}</div>
             </div>
           ))}
-        </>
-      )}
+    </>
+  )
 
-      {contextMenu.visible && contextMenu.file && (
-        <div
-          ref={menuRef}
-          className="context-menu"
-          style={{ left: contextMenu.x, top: contextMenu.y }}
-          onClick={e => e.stopPropagation()}
-        >
-          <div className="context-menu-item" onClick={handleShowInFolder}>
-            <span>📁</span> {t('detail.showInFolder')}
-          </div>
-          <div className="context-menu-item" onClick={handleOpenFile}>
-            <span>📂</span> {t('detail.openFile')}
-          </div>
-          <div className="context-menu-separator" />
-          <div className="context-menu-item" onClick={handleCopyPath}>
-            <span>📋</span> {t('contextMenu.copyPath')}
-          </div>
-          <div className="context-menu-item" onClick={handleCopyName}>
-            <span>📝</span> {t('contextMenu.copyName')}
-          </div>
-        </div>
-      )}
+  // 右键菜单（始终渲染，由 contextMenu.visible 控制显示）
+  if (contextMenu.visible && contextMenu.file) {
+  return (
+    <div
+      ref={menuRef}
+      className="context-menu"
+      style={{ left: contextMenu.x, top: contextMenu.y }}
+      onClick={e => e.stopPropagation()}
+    >
+      <div className="context-menu-item" onClick={handleShowInFolder}>
+        <span>📁</span> {t('detail.showInFolder')}
+      </div>
+      <div className="context-menu-item" onClick={handleOpenFile}>
+        <span>📂</span> {t('detail.openFile')}
+      </div>
+      <div className="context-menu-separator" />
+      <div className="context-menu-item" onClick={handleCopyPath}>
+        <span>📋</span> {t('contextMenu.copyPath')}
+      </div>
+      <div className="context-menu-item" onClick={handleCopyName}>
+        <span>📝</span> {t('contextMenu.copyName')}
+      </div>
     </div>
   )
+}
+
+return null
 }
 
 export default FileList
