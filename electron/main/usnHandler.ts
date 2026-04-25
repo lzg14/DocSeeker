@@ -3,7 +3,6 @@ import { BrowserWindow } from 'electron'
 import path from 'path'
 import fs from 'fs'
 import crypto from 'crypto'
-import { extractContent } from './scanner'
 import {
   deleteFileFromAllShards,
   renameFileInAllShards,
