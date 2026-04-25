@@ -890,6 +890,8 @@ export async function searchByFileName(
 
   // Build filename-only FTS query (restrict to name column)
   const ftsQuery = keywords.map(k => `"${k.replace(/"/g, '""')}"*`).join(' AND ')
+  log.info(`[Search] searchByFileName query="${query}", fileTypes=${JSON.stringify(options?.fileTypes)}, ftsQuery="${ftsQuery}"`)
+
   const readyShards = getReadyShards()
   if (readyShards.length === 0) return []
 

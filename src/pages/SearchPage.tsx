@@ -326,12 +326,13 @@ function SearchPage(): JSX.Element {
         const hasFilters = searchOpts &&
           (searchOpts.fileTypes?.length || searchOpts.sizeMin || searchOpts.sizeMax || searchOpts.dateFrom || searchOpts.dateTo)
 
-        if (hasFilters) {
-          result = scope === 'filename'
-            ? await window.electron.searchByFileName(query, searchOpts)
-            : dedupEnabledRef.current
-              ? await window.electron.searchDeduplicate(query, searchOpts)
-              : await window.electron.searchFilesAdvanced(query, searchOpts)
+        // Filename-only search: always use searchByFileName when scope is 'filename'
+        if (scope === 'filename') {
+          result = await window.electron.searchByFileName(query, searchOpts)
+        } else if (hasFilters) {
+          result = dedupEnabledRef.current
+            ? await window.electron.searchDeduplicate(query, searchOpts)
+            : await window.electron.searchFilesAdvanced(query, searchOpts)
         } else {
           result = fuzzyEnabledRef.current
             ? await window.electron.searchFilesFuzzy(query)
