@@ -262,18 +262,12 @@ function getTrayLabels(): { showWindow: string; globalSearch: string; exit: stri
   }
 }
 
-export function updateTrayMenu(status?: string, message?: string): void {
+export function updateTrayMenu(): void {
   if (!tray) return
 
   const labels = getTrayLabels()
-  const statusText = message || getDefaultStatusText(status || 'disconnected')
 
   const contextMenu = Menu.buildFromTemplate([
-    {
-      label: `${labels.showWindow} (${statusText})`,
-      enabled: false
-    },
-    { type: 'separator' },
     {
       label: labels.showWindow,
       click: () => {
@@ -307,27 +301,6 @@ export function updateTrayMenu(status?: string, message?: string): void {
   ])
 
   tray.setContextMenu(contextMenu)
-}
-
-function getDefaultStatusText(status: string): string {
-  const lang = getAppSetting<string>('language', 'zh-CN')
-  const texts: Record<string, Record<string, string>> = {
-    'zh-CN': {
-      disconnected: '未连接',
-      connecting: '连接中...',
-      connected: '已连接',
-      monitoring: '监控中',
-      error: '错误'
-    },
-    'en': {
-      disconnected: 'Disconnected',
-      connecting: 'Connecting...',
-      connected: 'Connected',
-      monitoring: 'Monitoring',
-      error: 'Error'
-    }
-  }
-  return texts[lang]?.[status] || status
 }
 
 function createWindow(): void {
@@ -458,10 +431,9 @@ app.whenReady().then(async () => {
     }
   })
 
-  // Register monitor status change callback to update tray
+  // Register monitor status change callback
   onMonitorStatusChange((status, message) => {
-    updateTrayMenu(status, message)
-    // Also notify renderer
+    // Notify renderer of status change
     mainWindow?.webContents.send('monitor-status-changed', { status, message })
   })
 
