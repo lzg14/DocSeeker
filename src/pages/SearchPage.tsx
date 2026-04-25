@@ -6,6 +6,12 @@ import { useLanguage } from '../context/LanguageContext'
 import { formatSize } from '../utils/format'
 import { exportResults, ExportFormat } from '../utils/exportResults'
 
+// 调试开关：开发时设为 true，正式发布设为 false
+const DEBUG = true
+const debugLog = (...args: unknown[]) => {
+  if (DEBUG) console.log('[DEBUG]', ...args)
+}
+
 interface SearchHistoryEntry {
   id?: number
   query: string
@@ -238,8 +244,9 @@ function SearchPage(): JSX.Element {
     const searchId = ++searchCounterRef.current
 
     // 使用最新的 filters（避免闭包问题）
-    const searchOpts = opts ?? filters
-    console.log('[DEBUG] performSearch called, query:', JSON.stringify(query), 'opts:', JSON.stringify(opts), 'searchOpts:', JSON.stringify(searchOpts))
+    // 合并 opts 和 filters，确保有过滤条件时使用新值，没有时使用当前 filters
+    const searchOpts = { ...filters, ...opts }
+    debugLog('performSearch called, query:', JSON.stringify(query), 'opts:', JSON.stringify(opts), 'searchOpts:', JSON.stringify(searchOpts))
     if (!query.trim()) {
       setFiles([])
       setHasSearched(false)
@@ -521,14 +528,14 @@ function SearchPage(): JSX.Element {
   }
 
   const handleFilterChange = (newFilters: SearchOptions) => {
-    console.log('[DEBUG] handleFilterChange called, searchQuery:', JSON.stringify(searchQuery), 'filters:', JSON.stringify(newFilters))
+    debugLog('handleFilterChange called, searchQuery:', JSON.stringify(searchQuery), 'filters:', JSON.stringify(newFilters))
     setFilters(newFilters)
     // Trigger re-search with new filters if there's an active search
     if (searchQuery.trim()) {
-      console.log('[DEBUG] Calling performSearch with filters:', JSON.stringify(newFilters))
+      debugLog('Calling performSearch with filters:', JSON.stringify(newFilters))
       performSearch(searchQuery, newFilters)
     } else {
-      console.log('[DEBUG] No searchQuery, skipping performSearch')
+      debugLog('No searchQuery, skipping performSearch')
     }
   }
 
