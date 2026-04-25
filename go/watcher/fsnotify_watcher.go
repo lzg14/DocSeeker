@@ -97,6 +97,7 @@ func (w *FsnotifyWatcher) Start(dirs []string) {
 		dir = filepath.ToSlash(dir)
 		volume := getVolumeLetter(dir)
 		if volume == "" {
+			fmt.Fprintf(os.Stderr, "WARN: cannot get volume for %s, skipping\n", dir)
 			continue
 		}
 
@@ -237,8 +238,18 @@ func contains(slice []string, s string) bool {
 
 func getVolumeLetter(fullPath string) string {
 	norm := strings.ReplaceAll(fullPath, "\\", "/")
+	// Windows: D:/path
 	if len(norm) >= 3 && norm[1] == ':' {
 		return norm[:3]
+	}
+	// Unix/macOS: /Users/xxx or /home/xxx
+	if strings.HasPrefix(norm, "/") {
+		// Return root "/" for Unix systems (or first segment like "/Users")
+		idx := strings.Index(norm[1:], "/")
+		if idx == -1 {
+			return norm // "/Users/xxx" -> "/Users/xxx" (whole path is volume)
+		}
+		return norm[:idx+1] // "/Users/xxx/Documents" -> "/Users"
 	}
 	return ""
 }
