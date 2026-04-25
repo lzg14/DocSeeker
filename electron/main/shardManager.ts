@@ -83,23 +83,18 @@ export interface FileRecord {
 const SHARD_DIR = 'shards'
 const SHARD_PREFIX = 'shard_'
 const SHARD_EXT = '.db'
-const DB_DIR = 'db'
-const HOT_CACHE_NAME = 'hot-cache.json'
 const BATCH_SIZE = 100   // Files per insert batch
 const SPEED_TEST_SIZE_MB = 256  // 256MB sequential read test
 
 // ============ Paths ============
 
 function getShardsDir(): string {
-  return join(app.getPath('userData'), DB_DIR, SHARD_DIR)
+  const { getDataPath } = require('./config')
+  return join(getDataPath(), SHARD_DIR)
 }
 
 function getShardPath(shardId: number): string {
   return join(getShardsDir(), `${SHARD_PREFIX}${shardId}${SHARD_EXT}`)
-}
-
-function getHotCachePath(): string {
-  return join(app.getPath('userData'), DB_DIR, HOT_CACHE_NAME)
 }
 
 // ============ Machine Profile Detection ============
@@ -460,10 +455,11 @@ export async function initShardManager(): Promise<void> {
       mkdirSync(dir, { recursive: true })
     }
 
-    // Ensure parent db/ directory exists
-    const dbDir = join(app.getPath('userData'), DB_DIR)
-    if (!existsSync(dbDir)) {
-      mkdirSync(dbDir, { recursive: true })
+    // Ensure data directory exists
+    const { getDataPath } = require('./config')
+    const dataDir = getDataPath()
+    if (!existsSync(dataDir)) {
+      mkdirSync(dataDir, { recursive: true })
     }
 
     // Try to load cached profile and config first

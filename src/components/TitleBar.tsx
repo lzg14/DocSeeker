@@ -104,7 +104,7 @@ function TitleBar({ activeTab, onTabChange }: TitleBarProps): JSX.Element {
     <>
       <div className="title-bar">
         <div className="title-bar-left">
-          <img src="build/icon.png?v=2" className="title-bar-icon" alt="DocSeeker" />
+          <img src={`build/icon.png?v=${Date.now()}`} className="title-bar-icon" alt="DocSeeker" />
 
           {/* Navigation buttons */}
           <div className="title-bar-nav">

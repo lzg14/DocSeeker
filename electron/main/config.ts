@@ -18,6 +18,39 @@ import log from 'electron-log/main'
 
 // ============ Scan Settings ============
 
+/**
+ * Get data storage path.
+ * - If user has set a custom path, return that path
+ * - Otherwise, return the default userData/db path
+ */
+export function getDataPath(): string {
+  const customPath = store.app_settings.dataPath as string | undefined
+  if (customPath && existsSync(customPath)) {
+    return customPath
+  }
+  // Fallback to default
+  return getDefaultDataPath()
+}
+
+export function getDefaultDataPath(): string {
+  return join(app.getPath('userData'), 'db')
+}
+
+/**
+ * Set custom data storage path.
+ * Returns true if path is valid and saved.
+ */
+export function setDataPath(dataPath: string): boolean {
+  if (!dataPath || !existsSync(dataPath)) {
+    log.warn('[Config] Invalid data path:', dataPath)
+    return false
+  }
+  store.app_settings.dataPath = dataPath
+  saveStore()
+  log.info('[Config] Data path set to:', dataPath)
+  return true
+}
+
 export interface ScanSettings {
   timeoutMs: number
   maxFileSize: number

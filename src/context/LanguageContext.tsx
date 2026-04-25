@@ -247,6 +247,10 @@ const translations: Record<Language, Record<string, string>> = {
     'settings.enableRealtimeMonitor': '启用实时监控',
     'settings.enableRealtimeMonitorDesc': '监控目录下文件变更，实时更新搜索索引。开启后，删除文件夹会同步删除其下所有文件的索引。',
     'settings.realtimeMonitorWarning': '删除文件夹将同步删除该目录下所有文件的搜索索引，如需恢复需手动重新扫描。',
+    'settings.dataPath': '数据存储位置',
+    'settings.dataPathDesc': '修改后需要重新扫描',
+    'settings.changePath': '更改',
+    'settings.customPath': '已自定义',
     // Theme
     'theme.light': '浅色',
     'theme.light.desc': '白天 / 办公环境',
@@ -476,6 +480,10 @@ const translations: Record<Language, Record<string, string>> = {
     'settings.enableRealtimeMonitor': 'Enable Realtime Monitor',
     'settings.enableRealtimeMonitorDesc': 'Monitor file changes in watched directories and update search index in real time. Note: deleting a folder will remove all its files from the search index.',
     'settings.realtimeMonitorWarning': 'Deleting a folder will remove all its files from the search index. Restore requires a manual rescan.',
+    'settings.dataPath': 'Data Storage Location',
+    'settings.dataPathDesc': 'Requires rescan after change',
+    'settings.changePath': 'Change',
+    'settings.customPath': 'Custom',
     // Status bar
     'status.indexed': '{count} files indexed',
     'status.loading': 'Loading...',

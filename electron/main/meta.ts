@@ -10,23 +10,23 @@
  *         Shards store file content; meta.db stores folder stats.
  */
 
-import { app } from 'electron'
 import { join } from 'path'
 import { existsSync, mkdirSync } from 'fs'
 import Database, { Database as BetterSqlite3Database } from 'better-sqlite3'
 import log from 'electron-log/main'
+import { getDataPath } from './config'
 
 let metaDb: BetterSqlite3Database | null = null
 
 export function getMetaDbPath(): string {
-  return join(app.getPath('userData'), 'db', 'meta.db')
+  return join(getDataPath(), 'meta.db')
 }
 
 function ensureDbDir(): void {
-  const dir = join(app.getPath('userData'), 'db')
+  const dir = getDataPath()
   if (!existsSync(dir)) {
     mkdirSync(dir, { recursive: true })
-    log.info('[Meta] Created db directory:', dir)
+    log.info('[Meta] Created data directory:', dir)
   }
 }
 

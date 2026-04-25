@@ -3,7 +3,6 @@ import { join } from 'path'
 import log from 'electron-log/main'
 import { initDatabase, closeDatabase } from './database'
 import { closeAllShards, initShardManager } from './shardManager'
-import { initHotCache, closeHotCache } from './hotCache'
 import { usnWatcher, onDoubleCtrl, onMonitorStatusChange } from './usnWatcher'
 import { registerIpcHandlers } from './ipc'
 import { getAppSetting, setAppSetting } from './config'
@@ -387,9 +386,6 @@ app.whenReady().then(async () => {
 
   electronApp.setAppUserModelId('com.docseeker.app')
 
-  // Init hot cache (loads instantly, <10ms)
-  initHotCache()
-
   // Init database (meta + shards) — non-blocking
   try {
     await initDatabase()
@@ -474,7 +470,6 @@ app.on('window-all-closed', () => {
   log.info('All windows closed')
   closeAllShards()
   closeDatabase()
-  closeHotCache()
   if (process.platform !== 'darwin') {
     app.quit()
   }
@@ -488,5 +483,4 @@ app.on('before-quit', () => {
   usnWatcher.stop()
   closeAllShards()
   closeDatabase()
-  closeHotCache()
 })

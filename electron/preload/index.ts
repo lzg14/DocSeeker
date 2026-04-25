@@ -91,6 +91,10 @@ export interface UsnEvent {
 }
 
 export interface ElectronAPI {
+  // Data path
+  getDataPath: () => Promise<{ current: string; default: string }>
+  setDataPath: (path: string) => Promise<boolean>
+  // Directory selection
   selectDirectory: () => Promise<string | null>
   onScanProgress: (callback: (progress: ScanProgress) => void) => () => void
   searchFiles: (query: string) => Promise<FileRecord[]>
@@ -188,6 +192,10 @@ export interface Tag {
 }
 
 const electronAPI: ElectronAPI = {
+  // Data path
+  getDataPath: () => ipcRenderer.invoke('get-data-path'),
+  setDataPath: (path: string) => ipcRenderer.invoke('set-data-path', path),
+
   selectDirectory: () => ipcRenderer.invoke('select-directory'),
 
   onScanProgress: (callback: (progress: ScanProgress) => void) => {

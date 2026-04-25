@@ -117,6 +117,20 @@ export function registerIpcHandlers(): void {
   if (handlersRegistered) return
   handlersRegistered = true
 
+  // Data path management
+  ipcMain.handle('get-data-path', async () => {
+    const { getDataPath, getDefaultDataPath } = require('./config')
+    return {
+      current: getDataPath(),
+      default: getDefaultDataPath()
+    }
+  })
+
+  ipcMain.handle('set-data-path', async (_, dataPath: string) => {
+    const { setDataPath } = require('./config')
+    return setDataPath(dataPath)
+  })
+
   // Select directory
   ipcMain.handle('select-directory', async () => {
     const result = await dialog.showOpenDialog({

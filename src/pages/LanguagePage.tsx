@@ -13,6 +13,8 @@ function LanguagePage(): JSX.Element {
   const [doubleCtrlEnabled, setDoubleCtrlEnabledLocal] = useState(true)
   const [hotkeyError, setHotkeyError] = useState('')
   const [monitorStatus, setMonitorStatus] = useState<{ status: string; message?: string }>({ status: 'disconnected' })
+  const [dataPath, setDataPath] = useState<{ current: string; default: string }>({ current: '', default: '' })
+  const [pathError, setPathError] = useState('')
 
   useEffect(() => {
     window.electron.getGlobalHotkey().then(h => setCurrentHotkey(formatHotkey(h)))
@@ -25,6 +27,8 @@ function LanguagePage(): JSX.Element {
     window.electron.getMonitorStatus?.().then(setMonitorStatus)
     // Subscribe to status changes
     const unsubscribe = window.electron.onMonitorStatusChanged?.(setMonitorStatus)
+    // Get data path
+    window.electron.getDataPath?.().then(setDataPath)
     return () => unsubscribe?.()
   }, [])
 
@@ -111,6 +115,19 @@ function LanguagePage(): JSX.Element {
     document.documentElement.setAttribute('lang', newLang)
     // Sync to config.json so tray menu shows correct language
     window.electron.setLanguage(newLang)
+  }
+
+  const handleSelectDataPath = async () => {
+    const dir = await window.electron.selectDirectory()
+    if (!dir) return
+
+    const success = await window.electron.setDataPath?.(dir)
+    if (success) {
+      setDataPath({ ...dataPath, current: dir })
+      setPathError('')
+    } else {
+      setPathError('Invalid directory')
+    }
   }
 
   const Toggle = ({ checked, onChange }: { checked: boolean; onChange: (v: boolean) => void }) => (
@@ -229,6 +246,33 @@ function LanguagePage(): JSX.Element {
           </div>
           <Toggle checked={monitorEnabled} onChange={handleToggleMonitor} />
         </div>
+      </div>
+
+      <div className="settings-group">
+        <div className="settings-row">
+          <div className="settings-label-wrap">
+            <span className="settings-label">{t('settings.dataPath') || '数据存储位置'}</span>
+            <span style={{ fontSize: '11px', color: '#888', marginLeft: '8px' }}>
+              {t('settings.dataPathDesc') || '修改后需要重新扫描'}
+            </span>
+          </div>
+        </div>
+        <div className="settings-row" style={{ alignItems: 'center' }}>
+          <div style={{ flex: 1, fontSize: '12px', color: '#666', wordBreak: 'break-all' }}>
+            {dataPath.current || dataPath.default || '...'}
+            {dataPath.current && dataPath.current !== dataPath.default && (
+              <span style={{ color: '#ff9800', marginLeft: '8px' }}>({t('settings.customPath') || '已自定义'})</span>
+            )}
+          </div>
+          <button className="btn btn-secondary" onClick={handleSelectDataPath} style={{ marginLeft: '8px', flexShrink: 0 }}>
+            {t('settings.changePath') || '更改'}
+          </button>
+        </div>
+        {pathError && (
+          <div style={{ color: '#f44336', fontSize: '12px', marginTop: '4px' }}>
+            {pathError}
+          </div>
+        )}
       </div>
     </div>
   )

@@ -5,16 +5,63 @@
 ## 概览
 
 ```
-db/
-├── meta.db        — 用户数据（文件夹、搜索历史）
-├── config.json    — 应用设置（扫描参数、主题、快捷键等）
-└── shards/       — 文件索引（按分片存储）
-    ├── shard_0.db
-    ├── shard_1.db
-    └── ...
+db/                              # 配置目录（固定位置）
+├── config.json                  # 应用设置（含 dataPath 配置）
+└── shards/                      # 数据目录（可自定义）
+    ├── meta.db                 — 用户数据（文件夹、搜索历史）
+    └── shards/                 — 文件索引（按分片存储）
+        ├── shard_0.db
+        ├── shard_1.db
+        └── ...
+
+thumbnails/                      # 缩略图缓存（可自定义）
 ```
 
-**数据目录：** `AppData/Roaming/docseeker/db/`（Windows）
+**固定配置目录：** `AppData/Roaming/docseeker/db/`（Windows）
+- `config.json` 必须放在固定位置，因为应用启动时需要先读取它才知道数据目录在哪
+
+**默认数据目录：** `AppData/Roaming/docseeker/db/`（与配置目录相同）
+**用户自定义数据目录：** 可在设置中选择任意位置
+
+---
+
+## 自定义数据目录
+
+用户可自定义数据存储位置，避免占用系统盘空间。
+
+### 配置存储
+
+`config.json` 中的 `app_settings.dataPath` 字段：
+
+```json
+{
+  "scan_settings": { ... },
+  "app_settings": {
+    "dataPath": "D:\\DocSeeker\\data"
+  }
+}
+```
+
+### 目录结构
+
+```
+固定位置 (userData/db/)：
+└── config.json           # 只存配置，含 dataPath 字段
+
+用户自定义位置 (dataPath)：
+└── docseeker/            # 用户指定
+    ├── meta.db          # 用户数据
+    └── shards/          # 文件索引
+        ├── shard_0.db
+        └── ...
+```
+
+### 实现说明
+
+1. **config.json 位置固定** - 应用启动时需要先读取配置才能知道数据目录
+2. **首次启动时** - 如果没有设置 dataPath，使用默认位置 `userData/db/`
+3. **用户可随时修改** - 在设置页面选择新的数据目录
+4. **不需要迁移** - 新目录不会自动迁移旧数据，需要用户重新扫描
 
 ---
 
