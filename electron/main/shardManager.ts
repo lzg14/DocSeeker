@@ -761,9 +761,8 @@ export async function searchAllShards(
 
   if (!query.trim()) return []
 
-  if (options?.fileTypes?.length) {
-    log.info(`[Search] searchAllShards called with fileTypes: ${JSON.stringify(options.fileTypes)}`)
-  }
+  // 调试日志：显示搜索参数
+  log.info(`[Search] searchAllShards query="${query}", fileTypes=${JSON.stringify(options?.fileTypes)}`)
 
   const readyShards = getReadyShards()
   if (readyShards.length === 0) return []
