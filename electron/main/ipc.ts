@@ -77,7 +77,7 @@ import {
   deleteSavedSearch,
   type ScannedFolder as MetaScannedFolder
 } from './meta'
-import { getScanSettings, updateScanSettings, getAppSetting, setAppSetting } from './config'
+import { getScanSettings, updateScanSettings, getAppSetting, setAppSetting, getDataPath, getDefaultDataPath, setDataPath } from './config'
 import { usnWatcher } from './usnWatcher'
 import { getImageThumbnail, isImageFile, THUMB_CACHE } from './thumbnail'
 import { updateTrayMenu } from './index'
@@ -119,7 +119,6 @@ export function registerIpcHandlers(): void {
 
   // Data path management
   ipcMain.handle('get-data-path', async () => {
-    const { getDataPath, getDefaultDataPath } = require('./config')
     return {
       current: getDataPath(),
       default: getDefaultDataPath()
@@ -127,7 +126,6 @@ export function registerIpcHandlers(): void {
   })
 
   ipcMain.handle('set-data-path', async (_, dataPath: string) => {
-    const { setDataPath } = require('./config')
     return setDataPath(dataPath)
   })
 
@@ -140,6 +138,33 @@ export function registerIpcHandlers(): void {
       return null
     }
     return result.filePaths[0]
+  })
+
+  // Save file dialog
+  ipcMain.handle('save-file-dialog', async (_, options: { defaultPath?: string; filters?: { name: string; extensions: string[] }[] }) => {
+    const result = await dialog.showSaveDialog({
+      defaultPath: options.defaultPath,
+      filters: options.filters || [
+        { name: 'Markdown', extensions: ['md'] },
+        { name: 'Text', extensions: ['txt'] }
+      ]
+    })
+    if (result.canceled || !result.filePath) {
+      return null
+    }
+    return result.filePath
+  })
+
+  // Save text to file
+  ipcMain.handle('save-text-to-file', async (_, filePath: string, content: string) => {
+    try {
+      const fs = await import('fs/promises')
+      await fs.writeFile(filePath, content, 'utf-8')
+      return { success: true }
+    } catch (err) {
+      log.error('[IPC] save-text-to-file error:', err)
+      return { success: false, error: (err as Error).message }
+    }
   })
 
   // Search files (via shard manager)
@@ -647,11 +672,22 @@ export function registerIpcHandlers(): void {
   ipcMain.handle('extract-file-content', async (_, filePath: string): Promise<string | null> => {
     try {
       const { extractContent } = await import('./scanner')
-      const ext = extname(filePath).toLowerCase()
       const content = await extractContent(filePath)
       return content || null
     } catch (error) {
       log.warn('[IPC] Failed to extract file content:', error)
+      return null
+    }
+  })
+
+  // Load full file content (for quote cards)
+  ipcMain.handle('load-file-full-content', async (_, filePath: string): Promise<string | null> => {
+    try {
+      const { extractContent } = await import('./scanner')
+      const content = await extractContent(filePath)
+      return content || null
+    } catch (error) {
+      log.warn('[IPC] Failed to load file full content:', error)
       return null
     }
   })

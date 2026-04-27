@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { FileRecord } from '../types'
 import { useLanguage } from '../context/LanguageContext'
 import { renderPdfPage } from '../utils/pdfRender'
+import QuoteCards from './QuoteCards'
 
 interface Tag {
   id?: number
@@ -23,6 +24,9 @@ function FileDetail({ file, formatSize, searchQuery = '' }: FileDetailProps): JS
   const [showTagMenu, setShowTagMenu] = useState(false)
   const [newTagName, setNewTagName] = useState('')
   const [editingTagId, setEditingTagId] = useState<number | null>(null)
+  const [showQuoteCards, setShowQuoteCards] = useState(false)
+  const [quoteKeyword, setQuoteKeyword] = useState('')
+  const [fullContent, setFullContent] = useState<string | null>(null)
 
   const handleShowInFolder = () => window.electron.showInFolder(file.path)
   const handleOpenFile = () => window.electron.openFile(file.path)
@@ -114,6 +118,17 @@ function FileDetail({ file, formatSize, searchQuery = '' }: FileDetailProps): JS
       })
     }
   }, [file?.path])
+
+  // Load full content for quote cards when showing
+  useEffect(() => {
+    if (showQuoteCards && file?.path) {
+      window.electron.loadFileFullContent(file.path).then(content => {
+        setFullContent(content)
+      })
+    } else {
+      setFullContent(null)
+    }
+  }, [showQuoteCards, file?.path])
 
   // Tag management functions
   const handleAddTag = async (tag: Tag) => {
@@ -228,7 +243,32 @@ function FileDetail({ file, formatSize, searchQuery = '' }: FileDetailProps): JS
       <button className="btn btn-secondary" onClick={handleOpenFile}>
         {t('detail.openFile')}
       </button>
+      {file.content && (
+        <button
+          className="btn btn-secondary"
+          onClick={() => {
+            setQuoteKeyword(searchQuery || '')
+            setShowQuoteCards(true)
+          }}
+        >
+          {t('quote.extract') || '提取卡片'}
+        </button>
+      )}
     </div>
+
+      {/* Quote Cards Modal */}
+      {showQuoteCards && (
+        <QuoteCards
+          fileName={file.name}
+          content={fullContent || file.content || ''}
+          keyword={quoteKeyword}
+          isLoading={!fullContent && !file.content}
+          onClose={() => {
+            setShowQuoteCards(false)
+            setFullContent(null)
+          }}
+        />
+      )}
 
       {/* Tags section */}
       <div className="detail-card">

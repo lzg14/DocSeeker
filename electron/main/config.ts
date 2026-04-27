@@ -97,11 +97,11 @@ let store: ConfigStore = {
 // ============ Paths ============
 
 export function getConfigPath(): string {
-  return join(app.getPath('userData'), 'db', 'config.json')
+  return join(getDataPath(), 'config.json')
 }
 
 function getConfigDir(): string {
-  return join(app.getPath('userData'), 'db')
+  return getDataPath()
 }
 
 function ensureConfigDir(): void {

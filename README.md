@@ -27,6 +27,7 @@ A desktop full-text search tool built with Electron + React + TypeScript, design
 - Display search keyword context snippets (highlighted matches)
 - Search results sorted by relevance
 - Click to view file details
+- **Literature Citation Cards**: Click on a file to extract keyword citations (at least 2 complete sentences, 100+ chars before and after), support copy and export to MD/TXT
 - Quick open file or show in folder
 
 ### 4. Language & Theme Settings

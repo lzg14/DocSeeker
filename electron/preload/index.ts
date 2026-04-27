@@ -128,6 +128,8 @@ export interface ElectronAPI {
   addSavedSearch: (name: string, query: string) => Promise<number>
   deleteSavedSearch: (id: number) => Promise<void>
   extractFileContent: (filePath: string) => Promise<string | null>
+  // Load full file content (for quote cards)
+  loadFileFullContent: (filePath: string) => Promise<string | null>
   // Floating window
   hideFloatingWindow: () => Promise<void>
   // Global hotkey
@@ -155,6 +157,10 @@ export interface ElectronAPI {
   getShardInfo: () => Promise<any>
   // System paths
   getSystemPaths: () => Promise<{ documents: string; desktop: string }>
+  // File save dialog
+  saveFileDialog: (options: { defaultPath?: string; filters?: { name: string; extensions: string[] }[] }) => Promise<string | null>
+  // Save text to file
+  saveTextToFile: (filePath: string, content: string) => Promise<{ success: boolean; error?: string }>
   // Image thumbnail
   thumbnailGet: (filePath: string) => Promise<string | null>
   thumbnailClear: () => Promise<{ success: boolean }>
@@ -197,6 +203,12 @@ const electronAPI: ElectronAPI = {
   setDataPath: (path: string) => ipcRenderer.invoke('set-data-path', path),
 
   selectDirectory: () => ipcRenderer.invoke('select-directory'),
+
+  saveFileDialog: (options: { defaultPath?: string; filters?: { name: string; extensions: string[] }[] }) =>
+    ipcRenderer.invoke('save-file-dialog', options),
+
+  saveTextToFile: (filePath: string, content: string) =>
+    ipcRenderer.invoke('save-text-to-file', filePath, content),
 
   onScanProgress: (callback: (progress: ScanProgress) => void) => {
     const handler = (_: Electron.IpcRendererEvent, progress: ScanProgress): void => {
@@ -277,6 +289,9 @@ const electronAPI: ElectronAPI = {
   deleteSavedSearch: (id: number) => ipcRenderer.invoke('delete-saved-search', id),
 
   extractFileContent: (filePath: string) => ipcRenderer.invoke('extract-file-content', filePath),
+
+  // Load full file content for quote cards
+  loadFileFullContent: (filePath: string) => ipcRenderer.invoke('load-file-full-content', filePath),
 
   hideFloatingWindow: () => ipcRenderer.invoke('window-hide-floating'),
 

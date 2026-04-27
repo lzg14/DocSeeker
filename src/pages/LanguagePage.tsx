@@ -249,27 +249,23 @@ function LanguagePage(): JSX.Element {
       </div>
 
       <div className="settings-group">
-        <div className="settings-row">
-          <div className="settings-label-wrap">
-            <span className="settings-label">{t('settings.dataPath') || '数据存储位置'}</span>
-            <span style={{ fontSize: '11px', color: '#888', marginLeft: '8px' }}>
-              {t('settings.dataPathDesc') || '修改后需要重新扫描'}
-            </span>
-          </div>
-        </div>
-        <div className="settings-row" style={{ alignItems: 'center' }}>
-          <div style={{ flex: 1, fontSize: '12px', color: '#666', wordBreak: 'break-all' }}>
+        <div className="settings-row" style={{ justifyContent: 'flex-start', flexWrap: 'wrap', gap: '12px' }}>
+          <span className="settings-label">{t('settings.dataPath') || '数据存储位置'}</span>
+          <div style={{ flex: 1, fontSize: '12px', color: '#666', wordBreak: 'break-all', minWidth: '200px' }}>
             {dataPath.current || dataPath.default || '...'}
             {dataPath.current && dataPath.current !== dataPath.default && (
               <span style={{ color: '#ff9800', marginLeft: '8px' }}>({t('settings.customPath') || '已自定义'})</span>
             )}
           </div>
-          <button className="btn btn-secondary" onClick={handleSelectDataPath} style={{ marginLeft: '8px', flexShrink: 0 }}>
+          <button className="btn btn-secondary" onClick={handleSelectDataPath}>
             {t('settings.changePath') || '更改'}
           </button>
         </div>
+        <div style={{ fontSize: '11px', color: '#888', paddingLeft: '12px', paddingBottom: '8px' }}>
+          {t('settings.dataPathDesc') || '修改后需要重新扫描'}
+        </div>
         {pathError && (
-          <div style={{ color: '#f44336', fontSize: '12px', marginTop: '4px' }}>
+          <div style={{ color: '#f44336', fontSize: '12px', paddingLeft: '12px', paddingBottom: '8px' }}>
             {pathError}
           </div>
         )}

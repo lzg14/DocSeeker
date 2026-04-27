@@ -13,6 +13,8 @@ const MAX_FILE_SIZE = 100 * 1024 * 1024  // 100MB - 超过则跳过内容提取
 const MAX_ZIP_INTERNAL_SIZE = 50 * 1024 * 1024  // 50MB - ZIP 内单个文件超过则跳过
 // 超时设置
 const TIMEOUT_MS = 15000  // 统一 15 秒超时
+// 嵌套压缩包深度限制
+const MAX_ARCHIVE_DEPTH = 3  // 最多允许 3 层嵌套压缩包
 // ZIP 文件头魔数
 const ZIP_MAGIC = Buffer.from([0x50, 0x4b, 0x03, 0x04])  // "PK\x03\x04"
 // RAR 文件头魔数（RAR 4.x / 5.x 签名相同）

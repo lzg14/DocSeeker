@@ -17,7 +17,7 @@ import { Worker } from 'worker_threads'
 import log from 'electron-log/main'
 import Database from 'better-sqlite3'
 import Fuse from 'fuse.js'
-import { getAppSetting, setAppSetting } from './config'
+import { getAppSetting, setAppSetting, getDataPath } from './config'
 
 // ============ Types ============
 
@@ -89,7 +89,6 @@ const SPEED_TEST_SIZE_MB = 256  // 256MB sequential read test
 // ============ Paths ============
 
 function getShardsDir(): string {
-  const { getDataPath } = require('./config')
   return join(getDataPath(), SHARD_DIR)
 }
 
@@ -456,7 +455,6 @@ export async function initShardManager(): Promise<void> {
     }
 
     // Ensure data directory exists
-    const { getDataPath } = require('./config')
     const dataDir = getDataPath()
     if (!existsSync(dataDir)) {
       mkdirSync(dataDir, { recursive: true })
@@ -1386,6 +1384,7 @@ export function getFolderStatsFromShards(folderPath: string): { fileCount: numbe
   let totalCount = 0
   let totalSize = 0
   const readyShards = getReadyShards()
+  log.info(`[ShardManager] getFolderStatsFromShards: folder="${folderPath}", prefix="${prefix}", readyShards=${readyShards.length}`)
   for (const shard of readyShards) {
     try {
       const db = new Database(shard.dbPath, { readonly: true })
@@ -1394,11 +1393,13 @@ export function getFolderStatsFromShards(folderPath: string): { fileCount: numbe
       if (row) {
         totalCount += row.count
         totalSize += row.total_size
+        log.info(`[ShardManager] getFolderStatsFromShards: shard ${shard.id} matched ${row.count} files`)
       }
       db.close()
     } catch (err) {
       log.warn(`[ShardManager] getFolderStatsFromShards failed on shard ${shard.id}:`, err)
     }
   }
+  log.info(`[ShardManager] getFolderStatsFromShards: total=${totalCount} files, size=${totalSize}`)
   return { fileCount: totalCount, totalSize }
 }
