@@ -69,13 +69,17 @@ export interface SearchOptions {
 }
 
 export interface FileRecord {
+  id?: number
   path: string
   name: string
   size: number
   hash: string | null
   file_type: string | null
   content: string | null
-  is_supported?: boolean
+  created_at?: string
+  updated_at?: string
+  is_supported?: number | boolean  // SQLite returns number, TypeScript expects boolean
+  match_type?: 'content' | 'filename' | 'both' | 'fuzzy'
 }
 
 // ============ Constants ============
@@ -874,8 +878,8 @@ export interface FuzzySearchResult {
   content: string | null
   created_at: string
   updated_at: string
-  is_supported: boolean | null
-  match_type?: string
+  is_supported: number | boolean | undefined
+  match_type?: 'filename' | 'content' | 'both' | 'fuzzy'
   rank?: number
   fuzzyScore?: number  // 0 = 完美匹配, 1 = 最差
 }

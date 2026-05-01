@@ -363,7 +363,7 @@ export function registerIpcHandlers(): void {
     const monitorEnabled = getAppSetting<boolean>('realtimeMonitor', false)
     if (monitorEnabled && usnWatcher) {
       const allDirs = getAllScannedFolders().map(f => f.path.replace(/\\/g, '/'))
-      usnWatcher.send({ type: 'update_dirs', dirs: allDirs })
+      usnWatcher.updateDirs(allDirs)
     }
 
     return getScannedFolderByPath(folderPath) ?? null
@@ -382,7 +382,7 @@ export function registerIpcHandlers(): void {
           .filter(f => f.id !== id)
           .map(f => f.path.replace(/\\/g, '/'))
         if (remainingDirs.length > 0) {
-          usnWatcher.send({ type: 'update_dirs', dirs: remainingDirs })
+          usnWatcher.updateDirs(remainingDirs)
         } else {
           usnWatcher.stop()
         }

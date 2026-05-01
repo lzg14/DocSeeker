@@ -401,10 +401,6 @@ app.whenReady().then(async () => {
   registerIpcHandlers()
   log.info('IPC handlers registered')
 
-  ipcMain.handle('window-hide-floating', async () => {
-    if (floatingWindow) floatingWindow.hide()
-  })
-
   app.on('browser-window-created', (_, window) => {
     optimizer.watchWindowShortcuts(window)
   })
@@ -479,7 +475,6 @@ app.on('before-quit', () => {
   log.info('Application quitting...')
   ;app.isQuitting = true
   globalShortcut.unregisterAll()
-  stopUpdater()
   usnWatcher.stop()
   closeAllShards()
   closeDatabase()

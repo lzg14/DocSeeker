@@ -23,7 +23,8 @@ import {
   closeAllShards,
   getFolderStatsFromShards,
   type SearchOptions,
-  type SearchResult
+  type SearchResult,
+  type FileRecord
 } from './shardManager'
 import {
   getAllScannedFolders,
@@ -69,9 +70,13 @@ export function closeDatabase(): void {
   log.info('[Database] Closed')
 }
 
-// ============ Re-export types and functions from config ============
+// ============ Re-export types and functions ============
 
-export type { ScannedFolder, SavedSearch, SearchHistoryEntry, SearchOptions, SearchResult, Tag }
+// Types from shardManager (re-exported here for backward compatibility)
+export type { SearchResult, SearchOptions, FuzzySearchResult } from './shardManager'
+
+// Types from meta
+export type { ScannedFolder, SavedSearch, SearchHistoryEntry, Tag } from './meta'
 
 export {
   searchByFileName
@@ -107,21 +112,10 @@ export {
 
 export { getScanSettings, updateScanSettings } from './config'
 
-// ============ File operations (via shard manager) ============
+// Re-export FileRecord from shardManager for backward compatibility
+export type { FileRecord } from './shardManager'
 
-export interface FileRecord {
-  id?: number
-  path: string
-  name: string
-  size: number
-  hash: string | null
-  file_type: string | null
-  content: string | null
-  created_at?: string
-  updated_at?: string
-  is_supported?: boolean
-  match_type?: 'content' | 'filename' | 'both'
-}
+// ============ File operations (via shard manager) ============
 
 export function insertFile(file: FileRecord): number {
   // In shard mode, inserts go through the IPC handler which manages shards.

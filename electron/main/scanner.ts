@@ -226,8 +226,9 @@ async function extractTextFromXps(filePath: string): Promise<string> {
 
     // XPS document structure: Documents/1/Pages/*.fpage contain page XML
     for (const [name, file] of Object.entries(zip.files)) {
-      if (file.dir || !name.endsWith('.fpage')) continue
-      const pageXml = await file.async('string')
+      const zipObject = file as { dir?: boolean; async: (type: string) => Promise<string> }
+      if (zipObject.dir || !name.endsWith('.fpage')) continue
+      const pageXml = await zipObject.async('string')
       // Extract text from Glyphs elements (XPS text rendering unit)
       const glyphMatches = pageXml.match(/<Glyphs[^>]*UnicodeString="([^"]*)"[^>]*>/gi) || []
       for (const m of glyphMatches) {
@@ -386,12 +387,14 @@ async function extractTextFromMbox(filePath: string): Promise<string> {
 async function extractTextFromPst(filePath: string): Promise<string> {
   try {
     const { PSTFile, PSTMessage, PSTFolder } = require('pst-extractor')
+    type PSTFolderType = InstanceType<typeof PSTFolder>
+    type PSTMessageType = InstanceType<typeof PSTMessage>
     const pstFile = new PSTFile(filePath)
     const store = pstFile.getMessageStore()
     const texts: string[] = []
 
     // Recursively process all folders
-    function processFolder(folder: PSTFolder, depth: number): void {
+    function processFolder(folder: PSTFolderType, depth: number): void {
       const indent = '  '.repeat(depth)
       if (depth > 0 && folder.displayName) {
         log.info(`[PST] Processing folder: ${indent}${folder.displayName}`)
@@ -399,7 +402,7 @@ async function extractTextFromPst(filePath: string): Promise<string> {
 
       // Process emails in this folder
       if (folder.contentCount > 0) {
-        let email: PSTMessage | null = folder.getNextChild()
+        let email: PSTMessageType | null = folder.getNextChild()
         while (email) {
           const emailData: string[] = []
 
@@ -434,7 +437,7 @@ async function extractTextFromPst(filePath: string): Promise<string> {
 
       // Process subfolders
       if (folder.hasSubfolders) {
-        const childFolders: PSTFolder[] = folder.getSubFolders()
+        const childFolders: PSTFolderType[] = folder.getSubFolders()
         for (const child of childFolders) {
           processFolder(child, depth + 1)
         }
@@ -610,13 +613,13 @@ async function extractTextFromRar(filePath: string, depth = 0): Promise<string> 
     }
 
     // 解压 RAR
-    const extractor = await createExtractorFromData(data)
+    const extractor = await createExtractorFromData({ data: data as unknown as ArrayBuffer })
     const list = extractor.getFileList()
     const files = [...list.fileHeaders]
     const texts: string[] = []
 
     for (const header of files) {
-      if (header.flags.dir) continue  // 跳过目录
+      if (header.flags.directory) continue  // 跳过目录
       const name = header.name
       const baseName = name.split('/').pop() || name
       if (baseName.startsWith('.')) continue
@@ -626,8 +629,9 @@ async function extractTextFromRar(filePath: string, depth = 0): Promise<string> 
       if (ext === '.rar') {
         try {
           const extracted = extractor.extract({ files: [name] })
-          if (extracted.files[0]) {
-            const uint8 = new Uint8Array(extracted.files[0].stream)
+          const extractedFiles = extracted.files as unknown as { stream: Uint8Array }[]
+          if (extractedFiles[0]) {
+            const uint8 = new Uint8Array(extractedFiles[0].stream)
             const tmpPath = filePath + '.nested.' + baseName
             fs.writeFileSync(tmpPath, Buffer.from(uint8))
             try {
@@ -647,8 +651,9 @@ async function extractTextFromRar(filePath: string, depth = 0): Promise<string> 
       if (ext === '.zip') {
         try {
           const extracted = extractor.extract({ files: [name] })
-          if (extracted.files[0]) {
-            const uint8 = new Uint8Array(extracted.files[0].stream)
+          const extractedFiles = extracted.files as unknown as { stream: Uint8Array }[]
+          if (extractedFiles[0]) {
+            const uint8 = new Uint8Array(extractedFiles[0].stream)
             const tmpPath = filePath + '.nested.' + baseName
             fs.writeFileSync(tmpPath, Buffer.from(uint8))
             try {
@@ -674,8 +679,9 @@ async function extractTextFromRar(filePath: string, depth = 0): Promise<string> 
 
       try {
         const extracted = extractor.extract({ files: [name] })
-        if (extracted.files[0]) {
-          const uint8 = new Uint8Array(extracted.files[0].stream)
+        const extractedFiles = extracted.files as unknown as { stream: Uint8Array }[]
+        if (extractedFiles[0]) {
+          const uint8 = new Uint8Array(extractedFiles[0].stream)
           const buf = Buffer.from(uint8)
           const tmpPath = filePath + '.extracted.' + baseName.replace(/[^a-zA-Z0-9.]/, '_')
           fs.writeFileSync(tmpPath, buf)

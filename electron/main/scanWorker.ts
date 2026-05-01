@@ -1,5 +1,6 @@
 import { parentPort, workerData } from 'worker_threads'
 import fs from 'fs/promises'
+import fsSync from 'fs'
 import path from 'path'
 import crypto from 'crypto'
 import log from 'electron-log/main'
@@ -154,11 +155,11 @@ async function extractTextFromDocx(filePath: string, fileSize?: number): Promise
   try {
     const mammoth = require('mammoth')
     const extractPromise = mammoth.extractRawText({ path: filePath })
-    const result = await withTimeout(extractPromise, TIMEOUT_MS)
+    const result = await withTimeout(extractPromise, TIMEOUT_MS) as { value?: string }
     log.info(`[EXTRACT] DOCX done: ${Date.now() - startTime}ms`)
     return result.value || ''
   } catch (error) {
-    log.warn(`[WARN] DOCX failed: ${error.message}`)
+    log.warn(`[WARN] DOCX failed: ${(error as Error).message}`)
     return ''
   }
 }
@@ -171,7 +172,8 @@ async function extractTextFromXlsx(filePath: string, fileSize?: number): Promise
   }
   // ZIP 头部检测
   try {
-    const header = await fs.readFile(filePath, { length: 4 })
+    const data = fsSync.readFileSync(filePath)
+    const header = data.slice(0, 4)
     if (!isValidZip(header)) {
       log.warn(`[XLSX] Skip invalid ZIP header: ${filePath}`)
       return ''
@@ -206,7 +208,7 @@ async function extractTextFromXlsx(filePath: string, fileSize?: number): Promise
 
     return text
   } catch (error) {
-    log.warn(`[WARN] XLSX failed: ${error.message}`)
+    log.warn(`[WARN] XLSX failed: ${(error as Error).message}`)
     return ''
   }
 }
@@ -222,11 +224,11 @@ async function extractTextFromPdf(filePath: string, fileSize?: number): Promise<
     const pdfParse = require('pdf-parse')
     const dataBuffer = await fs.readFile(filePath)
     const parsePromise = pdfParse(dataBuffer)
-    const data = await withTimeout(parsePromise, TIMEOUT_MS)
+    const data = await withTimeout(parsePromise, TIMEOUT_MS) as { text?: string }
     log.info(`[EXTRACT] PDF done: ${Date.now() - startTime}ms`)
     return data.text || ''
   } catch (error) {
-    log.warn(`[WARN] PDF failed: ${error.message}`)
+    log.warn(`[WARN] PDF failed: ${(error as Error).message}`)
     return ''
   }
 }
@@ -248,7 +250,7 @@ async function extractTextFromPptx(filePath: string, fileSize?: number): Promise
       return ''
     }
 
-    const zip = await withTimeout(JSZip.loadAsync(data), TIMEOUT_MS)
+    const zip = await withTimeout(JSZip.loadAsync(data), TIMEOUT_MS) as { files: Record<string, { async: (type: string) => Promise<string> }> }
     log.info(`[EXTRACT] PPTX done: ${Date.now() - startTime}ms, ${Object.keys(zip.files).length} files`)
 
     let text = ''
@@ -257,7 +259,7 @@ async function extractTextFromPptx(filePath: string, fileSize?: number): Promise
     )
 
     for (const slideFile of slideFiles) {
-      const slideContent = await zip.file(slideFile)?.async('string')
+      const slideContent = await zip.files[slideFile]?.async('string')
       if (slideContent) {
         const matches = slideContent.match(/<a:t>([^<]*)<\/a:t>/g)
         if (matches) {
@@ -268,7 +270,7 @@ async function extractTextFromPptx(filePath: string, fileSize?: number): Promise
 
     return text
   } catch (error) {
-    log.warn(`[WARN] PPTX failed: ${error.message}`)
+    log.warn(`[WARN] PPTX failed: ${(error as Error).message}`)
     return ''
   }
 }
@@ -308,13 +310,13 @@ async function extractTextFromOdf(filePath: string, fileSize?: number): Promise<
       log.warn(`[ODF] Skip invalid ZIP header: ${filePath}`)
       return ''
     }
-    const zip = await withTimeout(JSZip.loadAsync(data), TIMEOUT_MS)
-    const contentXml = await zip.file('content.xml')?.async('string')
+    const zip = await withTimeout(JSZip.loadAsync(data), TIMEOUT_MS) as { files: Record<string, { async: (type: string) => Promise<string> }> }
+    const contentXml = await zip.files['content.xml']?.async('string')
     if (!contentXml) return ''
     const textMatches = contentXml.match(/<text:[pwhs][^>]*>([^<]*)<\/text:[pwhs]>/g) || []
     return textMatches.map((m: string) => m.replace(/<[^>]+>/g, '')).filter((t: string) => t.trim().length > 0).join('\n')
   } catch (error) {
-    log.warn(`[WARN] ODF failed: ${error.message}`)
+    log.warn(`[WARN] ODF failed: ${(error as Error).message}`)
     return ''
   }
 }
@@ -334,10 +336,10 @@ async function extractTextFromChm(filePath: string, fileSize?: number): Promise<
       log.warn(`[CHM] Skip invalid ZIP header: ${filePath}`)
       return ''
     }
-    const zip = await withTimeout(JSZip.loadAsync(data), TIMEOUT_MS)
+    const zip = await withTimeout(JSZip.loadAsync(data), TIMEOUT_MS) as { files: Record<string, { dir: boolean, async: (type: string) => Promise<string> }> }
     const texts: string[] = []
 
-    for (const [name, file] of Object.entries(zip.files) as [string, { dir: boolean, async: (type: string) => Promise<string> }][]) {
+    for (const [name, file] of Object.entries(zip.files)) {
       if (file.dir) continue
       if (!name.endsWith('.html') && !name.endsWith('.htm')) continue
       const htmlContent = await file.async('string')
@@ -426,14 +428,16 @@ async function extractTextFromMbox(filePath: string): Promise<string> {
 async function extractTextFromPst(filePath: string): Promise<string> {
   try {
     const { PSTFile, PSTMessage, PSTFolder } = require('pst-extractor')
+    type PSTFolderType = InstanceType<typeof PSTFolder>
+    type PSTMessageType = InstanceType<typeof PSTMessage>
     const pstFile = new PSTFile(filePath)
     const texts: string[] = []
 
     // Recursively process all folders
-    function processFolder(folder: PSTFolder): void {
+    function processFolder(folder: PSTFolderType): void {
       // Process emails in this folder
       if (folder.contentCount > 0) {
-        let email: PSTMessage | null = folder.getNextChild()
+        let email: PSTMessageType | null = folder.getNextChild()
         while (email) {
           const emailData: string[] = []
 
@@ -492,11 +496,13 @@ async function extractTextFromEpub(filePath: string, fileSize?: number): Promise
       log.warn(`[EPUB] Skip invalid ZIP header: ${filePath}`)
       return ''
     }
-    const zip = await withTimeout(JSZip.loadAsync(data), TIMEOUT_MS)
+    const zip = await withTimeout(JSZip.loadAsync(data), TIMEOUT_MS) as {
+      files: Record<string, { async: (type: string) => Promise<string> }>
+    }
     const texts: string[] = []
 
     // Find content.opf via META-INF/container.xml
-    const containerXml = zip.file('META-INF/container.xml')
+    const containerXml = zip.files['META-INF/container.xml']
     if (!containerXml) return ''
     const containerContent = await containerXml.async('string')
     const rootfileMatch = containerContent.match(/full-path="([^"]+)"/)
@@ -505,7 +511,7 @@ async function extractTextFromEpub(filePath: string, fileSize?: number): Promise
     const opfDir = opfPath.includes('/') ? opfPath.substring(0, opfPath.lastIndexOf('/') + 1) : ''
 
     // Parse content.opf
-    const opfFile = zip.file(opfPath)
+    const opfFile = zip.files[opfPath]
     if (!opfFile) return ''
     const opfContent = await opfFile.async('string')
 
@@ -522,7 +528,7 @@ async function extractTextFromEpub(filePath: string, fileSize?: number): Promise
       const href = manifestItems[itemId]
       if (!href) continue
       const chapterPath = opfDir + href
-      const chapterFile = zip.file(chapterPath)
+      const chapterFile = zip.files[chapterPath]
       if (!chapterFile) continue
       const chapterContent = await chapterFile.async('string')
       const text = chapterContent
@@ -636,7 +642,9 @@ async function extractTextFromVsd(filePath: string): Promise<string> {
       const JSZip = require('jszip')
       const data = await fs.readFile(filePath)
       if (!isValidZip(data)) return ''
-      const zip = await withTimeout(JSZip.loadAsync(data), TIMEOUT_MS)
+      const zip = await withTimeout(JSZip.loadAsync(data), TIMEOUT_MS) as {
+        files: Record<string, { dir: boolean; async: (type: string) => Promise<string> }>
+      }
       const texts: string[] = []
 
       // VSDX contains pages in word/document.xml or drawings
@@ -670,11 +678,13 @@ async function extractTextFromPages(filePath: string): Promise<string> {
     const JSZip = require('jszip')
     const data = await fs.readFile(filePath)
     if (!isValidZip(data)) return ''
-    const zip = await withTimeout(JSZip.loadAsync(data), TIMEOUT_MS)
+    const zip = await withTimeout(JSZip.loadAsync(data), TIMEOUT_MS) as {
+      files: Record<string, { async: (type: string) => Promise<string> }>
+    }
     const texts: string[] = []
 
     // Pages is a ZIP containing index.xml or document.archive
-    const indexXml = zip.file('index.xml')
+    const indexXml = zip.files['index.xml']
     if (indexXml) {
       const content = await indexXml.async('string')
       // Extract text from paragraphs
@@ -707,10 +717,12 @@ async function extractTextFromZip(filePath: string, depth = 0): Promise<string> 
       return ''
     }
 
-    const zip = await withTimeout(JSZip.loadAsync(data), TIMEOUT_MS)
+    const zip = await withTimeout(JSZip.loadAsync(data), TIMEOUT_MS) as {
+      files: Record<string, { dir: boolean; async: (type: string) => Promise<string> }>
+    }
     const texts: string[] = []
 
-    for (const [name, file] of Object.entries(zip.files) as [string, { dir: boolean, async: (type: string) => Promise<string> }][]) {
+    for (const [name, file] of Object.entries(zip.files)) {
       if (file.dir) continue
       const baseName = name.split('/').pop() || name
       if (baseName.startsWith('.') || baseName.startsWith('_')) continue
@@ -782,13 +794,13 @@ async function extractTextFromRar(filePath: string, depth = 0): Promise<string> 
     }
 
     // 解压 RAR
-    const extractor = await createExtractorFromData(data)
+    const extractor = await createExtractorFromData({ data: data as unknown as ArrayBuffer })
     const list = extractor.getFileList()
     const files = [...list.fileHeaders]
     const texts: string[] = []
 
     for (const header of files) {
-      if (header.flags.dir) continue  // 跳过目录
+      if (header.flags.directory) continue  // 跳过目录
       const name = header.name
       const baseName = name.split('/').pop() || name
       if (baseName.startsWith('.')) continue
@@ -798,8 +810,9 @@ async function extractTextFromRar(filePath: string, depth = 0): Promise<string> 
       if (ext === '.rar') {
         try {
           const extracted = extractor.extract({ files: [name] })
-          if (extracted.files[0]) {
-            const uint8 = new Uint8Array(extracted.files[0].stream)
+          const extractedFiles = extracted.files as unknown as { stream: Uint8Array }[]
+          if (extractedFiles[0]) {
+            const uint8 = new Uint8Array(extractedFiles[0].stream)
             const tmpPath = filePath + '.nested.' + baseName
             await fs.writeFile(tmpPath, Buffer.from(uint8))
             try {
@@ -819,8 +832,9 @@ async function extractTextFromRar(filePath: string, depth = 0): Promise<string> 
       if (ext === '.zip') {
         try {
           const extracted = extractor.extract({ files: [name] })
-          if (extracted.files[0]) {
-            const uint8 = new Uint8Array(extracted.files[0].stream)
+          const extractedFiles = extracted.files as unknown as { stream: Uint8Array }[]
+          if (extractedFiles[0]) {
+            const uint8 = new Uint8Array(extractedFiles[0].stream)
             const tmpPath = filePath + '.nested.' + baseName
             await fs.writeFile(tmpPath, Buffer.from(uint8))
             try {

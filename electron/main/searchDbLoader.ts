@@ -7,8 +7,7 @@ import { parentPort } from 'worker_threads'
 import Database from 'better-sqlite3'
 import path from 'path'
 import log from 'electron-log/main'
-
-log.initialize()
+// electron-log v5 自动初始化，不需要手动调用 log.initialize()
 
 // Use env var to avoid needing electron app instance in worker
 const appDataPath = process.env.APPDATA || process.env.HOME || ''
