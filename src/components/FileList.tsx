@@ -175,82 +175,78 @@ function FileList({
     )
   }
 
-  // 渲染文件列表（不再包 wrapper，由 SearchPage 决定包装）
-  return (
-        <>
-          <div className="file-table-header">
-            <div className="file-name-header">{t('filelist.name')}</div>
-            <div>{t('filelist.type')}</div>
-            <div>{t('filelist.size')}</div>
-            <div>{t('filelist.modified')}</div>
-          </div>
-          {files.map((file) => (
-            <div
-              key={file.id}
-              className={`file-row ${selectedFile?.id === file.id ? 'selected' : ''}`}
-              onClick={() => onSelectFile(file)}
-              onContextMenu={(e) => handleContextMenu(e, file)}
-            >
-              <div className="file-name-cell">
-                <span>{getFileIcon(file.is_supported === false ? 'unsupported' : file.file_type)}</span>
-                <div className="file-name-info">
-                  <span className="file-name-text" title={file.path}>
-                    {highlightName(file.name, searchQuery)}
-                    <MatchTypeBadge matchType={file.match_type} />
-                  </span>
-                  {snippets[file.path] && (
-                    <span
-                      className="file-snippet"
-                      dangerouslySetInnerHTML={{ __html: snippets[file.path] }}
-                    />
-                  )}
-                </div>
-              </div>
-              <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>{file.file_type || '-'}</div>
-              <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>{formatSize(file.size)}</div>
-              <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>{formatDate(file.updated_at)}</div>
-            </div>
-          ))}
-    </>
-  )
-
-  // 右键菜单（始终渲染，由 contextMenu.visible 控制显示）
-  if (contextMenu.visible && contextMenu.file) {
+  // 渲染文件列表和右键菜单
   const isPdfFile = contextMenu.file?.file_type === 'pdf'
 
   return (
-    <div
-      ref={menuRef}
-      className="context-menu"
-      style={{ left: contextMenu.x, top: contextMenu.y }}
-      onClick={e => e.stopPropagation()}
-    >
-      <div className="context-menu-item" onClick={handleShowInFolder}>
-        <span>📁</span> {t('detail.showInFolder')}
+    <>
+      <div className="file-table-header">
+        <div className="file-name-header">{t('filelist.name')}</div>
+        <div>{t('filelist.type')}</div>
+        <div>{t('filelist.size')}</div>
+        <div>{t('filelist.modified')}</div>
       </div>
-      <div className="context-menu-item" onClick={handleOpenFile}>
-        <span>📂</span> {t('detail.openFile')}
-      </div>
-      {isPdfFile && (
-        <>
-          <div className="context-menu-separator" />
-          <div className="context-menu-item" onClick={handleExtractPdfOcr}>
-            <span>🔍</span> {t('contextMenu.extractOcr')}
+      {files.map((file) => (
+        <div
+          key={file.id}
+          className={`file-row ${selectedFile?.id === file.id ? 'selected' : ''}`}
+          onClick={() => onSelectFile(file)}
+          onContextMenu={(e) => handleContextMenu(e, file)}
+        >
+          <div className="file-name-cell">
+            <span>{getFileIcon(file.is_supported === false ? 'unsupported' : file.file_type)}</span>
+            <div className="file-name-info">
+              <span className="file-name-text" title={file.path}>
+                {highlightName(file.name, searchQuery)}
+                <MatchTypeBadge matchType={file.match_type} />
+              </span>
+              {snippets[file.path] && (
+                <span
+                  className="file-snippet"
+                  dangerouslySetInnerHTML={{ __html: snippets[file.path] }}
+                />
+              )}
+            </div>
           </div>
-        </>
-      )}
-      <div className="context-menu-separator" />
-      <div className="context-menu-item" onClick={handleCopyPath}>
-        <span>📋</span> {t('contextMenu.copyPath')}
-      </div>
-      <div className="context-menu-item" onClick={handleCopyName}>
-        <span>📝</span> {t('contextMenu.copyName')}
-      </div>
-    </div>
-  )
-}
+          <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>{file.file_type || '-'}</div>
+          <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>{formatSize(file.size)}</div>
+          <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>{formatDate(file.updated_at)}</div>
+        </div>
+      ))}
 
-return null
+      {/* 右键菜单 */}
+      {contextMenu.visible && contextMenu.file && (
+        <div
+          ref={menuRef}
+          className="context-menu"
+          style={{ left: contextMenu.x, top: contextMenu.y }}
+          onClick={e => e.stopPropagation()}
+        >
+          <div className="context-menu-item" onClick={handleShowInFolder}>
+            <span>📁</span> {t('detail.showInFolder')}
+          </div>
+          <div className="context-menu-item" onClick={handleOpenFile}>
+            <span>📂</span> {t('detail.openFile')}
+          </div>
+          {isPdfFile && (
+            <>
+              <div className="context-menu-separator" />
+              <div className="context-menu-item" onClick={handleExtractPdfOcr}>
+                <span>🔍</span> {t('contextMenu.extractOcr')}
+              </div>
+            </>
+          )}
+          <div className="context-menu-separator" />
+          <div className="context-menu-item" onClick={handleCopyPath}>
+            <span>📋</span> {t('contextMenu.copyPath')}
+          </div>
+          <div className="context-menu-item" onClick={handleCopyName}>
+            <span>📝</span> {t('contextMenu.copyName')}
+          </div>
+        </div>
+      )}
+    </>
+  )
 }
 
 export default FileList
