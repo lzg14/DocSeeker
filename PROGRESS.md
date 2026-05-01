@@ -114,7 +114,7 @@
 - [x] Apple iWork：Pages/Numbers/Keynote
 - [x] 70+ 种源代码和配置文件格式
 - [x] 图片元数据提取（EXIF 等）
-- [x] 图片 OCR 识别（PNG/JPG/PDF，支持中文/英文/日文/韩文）
+- [x] 图片 OCR 识别（PNG/JPG/PDF，支持中文/英文/日文/韩文，Windows.Media.Ocr → Tesseract 分层方案）
 
 ### 标签管理
 - [x] 文件标签（用户自定义标签分类）
@@ -171,7 +171,7 @@
 - 前端：React + TypeScript + CSS Variables
 - 后端：Electron + Node.js + better-sqlite3
 - 监控：Go + fsnotify（USN 文件监控 + 双击 Ctrl 热键）
-- OCR：Windows.Media.Ocr（Windows 10+ 内置，通过 windows-media-ocr CLI 调用）
+- OCR：Windows.Media.Ocr（Windows 10+，最高优先级）→ Tesseract（备选，需安装）
 - 构建：electron-vite + electron-builder
 
 ---

@@ -770,22 +770,119 @@ async function getOcrModule() {
 
 // OCR text extraction for images
 // Windows.Media.Ocr requires Windows 10+ (build 15063+)
+// Falls back to Tesseract OCR on older Windows or non-Windows platforms
 async function extractTextFromImageOcr(filePath: string): Promise<string> {
-  if (process.platform !== 'win32') return ''
+  const language = getAppSetting<string>('ocrLanguage', 'zh-CN')
+
+  // Try Windows.Media.Ocr first (best quality on Windows 10+)
+  if (process.platform === 'win32') {
+    try {
+      const ocrMod = await getOcrModule()
+      if (ocrMod) {
+        const { ocr } = ocrMod
+        const result = await ocr(filePath, { language })
+        if (result?.Text) {
+          log.info('[OCR] Windows.Media.Ocr success for', filePath)
+          return result.Text
+        }
+      }
+    } catch (err) {
+      log.warn('[OCR] Windows.Media.Ocr failed, trying Tesseract:', err)
+    }
+  }
+
+  // Fallback to Tesseract OCR
+  return await extractTextFromImageTesseract(filePath, language)
+}
+
+// Check if Tesseract is available
+let _tesseractChecked = false
+let _tesseractAvailable = false
+
+async function checkTesseractAvailable(): Promise<boolean> {
+  if (_tesseractChecked) return _tesseractAvailable
 
   try {
-    const ocrMod = await getOcrModule()
-    if (!ocrMod) return ''
-
-    const { ocr } = ocrMod
-    // Use system language or default to Chinese
-    const language = getAppSetting<string>('ocrLanguage', 'zh-CN')
-    const result = await ocr(filePath, { language })
-    return result.Text || ''
+    const { execSync } = require('child_process')
+    if (process.platform === 'win32') {
+      // Try common Windows Tesseract paths
+      const paths = [
+        'C:\\Program Files\\Tesseract-OCR\\tesseract.exe',
+        'C:\\Program Files (x86)\\Tesseract-OCR\\tesseract.exe',
+      ]
+      for (const tesseractPath of paths) {
+        try {
+          execSync(`"${tesseractPath}" --version`, { encoding: 'utf8', stdio: 'pipe' })
+          _tesseractAvailable = true
+          log.info('[OCR] Tesseract found at:', tesseractPath)
+          break
+        } catch {}
+      }
+    } else {
+      // Unix-like: just check if tesseract command exists
+      execSync('tesseract --version', { encoding: 'utf8', stdio: 'pipe' })
+      _tesseractAvailable = true
+      log.info('[OCR] Tesseract found in PATH')
+    }
   } catch (err) {
-    log.warn('[Scanner] OCR failed for', filePath, err)
+    _tesseractAvailable = false
+    log.warn('[OCR] Tesseract not available:', err)
+  }
+
+  _tesseractChecked = true
+  return _tesseractAvailable
+}
+
+// Extract text using Tesseract OCR
+async function extractTextFromImageTesseract(filePath: string, language: string): Promise<string> {
+  const available = await checkTesseractAvailable()
+  if (!available) {
+    log.warn('[OCR] Tesseract not available, skipping OCR for', filePath)
     return ''
   }
+
+  try {
+    const { exec } = require('child_process')
+    const { promisify } = require('util')
+    const execAsync = promisify(exec)
+
+    // Map our language codes to Tesseract codes
+    const langMap: Record<string, string> = {
+      'zh-CN': 'chi_sim',
+      'zh-TW': 'chi_tra',
+      'en': 'eng',
+      'ja': 'jpn',
+      'ko': 'kor',
+    }
+    const tesseractLang = langMap[language] || 'eng'
+
+    // Try Windows.Media.Ocr CLI path for better results
+    const ocrCliPath = getAppSetting<string>('ocrCliPath', '')
+    let cmd: string
+
+    if (process.platform === 'win32' && ocrCliPath) {
+      // Use windows-media-ocr CLI if available
+      cmd = ` "${ocrCliPath}" --language ${language} --file "${filePath}"`
+    } else {
+      // Use Tesseract directly
+      if (process.platform === 'win32') {
+        const tesseractPath = 'C:\\Program Files\\Tesseract-OCR\\tesseract.exe'
+        cmd = ` "${tesseractPath}" "${filePath}" stdout -l ${tesseractLang}`
+      } else {
+        cmd = `tesseract "${filePath}" stdout -l ${tesseractLang}`
+      }
+    }
+
+    const { stdout, stderr } = await execAsync(cmd, { timeout: 60000, encoding: 'utf8' })
+    if (stdout && stdout.trim().length > 0) {
+      log.info('[OCR] Tesseract success for', filePath)
+      return stdout.trim()
+    }
+  } catch (err) {
+    log.warn('[OCR] Tesseract failed for', filePath, err)
+  }
+
+  return ''
 }
 
 // Extract metadata from image files (EXIF, IPTC, XMP)
