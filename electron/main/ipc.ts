@@ -43,6 +43,7 @@ import {
   deleteFilesByFolderPrefixFromAllShardsAsync,
   cleanupOrphanedFilesAsync,
   getFolderStatsFromShards,
+  updateFileContentInAllShardsAsync,
   type FileRecord as ShardFileRecord
 } from './shardManager'
 
@@ -870,7 +871,13 @@ export function registerIpcHandlers(): void {
   })
 
   // PDF OCR 提取（用于手动触发单文件 OCR，不走扫描流程）
-  ipcMain.handle('extract-pdf-ocr', async (_, filePath: string): Promise<string> => {
+  interface OcrResult {
+    success: boolean
+    text: string
+    images: number
+    error?: string
+  }
+  ipcMain.handle('extract-pdf-ocr', async (_, filePath: string): Promise<OcrResult> => {
     const cliPath = join(__dirname, '..', '..', 'node_modules', 'windows-media-ocr', 'dist', 'assets', 'windows_media_ocr_cli.exe')
     const scriptPath = join(__dirname, 'extractOcr.py')
     const pythonExe = process.platform === 'win32' ? 'python' : 'python3'
@@ -888,23 +895,32 @@ export function registerIpcHandlers(): void {
       proc.stdout.on('data', (data: Buffer) => { stdout += data.toString() })
       proc.stderr.on('data', (data: Buffer) => { stderr += data.toString() })
 
-      proc.on('close', (code: number) => {
+      proc.on('close', async (code: number) => {
         if (code !== 0 || stderr.trim()) {
           log.warn('[extract-pdf-ocr] error:', stderr.trim())
-          resolve('')
+          resolve({ success: false, text: '', images: 0, error: stderr.trim() || 'Process exited with non-zero' })
           return
         }
         try {
           const result = JSON.parse(stdout.trim())
-          resolve(result.text || '')
+          const text = result.text || ''
+          const images = result.images || 0
+
+          // 将 OCR 结果写入数据库
+          if (text.trim() && images > 0) {
+            await updateFileContentInAllShardsAsync(filePath, text.trim())
+            log.info(`[extract-pdf-ocr] Updated DB with ${images} images OCR result for: ${filePath}`)
+          }
+
+          resolve({ success: true, text, images })
         } catch {
-          resolve('')
+          resolve({ success: false, text: '', images: 0, error: 'Failed to parse OCR output' })
         }
       })
 
       proc.on('error', (err: Error) => {
         log.warn('[extract-pdf-ocr] spawn error:', err.message)
-        resolve('')
+        resolve({ success: false, text: '', images: 0, error: err.message })
       })
     })
   })
