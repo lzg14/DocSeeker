@@ -407,9 +407,16 @@ async function loadExistingShards(): Promise<void> {
   shards.sort((a, b) => a.id - b.id)
   log.info(`[ShardManager] Found ${shards.length} existing shards`)
 
-  // Load shards in parallel up to config.parallelWorkers
-  if (config && shards.length > 0) {
-    const maxParallel = config.parallelWorkers
+  // Ensure at least one shard is available
+  if (shards.length === 0) {
+    // No existing shards — create the initial one synchronously
+    const initialShard = await openNextShard()
+    if (initialShard) {
+      log.info(`[ShardManager] Created initial shard ${initialShard.id}`)
+    }
+  } else {
+    // Load existing shards in parallel up to config.parallelWorkers
+    const maxParallel = config?.parallelWorkers ?? 4
     for (let i = 0; i < shards.length; i += maxParallel) {
       const batch = shards.slice(i, i + maxParallel)
       const promises = batch.map(s => {
