@@ -47,3 +47,7 @@ skills-lock.json
 # Superpowers
 .superpowers/
 tools/
+
+# Test artifacts
+tests/unit/test_thumb_*/
+!tests/unit/*.test.ts

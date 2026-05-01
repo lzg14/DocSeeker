@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<DocSeeker>
+  <TestDocument>
+    <title>DocSeeker XML Test</title>
+    <description>This is a test XML file for DocSeeker format testing</description>
+    <version>1.0.0</version>
+    <features>
+      <feature>Full-text search</feature>
+      <feature>Real-time monitoring</feature>
+      <feature>Multiple format support</feature>
+    </features>
+    <config>
+      <theme>dark</theme>
+      <language>zh-CN</language>
+    </config>
+  </TestDocument>
+</DocSeeker>

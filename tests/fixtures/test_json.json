@@ -1,0 +1,16 @@
+{
+  "name": "DocSeeker Test Document",
+  "version": "1.0.0",
+  "description": "This is a test JSON file for DocSeeker format testing",
+  "features": [
+    "Full-text search",
+    "Real-time monitoring",
+    "Multiple format support"
+  ],
+  "config": {
+    "theme": "dark",
+    "language": "zh-CN",
+    "autoScan": true
+  },
+  "test": "DocSeeker"
+}

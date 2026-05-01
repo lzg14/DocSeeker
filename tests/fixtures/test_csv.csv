@@ -1,0 +1,4 @@
+name,type,description,test
+DocSeeker,search,Document search tool,DocSeeker
+FileIndexer,index,File indexing system,Test
+ContentScanner,scan,Content extraction,Pass

@@ -1,0 +1,20 @@
+# DocSeeker TOML Test
+title = "DocSeeker Configuration"
+
+[owner]
+name = "DocSeeker"
+bio = "Personal Document Search Tool"
+keywords = ["文档", "搜索", "全文检索"]
+
+[database]
+host = "localhost"
+port = 5432
+name = "docseeker"
+
+[features]
+fuzzy_search = true
+auto_update = true
+
+[settings.theme]
+primary = "blue"
+secondary = "gray"

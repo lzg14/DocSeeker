@@ -1,0 +1,14 @@
+WEBVTT
+
+DocSeeker VTT Test - WebVTT 字幕格式测试
+
+00:00:01.000 --> 00:00:04.000
+关键词: WebVTT 字幕解析
+
+00:00:05.000 --> 00:00:08.000
+This is a WebVTT subtitle test.
+中文字幕测试
+
+00:00:09.000 --> 00:00:12.000
+End of test.
+测试结束。

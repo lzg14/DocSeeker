@@ -1,0 +1,19 @@
+# DocSeeker YAML Test
+application: DocSeeker
+version: "1.0.0"
+
+database:
+  host: localhost
+  port: 5432
+  name: docseeker
+
+settings:
+  theme: dark
+  language: zh-CN
+  keywords:
+    - 文档搜索
+    - 全文检索
+
+features:
+  - fuzzy_search: true
+  - auto_update: true
