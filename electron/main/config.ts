@@ -156,9 +156,36 @@ function migrateFromDb(dbPath: string): void {
 // ============ Init ============
 
 export function initConfig(): void {
-  ensureConfigDir()
-  const configPath = getConfigPath()
-  const dbPath = join(getConfigDir(), 'config.db')
+  // First, try to load existing config.json to get custom data path
+  // This must be done before determining the config directory
+  const legacyConfigPath = join(getDefaultDataPath(), 'config.json')
+  const legacyDbPath = join(getDefaultDataPath(), 'config.db')
+
+  // Also check if a custom path was saved
+  let customDataPath: string | undefined
+  if (existsSync(legacyConfigPath)) {
+    try {
+      const raw = readFileSync(legacyConfigPath, 'utf-8')
+      const parsed = JSON.parse(raw)
+      customDataPath = parsed.app_settings?.dataPath as string | undefined
+    } catch {}
+  }
+
+  // Determine the actual config directory
+  let configDir: string
+  if (customDataPath && existsSync(customDataPath)) {
+    configDir = customDataPath
+  } else {
+    configDir = getDefaultDataPath()
+  }
+
+  // Ensure directory exists
+  if (!existsSync(configDir)) {
+    mkdirSync(configDir, { recursive: true })
+  }
+
+  const configPath = join(configDir, 'config.json')
+  const dbPath = join(configDir, 'config.db')
 
   // Migrate from config.db if it exists (backward compatibility)
   if (existsSync(dbPath)) {
@@ -180,12 +207,12 @@ export function initConfig(): void {
       if (parsed.app_settings) {
         store.app_settings = { ...parsed.app_settings }
       }
-      log.info('[Config] Loaded from config.json')
+      log.info('[Config] Loaded from config.json at:', configPath)
     } catch (err) {
       log.warn('[Config] Failed to parse config.json, using defaults:', err)
     }
   } else {
-    log.info('[Config] No config.json found, saving defaults')
+    log.info('[Config] No config.json found, saving defaults to:', configPath)
     saveStore()
   }
 }
