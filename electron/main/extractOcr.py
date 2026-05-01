@@ -69,10 +69,11 @@ def main():
             return
 
         all_texts = []
-        for img_path in img_paths:
+        for idx, img_path in enumerate(img_paths, 1):
             result = ocr_image(cli_path, img_path, args.lang)
             if result and result.get('Text'):
                 all_texts.append(result['Text'])
+            print(f'progress:{idx}/{len(img_paths)}', flush=True, file=sys.stderr)
 
         full_text = ' '.join(all_texts)
         print(json.dumps({"text": full_text, "images": len(img_paths), "error": None}))
