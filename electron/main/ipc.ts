@@ -175,6 +175,45 @@ export function registerIpcHandlers(): void {
     }
   })
 
+  // Export file content to text file
+  ipcMain.handle('export-file-content', async (_, sourcePath: string) => {
+    try {
+      // Get base name for default export file
+      const baseName = sourcePath.split(/[\/]/).pop() || 'export'
+
+      // Show save dialog with default name
+      const result = await dialog.showSaveDialog({
+        title: '导出文件内容',
+        defaultPath: `${baseName}.txt`,
+        filters: [
+          { name: 'Text', extensions: ['txt'] }
+        ]
+      })
+
+      if (result.canceled || !result.filePath) {
+        return { success: false, canceled: true }
+      }
+
+      // Extract content using scanner
+      const { extractTextFromFile } = await import('./scanner')
+      const content = await extractTextFromFile(sourcePath)
+
+      if (!content || content.trim().length === 0) {
+        return { success: false, error: '无法提取文件内容或文件内容为空' }
+      }
+
+      // Save to file
+      const fsPromises = await import('fs/promises')
+      await fsPromises.writeFile(result.filePath, content, 'utf-8')
+      log.info('[IPC] Exported file content:', sourcePath, '->', result.filePath)
+
+      return { success: true, savedPath: result.filePath }
+    } catch (err) {
+      log.error('[IPC] export-file-content error:', err)
+      return { success: false, error: (err as Error).message }
+    }
+  })
+
   // Search files (via shard manager)
   ipcMain.handle('search-files', async (_, query: string): Promise<FileRecord[]> => {
     if (query.trim()) addSearchHistory(query)
