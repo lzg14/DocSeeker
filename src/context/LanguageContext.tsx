@@ -176,6 +176,7 @@ const translations: Record<Language, Record<string, string>> = {
     'contextMenu.copyPath': '复制路径',
     'contextMenu.copyName': '复制文件名',
     'contextMenu.extractOcr': 'OCR 识别',
+    'contextMenu.exportContent': '导出文本内容',
     // OCR
     'ocr.extractingImages': '正在提取图片并识别...',
     'ocr.done': 'OCR 完成',
@@ -445,10 +446,11 @@ const translations: Record<Language, Record<string, string>> = {
     'contextMenu.copyPath': 'Copy Path',
     'contextMenu.copyName': 'Copy Filename',
     'contextMenu.extractOcr': 'OCR Recognition',
+    'contextMenu.exportContent': 'Export Text Content',
     // OCR
     'ocr.extractingImages': 'Extracting images and recognizing...',
     'ocr.done': 'OCR Complete',
-    'ocr.imagesProcessed': 'image(s) recognized, content index updated',
+    'ocr.imagesProcessed': '{count} image(s) recognized, content index updated',
     'ocr.noImagesFound': 'No recognizable images found',
     // Scan page
     'scan.title': 'Scan Directory',

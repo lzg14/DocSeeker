@@ -102,6 +102,27 @@ function FileList({
     setContextMenu(prev => ({ ...prev, visible: false }))
   }
 
+  const handleExportContent = async () => {
+    if (!contextMenu.file) return
+    const file = contextMenu.file
+    setContextMenu(prev => ({ ...prev, visible: false }))
+
+    try {
+      const result = await window.electron.exportFileContent(file.path)
+      if (result.success && result.savedPath) {
+        // 复制到剪贴板并提示
+        window.electron.clipboardWriteText(result.savedPath)
+        alert(`已导出到: ${result.savedPath}`)
+      } else if (result.canceled) {
+        // 用户取消，不做任何操作
+      } else {
+        alert(`导出失败: ${result.error || '未知错误'}`)
+      }
+    } catch (err) {
+      alert(`导出失败: ${err}`)
+    }
+  }
+
   const handleExtractPdfOcr = async () => {
     if (!contextMenu.file) return
     const file = contextMenu.file
@@ -264,6 +285,10 @@ function FileList({
           <div className="context-menu-item" onClick={handleCopyName}>
             <span>📝</span> {t('contextMenu.copyName')}
           </div>
+          <div className="context-menu-separator" />
+          <div className="context-menu-item" onClick={handleExportContent}>
+            <span>📤</span> {t('contextMenu.exportContent')}
+          </div>
         </div>
       )}
 
@@ -287,7 +312,7 @@ function FileList({
             <div>
               <div>✅ {t('ocr.done')}</div>
               <div style={{ fontSize: '12px', color: '#888', marginTop: '4px' }}>
-                {ocrStatus.result.images} {t('ocr.imagesProcessed')}
+                {t('ocr.imagesProcessed', { count: ocrStatus.result.images })}
               </div>
             </div>
           )}
