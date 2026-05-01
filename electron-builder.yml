@@ -30,6 +30,7 @@ nsis:
   shortcutName: ${productName}
   uninstallDisplayName: ${productName}
   createDesktopShortcut: always
+  icon: build/icon.ico
 mac:
   entitlementsInherit: build/entitlements.mac.plist
   extendInfo:
