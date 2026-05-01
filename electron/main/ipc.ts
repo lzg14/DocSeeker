@@ -869,6 +869,46 @@ export function registerIpcHandlers(): void {
     return getAllFileTags()
   })
 
+  // PDF OCR 提取（用于手动触发单文件 OCR，不走扫描流程）
+  ipcMain.handle('extract-pdf-ocr', async (_, filePath: string): Promise<string> => {
+    const cliPath = join(__dirname, '..', '..', 'node_modules', 'windows-media-ocr', 'dist', 'assets', 'windows_media_ocr_cli.exe')
+    const scriptPath = join(__dirname, 'extractOcr.py')
+    const pythonExe = process.platform === 'win32' ? 'python' : 'python3'
+    const lang = getAppSetting<string>('ocrLanguage', 'zh-Hans-CN')
+
+    return new Promise((resolve) => {
+      const { spawn } = require('child_process')
+      const proc = spawn(pythonExe, [scriptPath, filePath, cliPath, '--lang', lang], {
+        timeout: 300000
+      })
+
+      let stdout = ''
+      let stderr = ''
+
+      proc.stdout.on('data', (data: Buffer) => { stdout += data.toString() })
+      proc.stderr.on('data', (data: Buffer) => { stderr += data.toString() })
+
+      proc.on('close', (code: number) => {
+        if (code !== 0 || stderr.trim()) {
+          log.warn('[extract-pdf-ocr] error:', stderr.trim())
+          resolve('')
+          return
+        }
+        try {
+          const result = JSON.parse(stdout.trim())
+          resolve(result.text || '')
+        } catch {
+          resolve('')
+        }
+      })
+
+      proc.on('error', (err: Error) => {
+        log.warn('[extract-pdf-ocr] spawn error:', err.message)
+        resolve('')
+      })
+    })
+  })
+
   log.info('[IPC] All handlers registered')
 }
 

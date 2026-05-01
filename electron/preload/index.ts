@@ -193,6 +193,8 @@ export interface ElectronAPI {
   setOcrSettings: (settings: { enabled?: boolean; language?: string }) => Promise<void>
   // App control
   restartApp: () => Promise<void>
+  // PDF OCR extraction (manual single-file OCR)
+  extractPdfOcr: (filePath: string) => Promise<string>
 }
 
 export interface Tag {
@@ -367,6 +369,9 @@ const electronAPI: ElectronAPI = {
 
   // App control
   restartApp: () => ipcRenderer.invoke('restart-app'),
+
+  // PDF OCR extraction (manual single-file OCR)
+  extractPdfOcr: (filePath: string) => ipcRenderer.invoke('extract-pdf-ocr', filePath),
 
   // Monitor status
   getMonitorStatus: () => ipcRenderer.invoke('get-monitor-status'),
