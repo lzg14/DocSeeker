@@ -31,6 +31,7 @@ function GuidePage({ onNavigate }: GuidePageProps): JSX.Element {
               <li>{t('guide.feature10')}</li>
               <li>{t('guide.feature11')}</li>
               <li>{t('guide.feature12')}</li>
+              <li>{t('guide.feature13')}</li>
             </ul>
           </div>
         </div>

@@ -56,24 +56,42 @@
 ### 界面
 - [x] Electron 无边框窗口 + 自定义标题栏
 - [x] 左侧固定导航栏
-- [x] CSS Variables 主题系统（浅色/深色）
-- [x] 状态栏组件（索引文件数 + 扫描进度）
-- [x] 文件列表重构
+- [x] CSS Variables 主题系统（浅色/深色/跟随系统）
+- [x] 状态栏组件（索引文件数 + 监控状态）
+- [x] 文件列表重构（虚拟滚动）
 - [x] 文件预览区样式升级
 - [x] 搜索框样式升级
 - [x] 按钮样式统一（btn-primary / btn-secondary / btn-small / btn-danger）
 - [x] 自定义确认对话框（风格统一）
 
 ### 页面功能
-- [x] 搜索功能（全文检索）
+- [x] 搜索功能（全文检索 + SQLite FTS5 + BM25 相关性排序）
+- [x] 高级搜索语法（AND/OR/NOT/前缀/短语/正则）
 - [x] 词干提取搜索（Porter Stemmer）：搜索 "run" 自动匹配 "running/runs/run" 文档
 - [x] 字段限定搜索语法：`name:`（文件名）、`path:`（路径）、`ext:`（扩展名）
+- [x] 正则搜索模式：`/pattern/`
+- [x] 搜索历史（记录与快速复用）
+- [x] 保存的搜索（命名收藏）
+- [x] 去重功能（按 MD5 过滤重复文件）
+- [x] 模糊搜索（Fuse.js 容忍拼写错误）
+- [x] 二次筛选（结果中按路径/文件名筛选）
+- [x] 批量操作（移动/复制/删除）
+- [x] 文献引用卡片（提取关键词引用，支持导出 MD/TXT）
 - [x] 扫描目录（添加目录 + 开始扫描）
 - [x] 文件夹管理（增量扫描/完整扫描/删除）
 - [x] 语言切换（中/英文）
-- [x] 主题切换（浅色/深色）
+- [x] 主题切换（浅色/深色/跟随系统）
 - [x] 搜索页面切换时保留搜索状态
-- [x] 右键菜单（文件操作：在文件夹中显示、打开文件、复制路径/名称、导出文本内容）
+- [x] 搜索结果排序（相关性/大小/修改时间）
+- [x] 搜索结果导出（CSV/HTML/TXT）
+
+### 右键菜单功能
+- [x] 在文件夹中显示
+- [x] 打开文件（定位到关键词）
+- [x] 复制路径
+- [x] 复制文件名
+- [x] OCR 识别（图片/PDF 中的文字提取）
+- [x] 导出文本内容（文件内容保存为 TXT）
 
 ### 系统集成
 - [x] 系统托盘（最小化到托盘、托盘菜单）
@@ -83,33 +101,60 @@
 - [x] 全局快捷键（Ctrl+Shift+F）
 - [x] 双击 Ctrl 热键唤起浮动窗口（Windows 专用）
 - [x] ESC 键关闭浮动窗口
+- [x] 数据存储位置配置（可自定义数据路径）
+- [x] 实时文件监控（USN Journal + Go 进程）
+- [x] 图片缩略图预览（hover 预览 JPG/PNG/GIF/WebP）
+
+### 文件格式支持
+- [x] 文档格式：Word · Excel · PowerPoint · PDF · RTF · CHM
+- [x] 开放格式：ODF (ODT/ODS/ODP) · EPUB
+- [x] 压缩包：ZIP/RAR/7Z/GZIP（支持包内搜索）
+- [x] 邮件：MSG/PST（Outlook）、EML/mbox
+- [x] 国产办公：WPS (WPS/ET/DPS)
+- [x] Apple iWork：Pages/Numbers/Keynote
+- [x] 70+ 种源代码和配置文件格式
+- [x] 图片元数据提取（EXIF 等）
+- [x] 图片 OCR 识别（PNG/JPG/PDF，支持中文/英文/日文/韩文）
+
+### 标签管理
+- [x] 文件标签（用户自定义标签分类）
+- [x] 标签管理页面
+- [x] 标签筛选搜索
 
 ### 帮助页（关于页）
-- [x] 功能介绍（5项核心功能）
+- [x] 功能介绍（13项核心功能）
 - [x] 赞赏作者（含收款码）
 
 ### i18n
-- [x] 完整中英文翻译
+- [x] 完整中英文翻译（700+ 翻译 key）
 - [x] 语言设置持久化（localStorage）
 
 ### 代码质量
-- [x] 清理无用文件和死代码（删除 7 个未使用文件）
+- [x] 清理无用文件和死代码
 - [x] 清理 styles.css 重复 CSS 和孤立规则
 - [x] 清理 LanguageContext.tsx 孤立翻译 key
 - [x] 清理 AppContext.tsx 死代码
 - [x] 清理 IPC/preload 废弃 API
 - [x] 提取 formatSize 为共享工具函数
 - [x] TypeScript 编译零错误
+- [x] 数据库分片架构（config.db 快速启动 + shards 后台加载）
 
 ---
 
 ## 主要功能列表（关于页展示）
 
-1. 全文搜索：支持 docx、xlsx、pdf、txt 等格式的文件名和内容搜索
-2. 多文件夹管理：支持同时管理多个扫描目录
-3. 增量扫描：仅扫描新增或修改的文件，快速更新索引
-4. 完整扫描：重新扫描所有文件，确保索引完整准确
-5. 本地优先：所有数据存储在本地，不上传云端，隐私安全
+1. 全文搜索：支持 70+ 种文件格式的内容搜索，基于 SQLite FTS5 + BM25 相关性排序
+2. 高级搜索语法：支持 AND/OR/NOT/前缀/短语/正则搜索
+3. 多文件夹管理：支持同时管理多个扫描目录
+4. 增量扫描：仅扫描新增或修改的文件，快速更新索引
+5. 实时文件监控：监控目录下文件变更，自动更新搜索索引
+6. 图片 OCR：扫描版 PDF/图片中的文字可提取搜索，支持中文/英文/日文/韩文
+7. 文献引用卡片：从文档中提取关键词引用，支持导出 MD/TXT
+8. 右键菜单导出：文件内容可导出为 TXT，方便保存
+9. 搜索历史+收藏：快速复用历史查询，命名收藏常用搜索
+10. 全局快捷键：Ctrl+Shift+F 或双击 Ctrl 随时唤起搜索
+11. 批量操作：移动/复制/删除多个搜索结果
+12. 本地优先：所有数据存储在本地，不上传云端，隐私安全
 
 ---
 
@@ -117,6 +162,7 @@
 
 - [ ] 重复文件检测页面（DuplicateFinder 组件已实现，未集成）
 - [ ] 应用图标（需重新打包生效）
+- [ ] CAD 文件支持（DWG/DXF 工程图纸）- 暂不计划
 
 ---
 
@@ -125,6 +171,7 @@
 - 前端：React + TypeScript + CSS Variables
 - 后端：Electron + Node.js + better-sqlite3
 - 监控：Go + fsnotify（USN 文件监控 + 双击 Ctrl 热键）
+- OCR：Windows.Media.Ocr + Python Tesseract
 - 构建：electron-vite + electron-builder
 
 ---
@@ -133,7 +180,7 @@
 
 | 文件 | 说明 |
 |------|------|
-| `src/context/LanguageContext.tsx` | i18n 翻译字典 |
+| `src/context/LanguageContext.tsx` | i18n 翻译字典（700+ key） |
 | `src/context/AppContext.tsx` | 全局状态（扫描进度等） |
 | `src/components/SideNav.tsx` | 左侧导航 |
 | `src/components/TitleBar.tsx` | 自定义标题栏 |
@@ -146,30 +193,34 @@
 | `src/pages/SearchPage.tsx` | 搜索文档页 |
 | `src/pages/LanguagePage.tsx` | 语言与主题页 |
 | `src/pages/GuidePage.tsx` | 关于页 |
+| `src/pages/TagsPage.tsx` | 标签管理页 |
 | `src/utils/format.ts` | 工具函数（formatSize） |
 | `electron/main/database.ts` | 数据库操作（SQLite） |
 | `electron/main/ipc.ts` | IPC 通信处理 |
 | `electron/main/index.ts` | Electron 主进程入口 |
+| `electron/main/shardManager.ts` | 数据库分片管理 |
 | `electron/main/fileWatcher.ts` | 文件监控（增量扫描） |
 | `electron/main/scheduler.ts` | 定时任务调度 |
+| `electron/main/scanner.ts` | 扫描器（多格式解析） |
+| `electron/main/usnHandler.ts` | USN Journal 监控处理 |
 | `electron/preload/index.ts` | 预加载脚本 |
 | `go/main.go` | Go 监控进程入口（USN Watcher + 双击 Ctrl） |
 | `go/keyboard_hook.go` | 双击 Ctrl 检测（GetAsyncKeyState 轮询） |
+| `scripts/extractOcr.py` | OCR 识别脚本（Tesseract） |
 
 ---
 
-## Git 提交记录
+## Git 提交记录（近期）
 
 ```
-e87a5ac docs: add PROGRESS.md tracking current project status
-a7067fc fix: folder-item background, text colors, and button layout
-d9bd3f7 fix: deduplicate features list, merge into 6 concise items
-0ae5461 fix: remove FAQ section, merge features and advantages in guide page
-7fc9c40 fix: remove schedule from scan page, merge donate into guide
-c2e5aa0 feat: merge scan+config pages, add donate page, restructure help
-887c747 fix: improve Chinese description wording
-ea35217 fix: prevent button text wrapping with white-space nowrap
-043746b fix: rename '设置' to '扫描设置'
-bfbe31f fix: resolve nav labels, scan button style, and implement full i18n
-c437dcf chore(styles): remove legacy CSS and add scrollbar + transitions
+2d0945f docs: add OCR progress i18n keys
+2171ecf feat: display OCR progress bar in FileList
+9115f7d feat: stream OCR progress via stderr to renderer
+4ca2a4f feat: emit progress line per image in extractOcr.py
+395f3fa feat: add OCR progress overlay in FileList
+38f13ae docs: 更新 DATABASE-SCHEMA.md 概览，修正目录结构说明
+b082f50 fix: 简化数据路径配置逻辑
+7e085e5 fix: 修复自定义数据路径设置不生效的问题
 ```
+
+---
