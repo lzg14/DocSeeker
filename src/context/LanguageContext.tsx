@@ -269,6 +269,10 @@ const translations: Record<Language, Record<string, string>> = {
     'settings.dataPathDesc': '修改后需要重新扫描',
     'settings.changePath': '更改',
     'settings.customPath': '已自定义',
+    'settings.restartRequired': '需要重启',
+    'settings.restartMessage': '数据存储位置已更改，需要重启应用使配置生效。',
+    'settings.newPath': '新路径',
+    'settings.restartNow': '立即重启',
     // Theme
     'theme.light': '浅色',
     'theme.light.desc': '白天 / 办公环境',
@@ -527,6 +531,10 @@ const translations: Record<Language, Record<string, string>> = {
     'settings.dataPathDesc': 'Requires rescan after change',
     'settings.changePath': 'Change',
     'settings.customPath': 'Custom',
+    'settings.restartRequired': 'Restart Required',
+    'settings.restartMessage': 'Data storage location has changed. Restart the app to apply changes.',
+    'settings.newPath': 'New Path',
+    'settings.restartNow': 'Restart Now',
     // Status bar
     'status.indexed': '{count} files indexed',
     'status.loading': 'Loading...',

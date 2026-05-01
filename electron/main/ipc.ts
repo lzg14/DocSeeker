@@ -129,6 +129,13 @@ export function registerIpcHandlers(): void {
     return setDataPath(dataPath)
   })
 
+  // Restart app to apply new data path
+  ipcMain.handle('restart-app', async () => {
+    log.info('[IPC] Restarting app to apply new data path...')
+    app.relaunch({ args: process.argv.slice(1).concat(['--restarted']) })
+    app.exit(0)
+  })
+
   // Select directory
   ipcMain.handle('select-directory', async () => {
     const result = await dialog.showOpenDialog({

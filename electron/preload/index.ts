@@ -191,6 +191,8 @@ export interface ElectronAPI {
   // OCR settings
   getOcrSettings: () => Promise<{ enabled: boolean; language: string }>
   setOcrSettings: (settings: { enabled?: boolean; language?: string }) => Promise<void>
+  // App control
+  restartApp: () => Promise<void>
 }
 
 export interface Tag {
@@ -362,6 +364,9 @@ const electronAPI: ElectronAPI = {
   // OCR settings
   getOcrSettings: () => ipcRenderer.invoke('get-ocr-settings'),
   setOcrSettings: (settings: { enabled?: boolean; language?: string }) => ipcRenderer.invoke('set-ocr-settings', settings),
+
+  // App control
+  restartApp: () => ipcRenderer.invoke('restart-app'),
 
   // Monitor status
   getMonitorStatus: () => ipcRenderer.invoke('get-monitor-status'),

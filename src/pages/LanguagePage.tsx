@@ -15,6 +15,8 @@ function LanguagePage(): JSX.Element {
   const [monitorStatus, setMonitorStatus] = useState<{ status: string; message?: string }>({ status: 'disconnected' })
   const [dataPath, setDataPath] = useState<{ current: string; default: string }>({ current: '', default: '' })
   const [pathError, setPathError] = useState('')
+  const [showRestartDialog, setShowRestartDialog] = useState(false)
+  const [pendingDataPath, setPendingDataPath] = useState('')
 
   useEffect(() => {
     window.electron.getGlobalHotkey().then(h => setCurrentHotkey(formatHotkey(h)))
@@ -121,13 +123,29 @@ function LanguagePage(): JSX.Element {
     const dir = await window.electron.selectDirectory()
     if (!dir) return
 
+    // 先检查路径是否有效
+    if (dataPath.current === dir) return // 路径没变，不需要处理
+
     const success = await window.electron.setDataPath?.(dir)
     if (success) {
-      setDataPath({ ...dataPath, current: dir })
+      // 显示重启提示，而不是立即更新 UI
+      setPendingDataPath(dir)
+      setShowRestartDialog(true)
       setPathError('')
     } else {
       setPathError('Invalid directory')
     }
+  }
+
+  const handleConfirmRestart = async () => {
+    await window.electron.restartApp?.()
+  }
+
+  const handleCancelRestart = () => {
+    setShowRestartDialog(false)
+    setPendingDataPath('')
+    // 刷新当前数据路径显示
+    window.electron.getDataPath?.().then(setDataPath)
   }
 
   const Toggle = ({ checked, onChange }: { checked: boolean; onChange: (v: boolean) => void }) => (
@@ -137,6 +155,33 @@ function LanguagePage(): JSX.Element {
       onClick={() => onChange(!checked)}
       className="toggle-switch"
     />
+  )
+
+  // Restart dialog
+  const RestartDialog = () => (
+    <div className="dialog-overlay" onClick={handleCancelRestart}>
+      <div className="dialog-content" onClick={e => e.stopPropagation()}>
+        <div className="dialog-header">
+          <h3 style={{ margin: 0, fontSize: '16px' }}>{t('settings.restartRequired') || '需要重启'}</h3>
+        </div>
+        <div className="dialog-body" style={{ padding: '16px 0' }}>
+          <p style={{ margin: '0 0 12px 0' }}>
+            {t('settings.restartMessage') || '数据存储位置已更改，需要重启应用使配置生效。'}
+          </p>
+          <p style={{ margin: 0, fontSize: '12px', color: '#666' }}>
+            <strong>{t('settings.newPath') || '新路径'}:</strong> {pendingDataPath}
+          </p>
+        </div>
+        <div className="dialog-footer">
+          <button className="btn btn-secondary" onClick={handleCancelRestart}>
+            {t('common.cancel') || '取消'}
+          </button>
+          <button className="btn btn-primary" onClick={handleConfirmRestart}>
+            {t('settings.restartNow') || '立即重启'}
+          </button>
+        </div>
+      </div>
+    </div>
   )
 
   return (
@@ -270,6 +315,9 @@ function LanguagePage(): JSX.Element {
           </div>
         )}
       </div>
+
+      {/* Restart dialog */}
+      {showRestartDialog && <RestartDialog />}
     </div>
   )
 }
