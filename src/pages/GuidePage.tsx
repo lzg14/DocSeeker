@@ -30,6 +30,7 @@ function GuidePage({ onNavigate }: GuidePageProps): JSX.Element {
               <li>{t('guide.feature9')}</li>
               <li>{t('guide.feature10')}</li>
               <li>{t('guide.feature11')}</li>
+              <li>{t('guide.feature12')}</li>
             </ul>
           </div>
         </div>

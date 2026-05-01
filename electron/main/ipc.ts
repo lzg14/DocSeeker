@@ -194,9 +194,26 @@ export function registerIpcHandlers(): void {
         return { success: false, canceled: true }
       }
 
-      // Extract content using scanner
-      const { extractTextFromFile } = await import('./scanner')
-      const content = await extractTextFromFile(sourcePath)
+      // Step 1: Try to get content from database first (fast)
+      let content: string | null = null
+      try {
+        const { getFileContentByPath } = await import('./shardManager')
+        content = getFileContentByPath(sourcePath)
+        log.info('[IPC] export-file-content: content from DB:', content ? `${content.length} chars` : 'null')
+      } catch (err) {
+        log.warn('[IPC] export-file-content: failed to get from DB:', err)
+      }
+
+      // Step 2: If not in DB, extract from file (may be slow for OCR)
+      if (!content || content.trim().length === 0) {
+        try {
+          const { extractTextFromFile } = await import('./scanner')
+          content = await extractTextFromFile(sourcePath)
+          log.info('[IPC] export-file-content: content from file:', content ? `${content.length} chars` : 'null')
+        } catch (err) {
+          log.warn('[IPC] export-file-content: failed to extract from file:', err)
+        }
+      }
 
       if (!content || content.trim().length === 0) {
         return { success: false, error: '无法提取文件内容或文件内容为空' }
@@ -916,7 +933,7 @@ export function registerIpcHandlers(): void {
     images: number
     error?: string
   }
-  ipcMain.handle('extract-pdf-ocr', async (_, filePath: string): Promise<OcrResult> => {
+  ipcMain.handle('extract-pdf-ocr', async (event, filePath: string): Promise<OcrResult> => {
     const cliPath = join(__dirname, '..', '..', 'node_modules', 'windows-media-ocr', 'dist', 'assets', 'windows_media_ocr_cli.exe')
     const scriptPath = join(__dirname, 'extractOcr.py')
     const pythonExe = process.platform === 'win32' ? 'python' : 'python3'
@@ -932,7 +949,21 @@ export function registerIpcHandlers(): void {
       let stderr = ''
 
       proc.stdout.on('data', (data: Buffer) => { stdout += data.toString() })
-      proc.stderr.on('data', (data: Buffer) => { stderr += data.toString() })
+      proc.stderr.on('data', (data: Buffer) => {
+        stderr += data.toString()
+        const lines = data.toString().split('\n')
+        for (const line of lines) {
+          const trimmed = line.trim()
+          if (trimmed.startsWith('progress:')) {
+            const match = trimmed.match(/progress:(\d+)\/(\d+)/)
+            if (match) {
+              const current = parseInt(match[1])
+              const total = parseInt(match[2])
+              event.sender.send('ocr-progress', { current, total })
+            }
+          }
+        }
+      })
 
       proc.on('close', async (code: number) => {
         if (code !== 0 || stderr.trim()) {

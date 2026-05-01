@@ -1407,3 +1407,33 @@ export function getFolderStatsFromShards(folderPath: string): { fileCount: numbe
   log.info(`[ShardManager] getFolderStatsFromShards: total=${totalCount} files, size=${totalSize}`)
   return { fileCount: totalCount, totalSize }
 }
+
+
+
+/**
+ * Get file content from shards by file path.
+ * Returns the content if found, null otherwise.
+ * This is a fast lookup from the database cache.
+ */
+export function getFileContentByPath(filePath: string): string | null {
+  const readyShards = getReadyShards()
+  // Normalize path separators for cross-platform compatibility
+  const normalizedPath = filePath.replace(/\\/g, '/')
+
+  for (const shard of readyShards) {
+    try {
+      const db = openShard(shard.id)
+      // Search with normalized path
+      const stmt = db.prepare("SELECT content FROM shard_files WHERE path = ?")
+      const row = stmt.get(normalizedPath) as { content: string } | undefined
+      if (row && row.content) {
+        db.close()
+        return row.content
+      }
+      db.close()
+    } catch (err) {
+      log.warn(`[ShardManager] getFileContentByPath failed on shard ${shard.id}:`, err)
+    }
+  }
+  return null
+}
