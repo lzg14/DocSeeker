@@ -171,7 +171,7 @@
 - 前端：React + TypeScript + CSS Variables
 - 后端：Electron + Node.js + better-sqlite3
 - 监控：Go + fsnotify（USN 文件监控 + 双击 Ctrl 热键）
-- OCR：Windows.Media.Ocr + Python Tesseract
+- OCR：Windows.Media.Ocr（Windows 10+ 内置，通过 windows-media-ocr CLI 调用）
 - 构建：electron-vite + electron-builder
 
 ---
