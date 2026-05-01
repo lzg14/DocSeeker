@@ -179,8 +179,9 @@ const translations: Record<Language, Record<string, string>> = {
     'contextMenu.exportContent': '导出文本内容',
     // OCR
     'ocr.extractingImages': '正在提取图片并识别...',
+    'ocr.recognizing': '正在识别第 {current} 张图片...',
     'ocr.done': 'OCR 完成',
-    'ocr.imagesProcessed': '张图片已识别，内容已更新索引',
+    'ocr.imagesProcessed': '{count} 张图片已识别，内容已更新索引',
     'ocr.noImagesFound': '未找到可识别的图片',
     // Scan page
     'scan.title': '扫描目录',
@@ -450,6 +451,7 @@ const translations: Record<Language, Record<string, string>> = {
     'contextMenu.exportContent': 'Export Text Content',
     // OCR
     'ocr.extractingImages': 'Extracting images and recognizing...',
+    'ocr.recognizing': 'Recognizing image {current} of {total}...',
     'ocr.done': 'OCR Complete',
     'ocr.imagesProcessed': '{count} image(s) recognized, content index updated',
     'ocr.noImagesFound': 'No recognizable images found',
