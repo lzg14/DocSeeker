@@ -11,6 +11,7 @@ import FloatingSearch from './pages/FloatingSearch'
 const ScanPage = lazy(() => import('./pages/ScanPage'))
 const LanguagePage = lazy(() => import('./pages/LanguagePage'))
 const GuidePage = lazy(() => import('./pages/GuidePage'))
+const TagsPage = lazy(() => import('./pages/TagsPage'))
 
 class ErrorBoundary extends Component<{ children: ReactNode }, { hasError: boolean }> {
   constructor(props: { children: ReactNode }) {
@@ -61,6 +62,8 @@ function App(): JSX.Element {
         return <Suspense fallback={<PageFallback />}><LanguagePage /></Suspense>
       case 'guide':
         return <Suspense fallback={<PageFallback />}><GuidePage onNavigate={setActiveTab} /></Suspense>
+      case 'tags':
+        return <Suspense fallback={<PageFallback />}><TagsPage /></Suspense>
       case 'search':
       default:
         return <SearchPage />

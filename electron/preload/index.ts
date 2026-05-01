@@ -188,6 +188,9 @@ export interface ElectronAPI {
   getLanguage: () => Promise<string>
   setLanguage: (lang: string) => Promise<void>
   onLanguageChanged: (callback: (lang: string) => void) => () => void
+  // OCR settings
+  getOcrSettings: () => Promise<{ enabled: boolean; language: string }>
+  setOcrSettings: (settings: { enabled?: boolean; language?: string }) => Promise<void>
 }
 
 export interface Tag {
@@ -355,6 +358,10 @@ const electronAPI: ElectronAPI = {
 
   getLanguage: () => ipcRenderer.invoke("get-language"),
   setLanguage: (lang: string) => ipcRenderer.invoke("set-language", lang),
+
+  // OCR settings
+  getOcrSettings: () => ipcRenderer.invoke('get-ocr-settings'),
+  setOcrSettings: (settings: { enabled?: boolean; language?: string }) => ipcRenderer.invoke('set-ocr-settings', settings),
 
   // Monitor status
   getMonitorStatus: () => ipcRenderer.invoke('get-monitor-status'),

@@ -187,6 +187,7 @@ const translations: Record<Language, Record<string, string>> = {
     'scan.startScan': '开始扫描',
     'scan.includeHidden': '隐藏文件',
     'scan.includeSystem': '系统文件',
+    'scan.ocrEnable': '图片 OCR（仅 Windows）',
     // Config / Scan page
     'config.title': '扫描设置',
     'config.loading': '加载中...',
@@ -290,6 +291,13 @@ const translations: Record<Language, Record<string, string>> = {
     'status.loading': '正在加载...',
     'status.monitoring': '监控中',
     'status.monitorOff': '监控已停止',
+    // Tag management
+    'tags.title': '标签管理',
+    'tags.create': '创建标签',
+    'tags.edit': '编辑标签',
+    'tags.delete': '删除标签',
+    'tags.deleteConfirm': '确定要删除这个标签吗？',
+    'tags.placeholder': '新标签名称',
     // Confirm dialog
     'confirm.cancel': '取消',
     'confirm.ok': '确定',
@@ -436,6 +444,7 @@ const translations: Record<Language, Record<string, string>> = {
     'scan.startScan': 'Start Scan',
     'scan.includeHidden': 'Hidden Files',
     'scan.includeSystem': 'System Files',
+    'scan.ocrEnable': 'Image OCR (Windows only)',
     // Config / Scan page
     'config.title': 'Scan Settings',
     'config.loading': 'Loading...',
@@ -540,6 +549,13 @@ const translations: Record<Language, Record<string, string>> = {
     'monitor.connecting': 'Connecting...',
     'monitor.error': 'Error',
     'monitor.disconnected': 'Disconnected',
+    // Tag management
+    'tags.title': 'Tag Management',
+    'tags.create': 'Create Tag',
+    'tags.edit': 'Edit Tag',
+    'tags.delete': 'Delete Tag',
+    'tags.deleteConfirm': 'Are you sure you want to delete this tag?',
+    'tags.placeholder': 'New tag name',
     // Confirm dialog
     'confirm.cancel': 'Cancel',
     'confirm.ok': 'OK',

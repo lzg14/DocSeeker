@@ -17,6 +17,7 @@ A desktop full-text search tool built with Electron + React + TypeScript, design
 - Manual incremental scan or complete rescan
 - Real-time scan progress display
 - View scan statistics (file count, total size, last scan time)
+- **Image OCR**: Optional image text recognition to extract text from PNG/JPG/BMP/TIFF images for searchable content (supports Chinese, English, Japanese, Korean)
 
 ### 3. Search Page
 - Full-text search by filename or document content (FTS5 + BM25 relevance ranking)

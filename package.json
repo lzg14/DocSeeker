@@ -33,7 +33,9 @@
       {
         "from": "go/docseeker-monitor",
         "to": "docseeker-monitor",
-        "filter": ["**/*"]
+        "filter": [
+          "**/*"
+        ]
       }
     ],
     "win": {
@@ -68,7 +70,10 @@
       "target": [
         {
           "target": "dmg",
-          "arch": ["x64", "arm64"]
+          "arch": [
+            "x64",
+            "arm64"
+          ]
         }
       ]
     },
@@ -93,6 +98,7 @@
     "pdfjs-dist": "^4.10.38",
     "pst-extractor": "^1.12.0",
     "tar.gz": "^1.0.7",
+    "windows-media-ocr": "^0.0.10",
     "xlsx": "^0.18.5"
   },
   "devDependencies": {

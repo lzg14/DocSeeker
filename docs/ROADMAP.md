@@ -65,7 +65,7 @@ DocSeeker 是一款基于 Electron + React + TypeScript 的本地文档全文搜
 | **双击 Ctrl 唤起浮层** | ✅ 已完成 | 多显示器支持 | Listary / Everything |
 | **网络驱动器/云盘搜索** | ⚠️ OneDrive 已支持 | NAS / SharePoint / Google Drive | dtSearch / Copernic |
 | **文件格式扩展** | ✅ 77 种 | 目标 60+（已完成） | AnyTXT 60+ |
-| **图片 OCR** | ⏸️ 暂不计划 | 扫描件/截图全文可搜 | Copernic / dtSearch |
+| **图片 OCR** | ✅ 已完成（Windows.Media.Ocr） | 扫描件/截图全文可搜 | Copernic / dtSearch |
 | **模糊搜索/容错** | ✅ 已完成（Fuse.js 后置过滤） | 打字错误也能搜 | TextSeek / FileSeek |
 | **CAD 文件（DWG/DXF）** | ⏸️ 暂不计划 | 工程图纸可搜 | Copernic / dtSearch |
 
@@ -178,7 +178,7 @@ DocSeeker 是一款基于 Electron + React + TypeScript 的本地文档全文搜
 - [x] **M5.6** 搜索结果排序自定义（按相关性/大小/修改时间/类型排序） — ✅ 已完成（2026-04-21）
 - [x] **M5.7** 文件/文件夹标签（用户自定义标签分类管理） — ✅ 已完成（2026-04-21）
 - [x] **M5.8** 双击 Ctrl 唤起浮层（通过 Go USN 进程键盘钩子实现，多显示器支持） — ✅ 已完成（2026-04-22）
-- [x] **M5.9** 图片 OCR（扫描件/截图全文可搜）— ⏸️ 暂不计划
+- [x] **M5.9** 图片 OCR（扫描件/截图全文可搜）— ✅ 已完成（2026-04-30，Windows.Media.Ocr）
 - [x] **M5.10** CAD 文件支持（DWG/DXF 工程图纸）— ⏸️ 暂不计划
 - [x] **M5.11** 文献引用卡片（从文档中提取关键词引用，前后至少2个完整句子，各100字以上，支持导出 MD/TXT） — ✅ 已完成（2026-04-26）
 

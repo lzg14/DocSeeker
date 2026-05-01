@@ -12,6 +12,7 @@ import {
   deleteFileByPath,
   FileRecord
 } from './database'
+import { getAppSetting } from './config'
 
 // Supported file extensions
 const SUPPORTED_EXTENSIONS = new Set([
@@ -745,9 +746,46 @@ async function extractTextFromSvg(filePath: string): Promise<string> {
   }
 }
 
+// Extract text from image files using OCR (Windows.Media.Ocr)
+// Lazy import to avoid blocking main process startup
+let _ocrModule: typeof import('windows-media-ocr') | null = null
+
+async function getOcrModule() {
+  if (!_ocrModule) {
+    try {
+      _ocrModule = await import('windows-media-ocr')
+    } catch (err) {
+      log.warn('[Scanner] Failed to load windows-media-ocr:', err)
+      return null
+    }
+  }
+  return _ocrModule
+}
+
+// OCR text extraction for images
+// Windows.Media.Ocr requires Windows 10+ (build 15063+)
+async function extractTextFromImageOcr(filePath: string): Promise<string> {
+  if (process.platform !== 'win32') return ''
+
+  try {
+    const ocrMod = await getOcrModule()
+    if (!ocrMod) return ''
+
+    const { ocr } = ocrMod
+    // Use system language or default to Chinese
+    const language = getAppSetting<string>('ocrLanguage', 'zh-CN')
+    const result = await ocr(filePath, { language })
+    return result.Text || ''
+  } catch (err) {
+    log.warn('[Scanner] OCR failed for', filePath, err)
+    return ''
+  }
+}
+
 // Extract metadata from image files (EXIF, IPTC, XMP)
 async function extractTextFromImage(filePath: string): Promise<string> {
   try {
+    // Extract EXIF metadata
     const data = await exifr.parse(filePath, {
       // Only pick text-like fields
       pick: [
@@ -761,14 +799,25 @@ async function extractTextFromImage(filePath: string): Promise<string> {
         'Headline', 'Credit', 'Source', 'SpecialInstructions',
       ]
     })
-    if (!data) return ''
-    const texts: string[] = []
-    for (const [key, value] of Object.entries(data)) {
-      if (value !== undefined && value !== null && value !== '') {
-        texts.push(`${key}: ${String(value)}`)
+    const exifTexts: string[] = []
+    if (data) {
+      for (const [key, value] of Object.entries(data)) {
+        if (value !== undefined && value !== null && value !== '') {
+          exifTexts.push(`${key}: ${String(value)}`)
+        }
       }
     }
-    return texts.join(' | ')
+    const exifContent = exifTexts.join(' | ')
+
+    // Try OCR if enabled in settings
+    const ocrEnabled = getAppSetting<boolean>('ocrEnabled', false)
+    let ocrContent = ''
+    if (ocrEnabled) {
+      ocrContent = await extractTextFromImageOcr(filePath)
+    }
+
+    // Combine EXIF and OCR content
+    return [ocrContent, exifContent].filter(Boolean).join(' | ')
   } catch {
     return ''
   }

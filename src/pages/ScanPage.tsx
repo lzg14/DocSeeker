@@ -6,6 +6,9 @@ import DeleteFolderConfirmDialog from '../components/DeleteFolderConfirmDialog'
 import QuickSetup from '../components/QuickSetup'
 import { formatSize } from '../utils/format'
 
+// OCR is only available on Windows
+const isWindows = navigator.userAgent.includes('Windows')
+
 function ScanPage(): JSX.Element {
   const {
     isScanning,
@@ -20,6 +23,8 @@ function ScanPage(): JSX.Element {
   const [isDeleting, setIsDeleting] = useState(false)
   const [includeHidden, setIncludeHidden] = useState(false)
   const [includeSystem, setIncludeSystem] = useState(false)
+  const [ocrEnabled, setOcrEnabled] = useState(false)
+  const [ocrLanguage, setOcrLanguage] = useState('zh-CN')
   const [totalFiles, setTotalFiles] = useState<number>(0)
 
   const loadFolders = useCallback(async () => {
@@ -46,6 +51,13 @@ function ScanPage(): JSX.Element {
       if (settings) {
         setIncludeHidden(settings.includeHidden ?? false)
         setIncludeSystem(settings.includeSystem ?? false)
+      }
+    })
+    // Load OCR settings
+    window.electron.getOcrSettings().then((settings: { enabled: boolean; language: string }) => {
+      if (settings) {
+        setOcrEnabled(settings.enabled ?? false)
+        setOcrLanguage(settings.language ?? 'zh-CN')
       }
     })
   }, [])
@@ -104,6 +116,16 @@ function ScanPage(): JSX.Element {
   const handleToggleSystem = async (checked: boolean) => {
     setIncludeSystem(checked)
     await window.electron.updateScanSettings({ includeSystem: checked })
+  }
+
+  const handleToggleOcr = async (checked: boolean) => {
+    setOcrEnabled(checked)
+    await window.electron.setOcrSettings({ enabled: checked })
+  }
+
+  const handleChangeOcrLanguage = async (lang: string) => {
+    setOcrLanguage(lang)
+    await window.electron.setOcrSettings({ language: lang })
   }
 
   const handleConfirmDelete = async () => {
@@ -169,6 +191,32 @@ function ScanPage(): JSX.Element {
             />
             <span className="scan-toggle-switch" />
           </label>
+          {isWindows && (
+            <>
+              <label className="scan-toggle">
+                <span className="scan-toggle-label">{t('scan.ocrEnable')}</span>
+                <input
+                  type="checkbox"
+                  className="scan-toggle-input"
+                  checked={ocrEnabled}
+                  onChange={(e) => handleToggleOcr(e.target.checked)}
+                />
+                <span className="scan-toggle-switch" />
+              </label>
+              {ocrEnabled && (
+                <select
+                  className="scan-select"
+                  value={ocrLanguage}
+                  onChange={(e) => handleChangeOcrLanguage(e.target.value)}
+                >
+                  <option value="zh-CN">中文</option>
+                  <option value="en-US">English</option>
+                  <option value="ja-JP">日本語</option>
+                  <option value="ko-KR">한국어</option>
+                </select>
+              )}
+            </>
+          )}
         </div>
         <div className="config-header-actions">
           <button
