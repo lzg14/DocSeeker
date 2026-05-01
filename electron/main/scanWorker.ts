@@ -111,6 +111,7 @@ interface ScanWorkerData {
   dirPath: string
   incremental?: boolean
   lastScanAt?: string
+  ocrEnabled?: boolean  // OCR 是否启用
   // 扫描设置
   settings?: {
     timeoutMs?: number
@@ -213,7 +214,7 @@ async function extractTextFromXlsx(filePath: string, fileSize?: number): Promise
   }
 }
 
-async function extractTextFromPdf(filePath: string, fileSize?: number): Promise<string> {
+async function extractTextFromPdf(filePath: string, fileSize?: number, ocrEnabledFlag?: boolean): Promise<string> {
   // 大小检查 - PDF 限制 50MB
   if (fileSize !== undefined && fileSize > 50 * 1024 * 1024) {
     log.warn(`[PDF] Skip large file (${formatSize(fileSize)}): ${filePath}`)
@@ -223,14 +224,72 @@ async function extractTextFromPdf(filePath: string, fileSize?: number): Promise<
   try {
     const pdfParse = require('pdf-parse')
     const dataBuffer = await fs.readFile(filePath)
-    const parsePromise = pdfParse(dataBuffer)
-    const data = await withTimeout(parsePromise, TIMEOUT_MS) as { text?: string }
-    log.info(`[EXTRACT] PDF done: ${Date.now() - startTime}ms`)
-    return data.text || ''
+    const data = await withTimeout(pdfParse(dataBuffer), TIMEOUT_MS) as { text?: string }
+    const extractedText = data.text || ''
+
+    // 检查提取的文字是否过少（图片型 PDF 的特征）
+    const readableChars = extractedText.replace(/\s/g, '').length
+
+    if (readableChars < 50 && (ocrEnabledFlag ?? false)) {
+      // 文字过少，尝试 OCR 回退
+      log.info(`[PDF] Text too short (${readableChars} chars), trying OCR: ${filePath}`)
+      const ocrText = await extractTextFromPdfOcr(filePath)
+      if (ocrText && ocrText.replace(/\s/g, '').length > 0) {
+        log.info(`[PDF] OCR succeeded: ${ocrText.replace(/\s/g, '').length} chars, time: ${Date.now() - startTime}ms`)
+        return ocrText
+      }
+    }
+
+    log.info(`[EXTRACT] PDF done: ${Date.now() - startTime}ms, chars: ${readableChars}`)
+    return extractedText
   } catch (error) {
     log.warn(`[WARN] PDF failed: ${(error as Error).message}`)
     return ''
   }
+}
+
+// Python OCR 回退函数（用于图片型 PDF）
+async function extractTextFromPdfOcr(filePath: string): Promise<string> {
+  return new Promise((resolve) => {
+    const pythonExe = process.platform === 'win32' ? 'python' : 'python3'
+    // Worker 中 __dirname 指向 out/main/，extractOcr.py 也在 out/main/ 下
+    const scriptPath = path.join(__dirname, 'extractOcr.py')
+    // windows-media-ocr CLI 路径（相对于 out/main/）
+    const cliPath = path.join(__dirname, '..', '..', 'node_modules', 'windows-media-ocr', 'dist', 'assets', 'windows_media_ocr_cli.exe')
+
+    const { spawn } = require('child_process')
+    const lang = 'zh-Hans-CN' // Windows OCR 中文简体标签
+
+    const proc = spawn(pythonExe, [scriptPath, filePath, cliPath, '--lang', lang], {
+      timeout: 300000 // 5分钟超时
+    })
+
+    let stdout = ''
+    let stderr = ''
+
+    proc.stdout.on('data', (data: Buffer) => { stdout += data.toString() })
+    proc.stderr.on('data', (data: Buffer) => { stderr += data.toString() })
+
+    proc.on('close', (code: number) => {
+      if (code !== 0 || stderr.trim()) {
+        log.warn('[PDF OCR] Python script error:', stderr.trim())
+        resolve('')
+        return
+      }
+      try {
+        const result = JSON.parse(stdout.trim())
+        resolve(result.text || '')
+      } catch {
+        log.warn('[PDF OCR] Failed to parse JSON:', stdout.substring(0, 100))
+        resolve('')
+      }
+    })
+
+    proc.on('error', (err: Error) => {
+      log.warn('[PDF OCR] Spawn error:', err.message)
+      resolve('')
+    })
+  })
 }
 
 async function extractTextFromPptx(filePath: string, fileSize?: number): Promise<string> {
@@ -1002,7 +1061,7 @@ async function extractTextFromXps(filePath: string): Promise<string> {
   }
 }
 
-async function extractText(filePath: string, ext: string, fileSize?: number): Promise<string> {
+async function extractText(filePath: string, ext: string, fileSize?: number, ocrEnabled?: boolean): Promise<string> {
   const lowerExt = ext.toLowerCase()
 
   switch (lowerExt) {
@@ -1015,7 +1074,7 @@ async function extractText(filePath: string, ext: string, fileSize?: number): Pr
     case '.ppt':
       return extractTextFromPptx(filePath, fileSize)
     case '.pdf':
-      return extractTextFromPdf(filePath, fileSize)
+      return extractTextFromPdf(filePath, fileSize, ocrEnabled)
     case '.xps':
       return extractTextFromXps(filePath)
     case '.rtf':
@@ -1234,7 +1293,7 @@ async function processFile(filePath: string): Promise<FileInfo | null> {
 
     // Extract text content only for supported file types
     if (isSupported) {
-      fileInfo.content = await extractText(filePath, ext, stats.size)
+      fileInfo.content = await extractText(filePath, ext, stats.size, ocrEnabled)
     }
 
     return fileInfo
@@ -1276,7 +1335,7 @@ function getFileType(ext: string): string {
 
 // Main scan function
 async function runScan(): Promise<void> {
-  const { dirPath, incremental, lastScanAt, settings } = workerData as ScanWorkerData
+  const { dirPath, incremental, lastScanAt, settings, ocrEnabled = false } = workerData as ScanWorkerData
 
   const isIncremental = incremental === true && lastScanAt
   const lastScanTime = isIncremental ? new Date(lastScanAt!).getTime() : 0

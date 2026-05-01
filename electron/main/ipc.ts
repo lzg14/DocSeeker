@@ -427,7 +427,7 @@ export function registerIpcHandlers(): void {
 
       try {
         const worker = new Worker(workerPath, {
-          workerData: { dirPath: folderPath, incremental: true, scanId }
+          workerData: { dirPath: folderPath, incremental: true, scanId, ocrEnabled: getAppSetting<boolean>('ocrEnabled', false) }
         })
 
         let filesProcessed = 0
@@ -544,7 +544,7 @@ export function registerIpcHandlers(): void {
       const workerPath = join(__dirname, 'scanWorker.js')
       try {
         const worker = new Worker(workerPath, {
-          workerData: { dirPath: folderPath, scanId }
+          workerData: { dirPath: folderPath, scanId, ocrEnabled: getAppSetting<boolean>('ocrEnabled', false) }
         })
 
         let filesProcessed = 0
