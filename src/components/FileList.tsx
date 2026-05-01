@@ -95,6 +95,17 @@ function FileList({
     setContextMenu(prev => ({ ...prev, visible: false }))
   }
 
+  const handleExtractPdfOcr = () => {
+    if (!contextMenu.file) return
+    window.electron.extractPdfOcr(contextMenu.file.path).then(text => {
+      if (text && text.trim()) {
+        // 复制 OCR 结果到剪贴板
+        window.electron.clipboardWriteText(text.trim())
+      }
+    })
+    setContextMenu(prev => ({ ...prev, visible: false }))
+  }
+
   const MatchTypeBadge: React.FC<{ matchType?: string }> = ({ matchType }) => {
     if (!matchType) return null
     if (matchType === 'filename') {
@@ -205,6 +216,8 @@ function FileList({
 
   // 右键菜单（始终渲染，由 contextMenu.visible 控制显示）
   if (contextMenu.visible && contextMenu.file) {
+  const isPdfFile = contextMenu.file?.file_type === 'pdf'
+
   return (
     <div
       ref={menuRef}
@@ -218,6 +231,14 @@ function FileList({
       <div className="context-menu-item" onClick={handleOpenFile}>
         <span>📂</span> {t('detail.openFile')}
       </div>
+      {isPdfFile && (
+        <>
+          <div className="context-menu-separator" />
+          <div className="context-menu-item" onClick={handleExtractPdfOcr}>
+            <span>🔍</span> {t('contextMenu.extractOcr')}
+          </div>
+        </>
+      )}
       <div className="context-menu-separator" />
       <div className="context-menu-item" onClick={handleCopyPath}>
         <span>📋</span> {t('contextMenu.copyPath')}

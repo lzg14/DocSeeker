@@ -175,6 +175,7 @@ const translations: Record<Language, Record<string, string>> = {
     // Context menu
     'contextMenu.copyPath': '复制路径',
     'contextMenu.copyName': '复制文件名',
+    'contextMenu.extractOcr': 'OCR 识别',
     // Scan page
     'scan.title': '扫描目录',
     'scan.scanning': '扫描中...',
@@ -436,6 +437,7 @@ const translations: Record<Language, Record<string, string>> = {
     // Context menu
     'contextMenu.copyPath': 'Copy Path',
     'contextMenu.copyName': 'Copy Filename',
+    'contextMenu.extractOcr': 'OCR Recognition',
     // Scan page
     'scan.title': 'Scan Directory',
     'scan.scanning': 'Scanning...',
