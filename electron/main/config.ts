@@ -46,9 +46,19 @@ export function setDataPath(dataPath: string): boolean {
     return false
   }
   store.app_settings.dataPath = dataPath
-  saveStore()
-  log.info('[Config] Data path set to:', dataPath)
-  return true
+  // Write to the NEW path (not via getConfigPath which depends on in-memory store)
+  const newConfigDir = dataPath
+  if (!existsSync(newConfigDir)) {
+    mkdirSync(newConfigDir, { recursive: true })
+  }
+  try {
+    writeFileSync(join(newConfigDir, 'config.json'), JSON.stringify(store, null, 2), 'utf-8')
+    log.info('[Config] Data path set to:', dataPath)
+    return true
+  } catch (err) {
+    log.warn('[Config] Failed to save config.json:', err)
+    return false
+  }
 }
 
 export interface ScanSettings {

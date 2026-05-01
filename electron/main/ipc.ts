@@ -909,37 +909,37 @@ export function registerIpcHandlers(): void {
     })
   })
 
+  // Language settings (for tray menu)
+  ipcMain.handle('get-language', async (): Promise<string> => {
+    return getAppSetting<string>('language', 'zh-CN')
+  })
+
+  ipcMain.handle('set-language', async (_, lang: string): Promise<void> => {
+    setAppSetting('language', lang)
+    // Update tray menu with new language
+    updateTrayMenu()
+    // Broadcast language change to all windows
+    BrowserWindow.getAllWindows().forEach(win => {
+      win.webContents.send('language-changed', lang)
+    })
+  })
+
+  // OCR settings
+  ipcMain.handle('get-ocr-settings', async (): Promise<{ enabled: boolean; language: string }> => {
+    return {
+      enabled: getAppSetting<boolean>('ocrEnabled', false),
+      language: getAppSetting<string>('ocrLanguage', 'zh-CN')
+    }
+  })
+
+  ipcMain.handle('set-ocr-settings', async (_, settings: { enabled?: boolean; language?: string }): Promise<void> => {
+    if (settings.enabled !== undefined) {
+      setAppSetting('ocrEnabled', settings.enabled)
+    }
+    if (settings.language !== undefined) {
+      setAppSetting('ocrLanguage', settings.language)
+    }
+  })
+
   log.info('[IPC] All handlers registered')
 }
-
-// Language settings (for tray menu)
-ipcMain.handle('get-language', async (): Promise<string> => {
-  return getAppSetting<string>('language', 'zh-CN')
-})
-
-ipcMain.handle('set-language', async (_, lang: string): Promise<void> => {
-  setAppSetting('language', lang)
-  // Update tray menu with new language
-  updateTrayMenu()
-  // Broadcast language change to all windows
-  BrowserWindow.getAllWindows().forEach(win => {
-    win.webContents.send('language-changed', lang)
-  })
-})
-
-// OCR settings
-ipcMain.handle('get-ocr-settings', async (): Promise<{ enabled: boolean; language: string }> => {
-  return {
-    enabled: getAppSetting<boolean>('ocrEnabled', false),
-    language: getAppSetting<string>('ocrLanguage', 'zh-CN')
-  }
-})
-
-ipcMain.handle('set-ocr-settings', async (_, settings: { enabled?: boolean; language?: string }): Promise<void> => {
-  if (settings.enabled !== undefined) {
-    setAppSetting('ocrEnabled', settings.enabled)
-  }
-  if (settings.language !== undefined) {
-    setAppSetting('ocrLanguage', settings.language)
-  }
-})

@@ -274,6 +274,8 @@ const translations: Record<Language, Record<string, string>> = {
     'settings.restartMessage': '数据存储位置已更改，需要重启应用使配置生效。',
     'settings.newPath': '新路径',
     'settings.restartNow': '立即重启',
+    // Common
+    'common.cancel': '取消',
     // Theme
     'theme.light': '浅色',
     'theme.light.desc': '白天 / 办公环境',
@@ -537,6 +539,8 @@ const translations: Record<Language, Record<string, string>> = {
     'settings.restartMessage': 'Data storage location has changed. Restart the app to apply changes.',
     'settings.newPath': 'New Path',
     'settings.restartNow': 'Restart Now',
+    // Common
+    'common.cancel': 'Cancel',
     // Status bar
     'status.indexed': '{count} files indexed',
     'status.loading': 'Loading...',
