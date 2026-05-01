@@ -34,6 +34,7 @@ function FileList({
     visible: boolean
     fileName: string
     phase: 'extracting' | 'ocr' | 'done'
+    progress?: { current: number; total: number }
     result?: { text: string; images: number }
     error?: string
   } | null>(null)
@@ -75,6 +76,22 @@ function FileList({
       document.removeEventListener('scroll', handleScroll, true)
     }
   }, [])
+
+  // OCR 进度监听
+  useEffect(() => {
+    if (!ocrStatus?.visible) return
+
+    const handler = (_: unknown, data: { current: number; total: number }) => {
+      setOcrStatus(prev => prev ? {
+        ...prev,
+        phase: 'ocr',
+        progress: { current: data.current, total: data.total }
+      } : null)
+    }
+
+    const unsubscribe = window.electron.onOcrProgress(handler)
+    return unsubscribe
+  }, [ocrStatus?.visible])
 
   const handleContextMenu = (e: React.MouseEvent, file: FileRecord) => {
     e.preventDefault()
@@ -307,6 +324,20 @@ function FileList({
         }}>
           {ocrStatus.phase === 'extracting' && (
             <div>{t('ocr.extractingImages')}</div>
+          )}
+          {ocrStatus.phase === 'ocr' && ocrStatus.progress && (
+            <div>
+              ⚙️ {t('ocr.recognizing')} ({ocrStatus.progress.current}/{ocrStatus.progress.total})
+              <div style={{ marginTop: '8px', height: '4px', background: '#eee', borderRadius: '2px' }}>
+                <div style={{
+                  width: `${(ocrStatus.progress.current / ocrStatus.progress.total) * 100}%`,
+                  height: '100%',
+                  background: '#4caf50',
+                  borderRadius: '2px',
+                  transition: 'width 0.3s'
+                }} />
+              </div>
+            </div>
           )}
           {ocrStatus.phase === 'done' && ocrStatus.result && (
             <div>

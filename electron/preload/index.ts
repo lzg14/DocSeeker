@@ -195,6 +195,8 @@ export interface ElectronAPI {
   restartApp: () => Promise<void>
   // PDF OCR extraction (manual single-file OCR)
   extractPdfOcr: (filePath: string) => Promise<string>
+  // OCR progress events
+  onOcrProgress: (callback: (data: { current: number; total: number }) => void) => () => void
   // Export file content to text file
   exportFileContent: (filePath: string) => Promise<{ success: boolean; savedPath?: string; canceled?: boolean; error?: string }>
 }
@@ -374,6 +376,13 @@ const electronAPI: ElectronAPI = {
 
   // PDF OCR extraction (manual single-file OCR)
   extractPdfOcr: (filePath: string) => ipcRenderer.invoke('extract-pdf-ocr', filePath),
+
+  // OCR progress events
+  onOcrProgress: (callback: (data: { current: number; total: number }) => void) => {
+    const handler = (_: any, data: { current: number; total: number }) => callback(data)
+    ipcRenderer.on('ocr-progress', handler)
+    return () => ipcRenderer.removeListener('ocr-progress', handler)
+  },
 
   // Export file content to text file
   exportFileContent: (filePath: string) => ipcRenderer.invoke('export-file-content', filePath),
