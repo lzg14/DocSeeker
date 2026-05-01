@@ -30,6 +30,13 @@ function FileList({
 }: FileListProps): JSX.Element {
   const { t } = useLanguage()
   const [contextMenu, setContextMenu] = useState<ContextMenuState>({ visible: false, x: 0, y: 0, file: null })
+  const [ocrStatus, setOcrStatus] = useState<{
+    visible: boolean
+    fileName: string
+    phase: 'extracting' | 'ocr' | 'done'
+    result?: { text: string; images: number }
+    error?: string
+  } | null>(null)
   const menuRef = useRef<HTMLDivElement>(null)
 
   // 高亮文件名中的搜索词
@@ -95,15 +102,29 @@ function FileList({
     setContextMenu(prev => ({ ...prev, visible: false }))
   }
 
-  const handleExtractPdfOcr = () => {
+  const handleExtractPdfOcr = async () => {
     if (!contextMenu.file) return
-    window.electron.extractPdfOcr(contextMenu.file.path).then(text => {
-      if (text && text.trim()) {
-        // 复制 OCR 结果到剪贴板
-        window.electron.clipboardWriteText(text.trim())
-      }
-    })
+    const file = contextMenu.file
     setContextMenu(prev => ({ ...prev, visible: false }))
+
+    // 显示进度
+    setOcrStatus({ visible: true, fileName: file.name, phase: 'extracting' })
+
+    try {
+      const result = await window.electron.extractPdfOcr(file.path)
+      if (result.success && result.text && result.images > 0) {
+        setOcrStatus({ visible: true, fileName: file.name, phase: 'done', result: { text: result.text, images: result.images } })
+      } else if (result.error) {
+        setOcrStatus({ visible: true, fileName: file.name, phase: 'done', error: result.error })
+      } else {
+        setOcrStatus({ visible: true, fileName: file.name, phase: 'done', error: t('ocr.noImagesFound') })
+      }
+    } catch (err) {
+      setOcrStatus({ visible: true, fileName: file.name, phase: 'done', error: String(err) })
+    }
+
+    // 3秒后自动关闭
+    setTimeout(() => setOcrStatus(null), 3000)
   }
 
   const MatchTypeBadge: React.FC<{ matchType?: string }> = ({ matchType }) => {
@@ -243,6 +264,36 @@ function FileList({
           <div className="context-menu-item" onClick={handleCopyName}>
             <span>📝</span> {t('contextMenu.copyName')}
           </div>
+        </div>
+      )}
+
+      {/* OCR 进度覆盖层 */}
+      {ocrStatus?.visible && (
+        <div style={{
+          position: 'fixed', bottom: '24px', right: '24px',
+          zIndex: 9999,
+          background: 'var(--surface-elevated, #fff)',
+          border: '1px solid var(--border, #e0e0e0)',
+          borderRadius: '8px',
+          padding: '16px 24px',
+          boxShadow: '0 4px 20px rgba(0,0,0,0.15)',
+          maxWidth: '320px',
+          fontSize: '14px'
+        }}>
+          {ocrStatus.phase === 'extracting' && (
+            <div>{t('ocr.extractingImages')}</div>
+          )}
+          {ocrStatus.phase === 'done' && ocrStatus.result && (
+            <div>
+              <div>✅ {t('ocr.done')}</div>
+              <div style={{ fontSize: '12px', color: '#888', marginTop: '4px' }}>
+                {ocrStatus.result.images} {t('ocr.imagesProcessed')}
+              </div>
+            </div>
+          )}
+          {ocrStatus.phase === 'done' && ocrStatus.error && (
+            <div style={{ color: '#e53935' }}>❌ {ocrStatus.error}</div>
+          )}
         </div>
       )}
     </>
