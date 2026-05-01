@@ -51,3 +51,6 @@ tools/
 # Test artifacts
 tests/unit/test_thumb_*/
 !tests/unit/*.test.ts
+
+# Claude temp files
+tmpclaude-*/
