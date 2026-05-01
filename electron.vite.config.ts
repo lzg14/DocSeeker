@@ -1,10 +1,19 @@
 import { resolve } from 'path'
 import { defineConfig, externalizeDepsPlugin } from 'electron-vite'
 import react from '@vitejs/plugin-react'
+import fs from 'fs'
 
 export default defineConfig({
   main: {
-    plugins: [externalizeDepsPlugin()],
+    plugins: [externalizeDepsPlugin(), {
+      name: 'copy-python-ocr',
+      closeBundle() {
+        // Copy Python OCR script to output directory
+        const src = resolve(__dirname, 'electron/main/extractOcr.py')
+        const dest = resolve(__dirname, 'out/main/extractOcr.py')
+        fs.copyFileSync(src, dest)
+      }
+    }],
     build: {
       rollupOptions: {
         input: {
