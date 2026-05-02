@@ -51,11 +51,12 @@ import log from 'electron-log/main'
 export async function initDatabase(): Promise<void> {
   log.info('[Database] Initializing...')
 
-  // Initialize meta database (scanned folders, search history, saved searches)
-  initMeta()
-
-  // Initialize config database (scan settings, app settings)
+  // Initialize config database first (scan settings, app settings including dataPath)
   initConfig()
+
+  // Initialize meta database (scanned folders, search history, saved searches)
+  // NOTE: initConfig() must run BEFORE initMeta() so getDataPath() returns the correct path
+  initMeta()
 
   // NOTE: do NOT await initShardManager() here — shard loading is lazy,
   // it happens on first search in searchAllShards() to keep UI responsive.

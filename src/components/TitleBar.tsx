@@ -74,6 +74,7 @@ const TagsIcon = () => (
 function TitleBar({ activeTab, onTabChange }: TitleBarProps): JSX.Element {
   const [isMaximized, setIsMaximized] = useState(false)
   const [showCloseConfirm, setShowCloseConfirm] = useState(false)
+  const [minimizeToTray, setMinimizeToTray] = useState(false)
   const { t } = useLanguage()
 
   useEffect(() => {
@@ -82,6 +83,10 @@ function TitleBar({ activeTab, onTabChange }: TitleBarProps): JSX.Element {
       setIsMaximized(maximized)
     })
     return unsubscribe
+  }, [])
+
+  useEffect(() => {
+    window.electron.getMinimizeToTray?.().then(setMinimizeToTray)
   }, [])
 
   useEffect(() => {
@@ -94,7 +99,7 @@ function TitleBar({ activeTab, onTabChange }: TitleBarProps): JSX.Element {
   const handleMinimize = () => window.electron.minimizeWindow()
   const handleMaximize = () => window.electron.maximizeWindow()
   const handleClose = () => {
-    if (localStorage.getItem('minimizeToTray') === 'true') {
+    if (minimizeToTray) {
       window.electron.minimizeToTray?.()
     } else {
       window.electron.closeWindow()
@@ -172,7 +177,7 @@ function TitleBar({ activeTab, onTabChange }: TitleBarProps): JSX.Element {
           message={t('confirm.exitMsg')}
           onConfirm={() => {
             setShowCloseConfirm(false)
-            if (localStorage.getItem('minimizeToTray') === 'true') {
+            if (minimizeToTray) {
               window.electron.minimizeToTray?.()
             } else {
               window.electron.closeWindow()

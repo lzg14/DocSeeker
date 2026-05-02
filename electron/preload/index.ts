@@ -188,6 +188,12 @@ export interface ElectronAPI {
   getLanguage: () => Promise<string>
   setLanguage: (lang: string) => Promise<void>
   onLanguageChanged: (callback: (lang: string) => void) => () => void
+  // Theme settings
+  getTheme: () => Promise<string>
+  setTheme: (theme: string) => Promise<void>
+  // Minimize to tray
+  getMinimizeToTray: () => Promise<boolean>
+  setMinimizeToTray: (enabled: boolean) => Promise<void>
   // OCR settings
   getOcrSettings: () => Promise<{ enabled: boolean; language: string }>
   setOcrSettings: (settings: { enabled?: boolean; language?: string }) => Promise<void>
@@ -366,6 +372,12 @@ const electronAPI: ElectronAPI = {
 
   getLanguage: () => ipcRenderer.invoke("get-language"),
   setLanguage: (lang: string) => ipcRenderer.invoke("set-language", lang),
+
+  getTheme: () => ipcRenderer.invoke("get-theme"),
+  setTheme: (theme: string) => ipcRenderer.invoke("set-theme", theme),
+
+  getMinimizeToTray: () => ipcRenderer.invoke("get-minimize-to-tray"),
+  setMinimizeToTray: (enabled: boolean) => ipcRenderer.invoke("set-minimize-to-tray", enabled),
 
   // OCR settings
   getOcrSettings: () => ipcRenderer.invoke('get-ocr-settings'),

@@ -995,6 +995,24 @@ export function registerIpcHandlers(): void {
     })
   })
 
+  // Theme settings
+  ipcMain.handle('get-theme', async (): Promise<string> => {
+    return getAppSetting<string>('themeId', 'system')
+  })
+
+  ipcMain.handle('set-theme', async (_, theme: string): Promise<void> => {
+    setAppSetting('themeId', theme)
+  })
+
+  // Minimizing to tray
+  ipcMain.handle('get-minimize-to-tray', async (): Promise<boolean> => {
+    return getAppSetting<boolean>('minimizeToTray', false)
+  })
+
+  ipcMain.handle('set-minimize-to-tray', async (_, enabled: boolean): Promise<void> => {
+    setAppSetting('minimizeToTray', enabled)
+  })
+
   // Language settings (for tray menu)
   ipcMain.handle('get-language', async (): Promise<string> => {
     return getAppSetting<string>('language', 'zh-CN')

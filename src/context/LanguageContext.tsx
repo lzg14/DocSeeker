@@ -643,25 +643,44 @@ const translations: Record<Language, Record<string, string>> = {
 }
 
 export function LanguageProvider({ children }: { children: ReactNode }): JSX.Element {
-  const [language, setLanguageState] = useState<Language>(() => {
-    return (localStorage.getItem('language') as Language) || 'zh-CN'
-  })
+  const [language, setLanguageState] = useState<Language>('zh-CN')
+  const [theme, setThemeState] = useState<ThemeId>('system')
+  const [initialized, setInitialized] = useState(false)
 
-  const [theme, setThemeState] = useState<ThemeId>(() => {
-    return (localStorage.getItem('theme') as ThemeId) || 'system'
-  })
+  // Load settings from config.json on startup
+  useEffect(() => {
+    const loadSettings = async () => {
+      try {
+        const [configLang, configTheme] = await Promise.all([
+          window.electron.getLanguage?.() || 'zh-CN',
+          window.electron.getTheme?.() || 'system'
+        ])
+        if (configLang && configLang !== language) {
+          setLanguageState(configLang as Language)
+        }
+        if (configTheme && configTheme !== theme) {
+          setThemeState(configTheme as ThemeId)
+        }
+      } catch (e) {
+        console.warn('Failed to load settings from config:', e)
+      }
+      setInitialized(true)
+    }
+    loadSettings()
+  }, [])
 
   const setLanguage = (lang: Language) => {
     setLanguageState(lang)
-    localStorage.setItem('language', lang)
+    window.electron.setLanguage?.(lang)
   }
 
   const setTheme = (newTheme: ThemeId) => {
     setThemeState(newTheme)
-    localStorage.setItem('theme', newTheme)
+    window.electron.setTheme?.(newTheme)
   }
 
   useEffect(() => {
+    if (!initialized) return
     if (theme === 'system') {
       const applySystemTheme = () => {
         const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches
@@ -674,24 +693,13 @@ export function LanguageProvider({ children }: { children: ReactNode }): JSX.Ele
     } else {
       document.documentElement.setAttribute('data-theme', theme)
     }
-  }, [theme])
+  }, [theme, initialized])
 
-  // Sync language from config.json on startup (for tray menu consistency)
-  useEffect(() => {
-    window.electron.getLanguage?.().then((configLang: string) => {
-      if (configLang && configLang !== language) {
-        setLanguageState(configLang as Language)
-        localStorage.setItem('language', configLang)
-      }
-    })
-  }, [])
-
-  // Listen for language changes from other windows (e.g., main window -> floating search)
+  // Listen for language changes from other windows
   useEffect(() => {
     const unsubscribe = window.electron.onLanguageChanged?.((newLang: string) => {
       if (newLang && newLang !== language) {
         setLanguageState(newLang as Language)
-        localStorage.setItem('language', newLang)
         document.documentElement.setAttribute('lang', newLang)
       }
     })

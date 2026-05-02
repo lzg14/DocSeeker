@@ -8,9 +8,7 @@ function LanguagePage(): JSX.Element {
   const [currentHotkey, setCurrentHotkey] = useState('Ctrl+Shift+F')
   const [listening, setListening] = useState(false)
   const [autoLaunch, setAutoLaunch] = useState(false)
-  const [minimizeToTray, setMinimizeToTray] = useState(
-    () => localStorage.getItem('minimizeToTray') === 'true'
-  )
+  const [minimizeToTray, setMinimizeToTray] = useState(false)
   const [monitorEnabled, setMonitorEnabled] = useState(false)
   const [doubleCtrlEnabled, setDoubleCtrlEnabledLocal] = useState(true)
   const [hotkeyError, setHotkeyError] = useState('')
@@ -55,6 +53,7 @@ function LanguagePage(): JSX.Element {
   useEffect(() => {
     window.electron.getGlobalHotkey().then(h => setCurrentHotkey(formatHotkey(h)))
     window.electron.getAutoLaunch?.().then(setAutoLaunch)
+    window.electron.getMinimizeToTray?.().then(setMinimizeToTray)
     window.electron.usnGetConfig?.().then(cfg => {
       if (cfg) setMonitorEnabled(cfg.enabled)
     })
@@ -335,7 +334,7 @@ function LanguagePage(): JSX.Element {
           label={t('settings.window.minimizeToTray')}
           action={<Toggle checked={minimizeToTray} onChange={v => {
             setMinimizeToTray(v)
-            localStorage.setItem('minimizeToTray', String(v))
+            window.electron.setMinimizeToTray?.(v)
           }} />}
         />
       </SettingsSection>
