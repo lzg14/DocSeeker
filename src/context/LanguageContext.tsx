@@ -300,6 +300,12 @@ const translations: Record<Language, Record<string, string>> = {
     'settings.fileTypes.archives': '压缩包',
     'settings.fileTypes.email': '邮件',
     'settings.fileTypes.media': '媒体',
+    'settings.fileTypesDesc': '选择要扫描的文件类型',
+    'settings.fileTypes.enableAll': '全选',
+    'settings.fileTypes.disableAll': '全不选',
+    'settings.configure': '配置',
+    'settings.manage': '管理',
+    'settings.tab.appearance': '外观',
     // Common
     'common.cancel': '取消',
     // Theme
@@ -591,6 +597,12 @@ const translations: Record<Language, Record<string, string>> = {
     'settings.fileTypes.archives': 'Archives',
     'settings.fileTypes.email': 'Email',
     'settings.fileTypes.media': 'Media',
+    'settings.fileTypesDesc': 'Choose which file types to scan',
+    'settings.fileTypes.enableAll': 'Enable All',
+    'settings.fileTypes.disableAll': 'Disable All',
+    'settings.configure': 'Configure',
+    'settings.manage': 'Manage',
+    'settings.tab.appearance': 'Appearance',
     // Common
     'common.cancel': 'Cancel',
     // Status bar

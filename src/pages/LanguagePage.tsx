@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useLanguage, themes } from '../context/LanguageContext'
+import FileTypesModal from '../components/FileTypesModal'
+import TagsModal from '../components/TagsModal'
 
 function LanguagePage(): JSX.Element {
   const { language, setLanguage, theme, setTheme, t } = useLanguage()
@@ -18,20 +20,13 @@ function LanguagePage(): JSX.Element {
   const [showRestartDialog, setShowRestartDialog] = useState(false)
   const [pendingDataPath, setPendingDataPath] = useState('')
 
+  // Modals
+  const [showFileTypesModal, setShowFileTypesModal] = useState(false)
+  const [showTagsModal, setShowTagsModal] = useState(false)
+
   // Accessibility: font size, icon size
   const [fontSize, setFontSize] = useState(() => localStorage.getItem('fontSize') || 'medium')
   const [iconSize, setIconSize] = useState(() => localStorage.getItem('iconSize') || 'medium')
-
-  // File type categories for scanning
-  const [fileTypes, setFileTypes] = useState<Record<string, boolean>>({
-    documents: true,
-    pdf: true,
-    text: true,
-    odf: true,
-    archives: true,
-    email: true,
-    media: true
-  })
 
   // Apply font size / icon size immediately
   useEffect(() => {
@@ -64,26 +59,19 @@ function LanguagePage(): JSX.Element {
       if (cfg) setMonitorEnabled(cfg.enabled)
     })
     window.electron.getDoubleCtrlEnabled?.().then(setDoubleCtrlEnabledLocal)
-    // Get initial monitor status
     window.electron.getMonitorStatus?.().then(setMonitorStatus)
-    // Subscribe to status changes
     const unsubscribe = window.electron.onMonitorStatusChanged?.(setMonitorStatus)
-    // Get data path
     window.electron.getDataPath?.().then(setDataPath)
-    // Get file type settings
-    window.electron.getScanSettings?.().then(settings => {
-      if (settings?.fileTypes) setFileTypes(settings.fileTypes)
-    })
     return () => unsubscribe?.()
   }, [])
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'monitoring': return '#4caf50' // Green
-      case 'connected': return '#8bc34a' // Light green
-      case 'connecting': return '#ff9800' // Orange
-      case 'error': return '#f44336' // Red
-      default: return '#9e9e9e' // Gray
+      case 'monitoring': return '#4caf50'
+      case 'connected': return '#8bc34a'
+      case 'connecting': return '#ff9800'
+      case 'error': return '#f44336'
+      default: return '#9e9e9e'
     }
   }
 
@@ -108,16 +96,13 @@ function LanguagePage(): JSX.Element {
   const listenForHotkey = async () => {
     setListening(true)
     setHotkeyError('')
-    // Blur the button to ensure keydown events go to window
     ;(document.activeElement as HTMLElement)?.blur()
-    // Disable current hotkey temporarily so it won't trigger during setting
     await window.electron.disableHotkey?.()
 
     const MODIFIER_KEYS = new Set(['Control', 'Shift', 'Alt', 'Meta', 'OS'])
 
     const cleanup = () => {
       window.removeEventListener('keydown', handler)
-      // Re-enable hotkey when exiting listening mode
       window.electron.enableHotkey?.()
     }
 
@@ -130,21 +115,16 @@ function LanguagePage(): JSX.Element {
       if (e.metaKey) modifiers.push('Meta')
 
       const key = e.key
-      // Skip if it's just a modifier key
       if (MODIFIER_KEYS.has(key)) return
 
-      // Get the final key (uppercase for single chars, or the key name)
       const finalKey = key.length === 1 ? key.toUpperCase() : key
 
-      // Require at least one key and either a modifier or a special key
       if (finalKey) {
         const hotkey = [...modifiers, finalKey].join('+')
-        console.log('[Hotkey] Setting:', hotkey)
         window.electron.setGlobalHotkey(hotkey).then(() => {
           setCurrentHotkey(formatHotkey(hotkey))
           setHotkeyError('')
         }).catch((err) => {
-          console.error('[Hotkey] Failed:', err)
           setHotkeyError('Failed to set hotkey')
         }).finally(() => {
           setListening(false)
@@ -158,20 +138,16 @@ function LanguagePage(): JSX.Element {
   const handleLanguageChange = (newLang: string) => {
     setLanguage(newLang as 'zh-CN' | 'en')
     document.documentElement.setAttribute('lang', newLang)
-    // Sync to config.json so tray menu shows correct language
     window.electron.setLanguage(newLang)
   }
 
   const handleSelectDataPath = async () => {
     const dir = await window.electron.selectDirectory()
     if (!dir) return
-
-    // 先检查路径是否有效
-    if (dataPath.current === dir) return // 路径没变，不需要处理
+    if (dataPath.current === dir) return
 
     const success = await window.electron.setDataPath?.(dir)
     if (success) {
-      // 显示重启提示，而不是立即更新 UI
       setPendingDataPath(dir)
       setShowRestartDialog(true)
       setPathError('')
@@ -187,7 +163,6 @@ function LanguagePage(): JSX.Element {
   const handleCancelRestart = () => {
     setShowRestartDialog(false)
     setPendingDataPath('')
-    // 刷新当前数据路径显示
     window.electron.getDataPath?.().then(setDataPath)
   }
 
@@ -227,9 +202,31 @@ function LanguagePage(): JSX.Element {
     </div>
   )
 
+  // Settings section component
+  const SettingsSection = ({ title, children }: { title: string; children: React.ReactNode }) => (
+    <div className="settings-group">
+      <div className="settings-section-title" style={{ padding: '12px 12px 8px' }}>
+        {title}
+      </div>
+      {children}
+    </div>
+  )
+
+  // Settings row with button component
+  const SettingsRow = ({ label, action, hint }: { label: string; action: React.ReactNode; hint?: string }) => (
+    <div className="settings-row">
+      <div style={{ flex: 1 }}>
+        <div className="settings-label">{label}</div>
+        {hint && <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '2px' }}>{hint}</div>}
+      </div>
+      {action}
+    </div>
+  )
+
   return (
     <div className="settings-page">
-      <div className="settings-group">
+      {/* Appearance & Language */}
+      <SettingsSection title={t('settings.tab.appearance') || '外观'}>
         <div className="settings-row">
           <span className="settings-label">{t('settings.themeLabel')}</span>
           <div className="theme-cards">
@@ -251,184 +248,156 @@ function LanguagePage(): JSX.Element {
             ))}
           </div>
         </div>
-      </div>
+        <SettingsRow
+          label={t('settings.languageLabel')}
+          action={
+            <select
+              className="settings-select"
+              value={language}
+              onChange={(e) => handleLanguageChange(e.target.value)}
+            >
+              <option value="zh-CN">简体中文</option>
+              <option value="en">English</option>
+            </select>
+          }
+        />
+      </SettingsSection>
 
-      <div className="settings-group">
-        <div className="settings-row">
-          <span className="settings-label">{t('settings.languageLabel')}</span>
-          <select
-            className="settings-select"
-            value={language}
-            onChange={(e) => handleLanguageChange(e.target.value)}
-          >
-            <option value="zh-CN">简体中文</option>
-            <option value="en">English</option>
-          </select>
-        </div>
-      </div>
+      {/* Accessibility */}
+      <SettingsSection title={t('settings.accessibility') || '可访问性'}>
+        <SettingsRow
+          label={t('settings.fontSize')}
+          action={
+            <div className="size-selector">
+              {(['small', 'medium', 'large', 'x-large'] as const).map(size => (
+                <button
+                  key={size}
+                  className={`size-btn ${fontSize === size ? 'active' : ''}`}
+                  onClick={() => setFontSize(size)}
+                  style={{ fontSize: size === 'small' ? '12px' : size === 'medium' ? '14px' : size === 'large' ? '16px' : '18px' }}
+                >
+                  {t(`settings.fontSize.${size}`)}
+                </button>
+              ))}
+            </div>
+          }
+        />
+        <SettingsRow
+          label={t('settings.iconSize')}
+          action={
+            <div className="size-selector">
+              {(['small', 'medium', 'large', 'x-large'] as const).map(size => (
+                <button
+                  key={size}
+                  className={`size-btn ${iconSize === size ? 'active' : ''}`}
+                  onClick={() => setIconSize(size)}
+                >
+                  <span style={{ fontSize: size === 'small' ? '14px' : size === 'medium' ? '16px' : size === 'large' ? '20px' : '24px' }}>▶</span>
+                </button>
+              ))}
+            </div>
+          }
+        />
+      </SettingsSection>
 
-      <div className="settings-group">
-        <div className="settings-row">
-          <div className="settings-label-wrap">
-            <span className="settings-label">{t('settings.globalHotkey')}</span>
-          </div>
-          <button
-            className="btn btn-secondary hotkey-btn"
-            onClick={listenForHotkey}
-            disabled={listening}
-          >
-            {listening ? t('settings.pressKey') : currentHotkey}
-          </button>
-        </div>
+      {/* Window Behavior */}
+      <SettingsSection title={t('settings.window') || '窗口'}>
+        <SettingsRow
+          label={t('settings.globalHotkey')}
+          action={
+            <button
+              className="btn btn-secondary hotkey-btn"
+              onClick={listenForHotkey}
+              disabled={listening}
+            >
+              {listening ? t('settings.pressKey') : currentHotkey}
+            </button>
+          }
+        />
         {hotkeyError && (
-          <div style={{ color: '#f44336', fontSize: '12px', marginTop: '4px' }}>
-            {hotkeyError}
-          </div>
+          <div style={{ color: '#f44336', fontSize: '12px', padding: '0 12px 8px' }}>{hotkeyError}</div>
         )}
-        <div className="settings-row">
-          <span className="settings-label">{t('settings.doubleCtrl')}</span>
-          <Toggle checked={doubleCtrlEnabled} onChange={v => {
+        <SettingsRow
+          label={t('settings.doubleCtrl')}
+          action={<Toggle checked={doubleCtrlEnabled} onChange={v => {
             setDoubleCtrlEnabledLocal(v)
             window.electron.setDoubleCtrlEnabled?.(v)
-          }} />
-        </div>
-      </div>
-
-      <div className="settings-group">
-        <div className="settings-row">
-          <span className="settings-label">{t('settings.window.autoLaunch')}</span>
-          <Toggle checked={autoLaunch} onChange={v => {
+          }} />}
+        />
+        <SettingsRow
+          label={t('settings.window.autoLaunch')}
+          action={<Toggle checked={autoLaunch} onChange={v => {
             setAutoLaunch(v)
             window.electron.setAutoLaunch?.(v)
-          }} />
-        </div>
-        <div className="settings-row">
-          <span className="settings-label">{t('settings.window.minimizeToTray')}</span>
-          <Toggle checked={minimizeToTray} onChange={v => {
+          }} />}
+        />
+        <SettingsRow
+          label={t('settings.window.minimizeToTray')}
+          action={<Toggle checked={minimizeToTray} onChange={v => {
             setMinimizeToTray(v)
             localStorage.setItem('minimizeToTray', String(v))
-          }} />
-        </div>
-      </div>
+          }} />}
+        />
+      </SettingsSection>
 
-      <div className="settings-group">
-        <div className="settings-row">
-          <div className="settings-label-wrap">
-            <span className="settings-label">{t('settings.enableRealtimeMonitor')}</span>
-            <span
-              className="monitor-status"
-              style={{ color: getStatusColor(monitorStatus.status), fontSize: '11px', marginLeft: '8px' }}
-            >
+      {/* Scanning Options */}
+      <SettingsSection title={t('scan.title') || '扫描'}>
+        <SettingsRow
+          label={t('settings.enableRealtimeMonitor')}
+          hint={getStatusText(monitorStatus.status)}
+          action={
+            <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
               <span
                 style={{
-                  display: 'inline-block',
-                  width: '6px',
-                  height: '6px',
+                  width: '8px',
+                  height: '8px',
                   borderRadius: '50%',
-                  backgroundColor: getStatusColor(monitorStatus.status),
-                  marginRight: '4px'
+                  backgroundColor: getStatusColor(monitorStatus.status)
                 }}
               />
-              {getStatusText(monitorStatus.status)}
+              <Toggle checked={monitorEnabled} onChange={handleToggleMonitor} />
             </span>
-          </div>
-          <Toggle checked={monitorEnabled} onChange={handleToggleMonitor} />
-        </div>
-      </div>
-
-      <div className="settings-group">
-        <div className="settings-row" style={{ justifyContent: 'flex-start', flexWrap: 'wrap', gap: '12px' }}>
-          <span className="settings-label">{t('settings.dataPath') || '数据存储位置'}</span>
-          <div style={{ flex: 1, fontSize: '12px', color: '#666', wordBreak: 'break-all', minWidth: '200px' }}>
-            {dataPath.current || dataPath.default || '...'}
-            {dataPath.current && dataPath.current !== dataPath.default && (
-              <span style={{ color: '#ff9800', marginLeft: '8px' }}>({t('settings.customPath') || '已自定义'})</span>
-            )}
-          </div>
-          <button className="btn btn-secondary" onClick={handleSelectDataPath}>
-            {t('settings.changePath') || '更改'}
-          </button>
-        </div>
-        <div style={{ fontSize: '11px', color: '#888', paddingLeft: '12px', paddingBottom: '8px' }}>
-          {t('settings.dataPathDesc') || '修改后需要重新扫描'}
-        </div>
-        {pathError && (
-          <div style={{ color: '#f44336', fontSize: '12px', paddingLeft: '12px', paddingBottom: '8px' }}>
-            {pathError}
-          </div>
-        )}
-      </div>
-
-      {/* File Types: Category Selection */}
-      <div className="settings-group">
-        <div className="settings-section-title" style={{ marginBottom: '12px' }}>
-          {t('settings.fileTypes') || '文件类型'}
-        </div>
-        <div style={{ padding: '0 12px 12px', display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
-          {([
-            { key: 'documents', label: t('settings.fileTypes.documents'), ext: 'doc/docx/xls/xlsx/ppt/pptx/rtf/chm' },
-            { key: 'pdf', label: t('settings.fileTypes.pdf'), ext: 'pdf/xps' },
-            { key: 'text', label: t('settings.fileTypes.text'), ext: 'txt/md/json/xml/csv/html/svg' },
-            { key: 'odf', label: t('settings.fileTypes.odf'), ext: 'odt/ods/odp/epub' },
-            { key: 'archives', label: t('settings.fileTypes.archives'), ext: 'zip/rar/7z' },
-            { key: 'email', label: t('settings.fileTypes.email'), ext: 'mbox/eml/pst' },
-            { key: 'media', label: t('settings.fileTypes.media'), ext: 'jpg/png/mp3/mp4...' },
-          ] as const).map(item => (
-            <label key={item.key} style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer' }}>
-              <input
-                type="checkbox"
-                checked={fileTypes[item.key] ?? true}
-                onChange={() => {
-                  const newFileTypes = { ...fileTypes, [item.key]: !fileTypes[item.key as keyof typeof fileTypes] }
-                  setFileTypes(newFileTypes)
-                  window.electron.updateScanSettings?.({ fileTypes: newFileTypes })
-                }}
-              />
-              <span>{item.label}</span>
-              <span style={{ fontSize: '11px', color: '#888' }}>({item.ext})</span>
-            </label>
-          ))}
-        </div>
-      </div>
-
-      {/* Accessibility: Font & Icon Size */}
-      <div className="settings-group">
-        <div className="settings-section-title" style={{ marginBottom: '12px' }}>
-          {t('settings.accessibility') || '可访问性'}
-        </div>
-        <div className="settings-row">
-          <span className="settings-label">{t('settings.fontSize') || '字号'}</span>
-          <div className="size-selector">
-            {(['small', 'medium', 'large', 'x-large'] as const).map(size => (
-              <button
-                key={size}
-                className={`size-btn ${fontSize === size ? 'active' : ''}`}
-                onClick={() => setFontSize(size)}
-                style={{ fontSize: size === 'small' ? '12px' : size === 'medium' ? '14px' : size === 'large' ? '16px' : '18px' }}
-              >
-                {t(`settings.fontSize.${size}`)}
+          }
+        />
+        <SettingsRow
+          label={t('settings.dataPath')}
+          action={
+            <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+              <span style={{ fontSize: '12px', color: 'var(--text-secondary)', maxWidth: '200px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                {dataPath.current || dataPath.default || '...'}
+              </span>
+              <button className="btn btn-secondary" onClick={handleSelectDataPath} style={{ padding: '4px 12px' }}>
+                {t('settings.changePath') || '更改'}
               </button>
-            ))}
-          </div>
-        </div>
-        <div className="settings-row">
-          <span className="settings-label">{t('settings.iconSize') || '图标大小'}</span>
-          <div className="size-selector">
-            {(['small', 'medium', 'large', 'x-large'] as const).map(size => (
-              <button
-                key={size}
-                className={`size-btn ${iconSize === size ? 'active' : ''}`}
-                onClick={() => setIconSize(size)}
-              >
-                <span style={{ fontSize: size === 'small' ? '14px' : size === 'medium' ? '16px' : size === 'large' ? '20px' : '24px' }}>▶</span>
-              </button>
-            ))}
-          </div>
-        </div>
-      </div>
+            </div>
+          }
+        />
+        <SettingsRow
+          label={t('settings.fileTypes')}
+          hint={t('settings.fileTypesDesc') || '选择要扫描的文件类型'}
+          action={
+            <button className="btn btn-secondary" onClick={() => setShowFileTypesModal(true)}>
+              {t('settings.configure') || '配置'}
+            </button>
+          }
+        />
+        <SettingsRow
+          label={t('tags.title')}
+          hint={t('tags.hint') || '管理文件标签'}
+          action={
+            <button className="btn btn-secondary" onClick={() => setShowTagsModal(true)}>
+              {t('settings.manage') || '管理'}
+            </button>
+          }
+        />
+      </SettingsSection>
 
       {/* Restart dialog */}
       {showRestartDialog && <RestartDialog />}
+
+      {/* Modals */}
+      {showFileTypesModal && <FileTypesModal onClose={() => setShowFileTypesModal(false)} />}
+      {showTagsModal && <TagsModal onClose={() => setShowTagsModal(false)} />}
     </div>
   )
 }
