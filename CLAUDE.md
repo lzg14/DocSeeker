@@ -1,5 +1,28 @@
 # DocSeeker 项目规范
 
+## 代码开发规范
+
+### 1. 每次代码改动后必须重新编译
+- 修改任何代码（TypeScript、CSS、配置文件等）后，**必须运行 `npm run build` 重新编译**
+- 编译通过后再测试，禁止跳过编译直接运行
+- 原因：electron-vite 编译产物在 `out/` 目录，不编译运行的是旧代码
+
+### 2. 新增 UI 元素必须同步更新多语言
+- 新增按钮、标签、文字说明时，必须同步更新 i18n 翻译
+- 涉及的文件：
+  - `src/context/LanguageContext.tsx` - 中英文翻译
+  - `src/pages/GuidePage.tsx` - 关于页功能描述（如有必要）
+- 翻译 key 命名规范：`section.element` 如 `settings.fontSize`
+
+### 3. 删除或修改重要功能必须同步更新文档
+- 删除/暂缓/修改重要功能时，必须同步更新：
+  - `PROGRESS.md` - 开发进度记录
+  - `docs/` - 相关技术文档
+  - `src/pages/GuidePage.tsx` - 关于页功能介绍
+- 规则：**代码和文档同步提交**，不允许文档落后于代码
+
+---
+
 ## 功能变更同步规则
 
 - **新增功能**：必须同步更新以下位置
