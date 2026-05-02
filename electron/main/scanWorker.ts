@@ -53,6 +53,42 @@ function formatSize(bytes: number): string {
 
 // ============ 扩展名集合 ============
 
+// Extension categories for file type filtering
+const EXTENSION_CATEGORIES = {
+  documents: ['.doc', '.docx', '.xls', '.xlsx', '.ppt', '.pptx', '.rtf', '.chm', '.wps', '.wpp', '.et', '.dps'],
+  pdf: ['.pdf', '.xps'],
+  text: ['.txt', '.md', '.markdown', '.mdown', '.json', '.xml', '.csv', '.html', '.htm', '.svg'],
+  odf: ['.odt', '.ods', '.odp', '.epub'],
+  archives: ['.zip', '.rar', '.7z', '.tar', '.gz', '.bz2'],
+  email: ['.mbox', '.eml', '.pst', '.msg'],
+  media: ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.bmp', '.tiff', '.tif', '.mp3', '.flac', '.ogg', '.wav', '.aac', '.m4a', '.mp4', '.avi', '.mkv', '.mov', '.wmv', '.flv', '.webm']
+}
+
+// Phase A/B/C extensions
+const PHASE_A_EXTENSIONS = ['.yaml', '.yml', '.log', '.ini', '.cfg', '.conf', '.srt', '.vtt', '.nfo', '.rst', '.tex']
+const PHASE_B_EXTENSIONS = ['.mobi', '.azw3', '.fb2', '.vsd', '.vsdx', '.pages']
+const PHASE_C_EXTENSIONS = ['.numbers', '.key', '.odg', '.odc', '.ots', '.otp']
+
+// Get extension category
+function getExtensionCategory(ext: string): string | null {
+  for (const [category, extensions] of Object.entries(EXTENSION_CATEGORIES)) {
+    if (extensions.includes(ext)) return category
+  }
+  // Phase A/B/C
+  if (PHASE_A_EXTENSIONS.includes(ext)) return 'text'
+  if (PHASE_B_EXTENSIONS.includes(ext)) return 'text'
+  if (PHASE_C_EXTENSIONS.includes(ext)) return 'odf'
+  return null
+}
+
+// Check if extension is enabled based on fileTypes config
+function isExtensionEnabled(ext: string, fileTypes?: Record<string, boolean>): boolean {
+  if (!fileTypes) return true // All enabled by default
+  const category = getExtensionCategory(ext)
+  if (!category) return true // Unknown extensions always enabled
+  return fileTypes[category] !== false
+}
+
 // Supported file extensions
 const SUPPORTED_EXTENSIONS = new Set([
   '.txt', '.md', '.markdown', '.mdown', '.json', '.xml', '.csv', '.html', '.htm', '.svg',
@@ -1349,6 +1385,7 @@ async function runScan(): Promise<void> {
   const CHECK_FILE_SIZE = settings?.checkFileSize ?? true
   const INCLUDE_HIDDEN = settings?.includeHidden ?? false
   const INCLUDE_SYSTEM = settings?.includeSystem ?? false
+  const FILE_TYPES = settings?.fileTypes // File type filtering config
 
   // 初始化错误统计
   const errorStats: ErrorStats = {
@@ -1443,6 +1480,13 @@ async function runScan(): Promise<void> {
           skipped++
           continue
         }
+      }
+
+      // Skip files based on file type category settings
+      const fileExt = path.extname(filePath).toLowerCase()
+      if (!isExtensionEnabled(fileExt, FILE_TYPES)) {
+        skipped++
+        continue
       }
 
       const fileInfo = await processFile(filePath)

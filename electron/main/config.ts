@@ -80,6 +80,16 @@ export interface ScanSettings {
   skipRules: SkipRule[]
   includeHidden: boolean
   includeSystem: boolean
+  // File type categories to scan (empty = all enabled)
+  fileTypes: {
+    documents: boolean   // doc/docx/xls/xlsx/ppt/pptx/rtf/chm/wps/et/dps/wpp
+    pdf: boolean         // pdf/xps
+    text: boolean        // txt/md/markdown/json/xml/csv/html/svg
+    odf: boolean         // odt/ods/odp/epub
+    archives: boolean    // zip/rar/7z
+    email: boolean       // mbox/eml/pst
+    media: boolean       // jpg/png/gif/webp/bmp/tiff/mp3/flac/wav/mp4/avi/mkv
+  }
 }
 
 export interface SkipRule {
@@ -98,7 +108,16 @@ export const DEFAULT_SCAN_SETTINGS: ScanSettings = {
   checkFileSize: true,
   skipRules: [],
   includeHidden: false,
-  includeSystem: false
+  includeSystem: false,
+  fileTypes: {
+    documents: true,
+    pdf: true,
+    text: true,
+    odf: true,
+    archives: true,
+    email: true,
+    media: true
+  }
 }
 
 // ============ In-Memory State ============

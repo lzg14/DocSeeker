@@ -22,6 +22,17 @@ function LanguagePage(): JSX.Element {
   const [fontSize, setFontSize] = useState(() => localStorage.getItem('fontSize') || 'medium')
   const [iconSize, setIconSize] = useState(() => localStorage.getItem('iconSize') || 'medium')
 
+  // File type categories for scanning
+  const [fileTypes, setFileTypes] = useState<Record<string, boolean>>({
+    documents: true,
+    pdf: true,
+    text: true,
+    odf: true,
+    archives: true,
+    email: true,
+    media: true
+  })
+
   // Apply font size / icon size immediately
   useEffect(() => {
     const sizeMap: Record<string, string> = {
@@ -59,6 +70,10 @@ function LanguagePage(): JSX.Element {
     const unsubscribe = window.electron.onMonitorStatusChanged?.(setMonitorStatus)
     // Get data path
     window.electron.getDataPath?.().then(setDataPath)
+    // Get file type settings
+    window.electron.getScanSettings?.().then(settings => {
+      if (settings?.fileTypes) setFileTypes(settings.fileTypes)
+    })
     return () => unsubscribe?.()
   }, [])
 
@@ -342,6 +357,38 @@ function LanguagePage(): JSX.Element {
             {pathError}
           </div>
         )}
+      </div>
+
+      {/* File Types: Category Selection */}
+      <div className="settings-group">
+        <div className="settings-section-title" style={{ marginBottom: '12px' }}>
+          {t('settings.fileTypes') || '文件类型'}
+        </div>
+        <div style={{ padding: '0 12px 12px', display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+          {([
+            { key: 'documents', label: t('settings.fileTypes.documents'), ext: 'doc/docx/xls/xlsx/ppt/pptx/rtf/chm' },
+            { key: 'pdf', label: t('settings.fileTypes.pdf'), ext: 'pdf/xps' },
+            { key: 'text', label: t('settings.fileTypes.text'), ext: 'txt/md/json/xml/csv/html/svg' },
+            { key: 'odf', label: t('settings.fileTypes.odf'), ext: 'odt/ods/odp/epub' },
+            { key: 'archives', label: t('settings.fileTypes.archives'), ext: 'zip/rar/7z' },
+            { key: 'email', label: t('settings.fileTypes.email'), ext: 'mbox/eml/pst' },
+            { key: 'media', label: t('settings.fileTypes.media'), ext: 'jpg/png/mp3/mp4...' },
+          ] as const).map(item => (
+            <label key={item.key} style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer' }}>
+              <input
+                type="checkbox"
+                checked={fileTypes[item.key] ?? true}
+                onChange={() => {
+                  const newFileTypes = { ...fileTypes, [item.key]: !fileTypes[item.key as keyof typeof fileTypes] }
+                  setFileTypes(newFileTypes)
+                  window.electron.updateScanSettings?.({ fileTypes: newFileTypes })
+                }}
+              />
+              <span>{item.label}</span>
+              <span style={{ fontSize: '11px', color: '#888' }}>({item.ext})</span>
+            </label>
+          ))}
+        </div>
       </div>
 
       {/* Accessibility: Font & Icon Size */}

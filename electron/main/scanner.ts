@@ -13,8 +13,44 @@ import {
   FileRecord
 } from './database'
 import { getAppSetting } from './config'
+import { getScanSettings } from './config'
 
-// Supported file extensions
+// Supported file extensions (grouped by category)
+const EXTENSION_CATEGORIES = {
+  documents: ['.doc', '.docx', '.xls', '.xlsx', '.ppt', '.pptx', '.rtf', '.chm', '.wps', '.wpp', '.et', '.dps'],
+  pdf: ['.pdf', '.xps'],
+  text: ['.txt', '.md', '.markdown', '.mdown', '.json', '.xml', '.csv', '.html', '.htm', '.svg'],
+  odf: ['.odt', '.ods', '.odp', '.epub'],
+  archives: ['.zip', '.rar', '.7z'],
+  email: ['.mbox', '.eml', '.pst'],
+  media: ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.bmp', '.tiff', '.tif', '.mp3', '.flac', '.ogg', '.wav', '.aac', '.m4a', '.mp4', '.avi', '.mkv', '.mov', '.wmv', '.flv', '.webm']
+}
+
+// Check if an extension belongs to a category
+function getExtensionCategory(ext: string): string | null {
+  for (const [category, extensions] of Object.entries(EXTENSION_CATEGORIES)) {
+    if (extensions.includes(ext)) return category
+  }
+  return null
+}
+
+// Check if a file extension is enabled for scanning based on config
+function isExtensionEnabled(ext: string): boolean {
+  try {
+    const settings = getScanSettings()
+    const fileTypes = settings.fileTypes
+    if (!fileTypes) return true // All enabled by default
+
+    const category = getExtensionCategory(ext)
+    if (!category) return true // Unknown extensions are allowed
+
+    return (fileTypes as Record<string, boolean>)[category] !== false
+  } catch {
+    return true // Default to enabled
+  }
+}
+
+// Supported file extensions (all - filtering happens in isExtensionEnabled)
 const SUPPORTED_EXTENSIONS = new Set([
   '.txt', '.md', '.markdown', '.mdown', '.json', '.xml', '.csv', '.html', '.htm', '.svg',
   '.doc', '.docx',
