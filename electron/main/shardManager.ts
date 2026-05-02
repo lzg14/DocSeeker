@@ -409,10 +409,35 @@ async function loadExistingShards(): Promise<void> {
 
   // Ensure at least one shard is available
   if (shards.length === 0) {
-    // No existing shards — create the initial one synchronously
-    const initialShard = await openNextShard()
-    if (initialShard) {
-      log.info(`[ShardManager] Created initial shard ${initialShard.id}`)
+    // No existing shards — create the initial one directly (avoid calling openNextShard which calls initShardManager)
+    const newId = shards.length
+    const newDbPath = getShardPath(newId)
+    const newShard: ShardInfo = {
+      id: newId,
+      dbPath: newDbPath,
+      status: 'loading',
+      fileCount: 0,
+      currentSizeBytes: 0
+    }
+    shards.push(newShard)
+    try {
+      const result = await loadShardWorker(newId, newDbPath)
+      if (result.type === 'ready') {
+        newShard.status = 'ready'
+        newShard.fileCount = result.fileCount ?? 0
+        newShard.loadTime = result.loadTime
+        newShard.currentSizeBytes = require('fs').statSync(newDbPath).size
+        log.info(`[ShardManager] Created initial shard ${newId}: ${newShard.fileCount} files`)
+      } else {
+        newShard.status = 'error'
+        newShard.error = result.error ?? 'Failed to load initial shard'
+        log.error(`[ShardManager] Failed to load initial shard ${newId}:`, newShard.error)
+      }
+    } catch (err) {
+      const error = err instanceof Error ? err.message : String(err)
+      newShard.status = 'error'
+      newShard.error = error
+      log.error(`[ShardManager] Exception creating initial shard:`, err)
     }
   } else {
     // Load existing shards in parallel up to config.parallelWorkers
