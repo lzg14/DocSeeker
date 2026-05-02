@@ -18,6 +18,34 @@ function LanguagePage(): JSX.Element {
   const [showRestartDialog, setShowRestartDialog] = useState(false)
   const [pendingDataPath, setPendingDataPath] = useState('')
 
+  // Accessibility: font size, icon size
+  const [fontSize, setFontSize] = useState(() => localStorage.getItem('fontSize') || 'medium')
+  const [iconSize, setIconSize] = useState(() => localStorage.getItem('iconSize') || 'medium')
+
+  // Apply font size / icon size immediately
+  useEffect(() => {
+    const sizeMap: Record<string, string> = {
+      small: '12px',
+      medium: '14px',
+      large: '16px',
+      'x-large': '18px',
+    }
+    const iconSizeMap: Record<string, string> = {
+      small: '14px',
+      medium: '16px',
+      large: '20px',
+      'x-large': '24px',
+    }
+    const root = document.documentElement
+    root.style.setProperty('--font-size-base', sizeMap[fontSize] || '14px')
+    root.style.setProperty('--font-size-small', sizeMap[fontSize] ? `${parseInt(sizeMap[fontSize]) - 2}px` : '12px')
+    root.style.setProperty('--font-size-large', sizeMap[fontSize] ? `${parseInt(sizeMap[fontSize]) + 2}px` : '16px')
+    root.style.setProperty('--icon-size-base', iconSizeMap[iconSize] || '16px')
+    root.style.setProperty('--icon-size-large', iconSizeMap[iconSize] ? `${parseInt(iconSizeMap[iconSize]) + 4}px` : '20px')
+    localStorage.setItem('fontSize', fontSize)
+    localStorage.setItem('iconSize', iconSize)
+  }, [fontSize, iconSize])
+
   useEffect(() => {
     window.electron.getGlobalHotkey().then(h => setCurrentHotkey(formatHotkey(h)))
     window.electron.getAutoLaunch?.().then(setAutoLaunch)
@@ -314,6 +342,42 @@ function LanguagePage(): JSX.Element {
             {pathError}
           </div>
         )}
+      </div>
+
+      {/* Accessibility: Font & Icon Size */}
+      <div className="settings-group">
+        <div className="settings-section-title" style={{ marginBottom: '12px' }}>
+          {t('settings.accessibility') || '可访问性'}
+        </div>
+        <div className="settings-row">
+          <span className="settings-label">{t('settings.fontSize') || '字号'}</span>
+          <div className="size-selector">
+            {(['small', 'medium', 'large', 'x-large'] as const).map(size => (
+              <button
+                key={size}
+                className={`size-btn ${fontSize === size ? 'active' : ''}`}
+                onClick={() => setFontSize(size)}
+                style={{ fontSize: size === 'small' ? '12px' : size === 'medium' ? '14px' : size === 'large' ? '16px' : '18px' }}
+              >
+                {t(`settings.fontSize.${size}`)}
+              </button>
+            ))}
+          </div>
+        </div>
+        <div className="settings-row">
+          <span className="settings-label">{t('settings.iconSize') || '图标大小'}</span>
+          <div className="size-selector">
+            {(['small', 'medium', 'large', 'x-large'] as const).map(size => (
+              <button
+                key={size}
+                className={`size-btn ${iconSize === size ? 'active' : ''}`}
+                onClick={() => setIconSize(size)}
+              >
+                <span style={{ fontSize: size === 'small' ? '14px' : size === 'medium' ? '16px' : size === 'large' ? '20px' : '24px' }}>▶</span>
+              </button>
+            ))}
+          </div>
+        </div>
       </div>
 
       {/* Restart dialog */}

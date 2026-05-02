@@ -245,6 +245,7 @@ const translations: Record<Language, Record<string, string>> = {
     'guide.feature11': '搜索结果导出：支持将搜索结果导出为 CSV、HTML、TXT 格式，方便分享与存档',
     'guide.feature12': '文件内容导出：支持将文件内容导出为 TXT 格式',
     'guide.feature13': '图片 OCR 识别：PNG/JPG/PDF 图片中的文字可提取搜索，支持中文/英文/日文/韩文，右键菜单一键识别',
+    'guide.feature14': '可访问性：字号/图标大小可调节，方便视力不好的用户',
     'guide.donate': '赞赏作者',
     'guide.donateDesc': '如果觉得好用，欢迎打赏支持一下',
     'guide.version': '版本',
@@ -283,6 +284,13 @@ const translations: Record<Language, Record<string, string>> = {
     'settings.restartMessage': '数据存储位置已更改，需要重启应用使配置生效。',
     'settings.newPath': '新路径',
     'settings.restartNow': '立即重启',
+    'settings.accessibility': '可访问性',
+    'settings.fontSize': '字号',
+    'settings.fontSize.small': '小',
+    'settings.fontSize.medium': '中',
+    'settings.fontSize.large': '大',
+    'settings.fontSize.x-large': '特大',
+    'settings.iconSize': '图标大小',
     // Common
     'common.cancel': '取消',
     // Theme
@@ -519,6 +527,7 @@ const translations: Record<Language, Record<string, string>> = {
     'guide.feature11': 'Export Search Results: Export search results to CSV, HTML, or TXT format for sharing and archiving',
     'guide.feature12': 'Export file content: Export file content to TXT format',
     'guide.feature13': 'Image OCR: Extract text from PNG/JPG/PDF images for search, supports zh/en/ja/ko, one-click via right-click menu',
+    'guide.feature14': 'Accessibility: Adjustable font and icon sizes for users with visual impairments',
     'guide.donate': 'Donate',
     'guide.donateDesc': 'If you find this tool useful, your support is appreciated',
     'guide.version': 'Version',
@@ -557,6 +566,13 @@ const translations: Record<Language, Record<string, string>> = {
     'settings.restartMessage': 'Data storage location has changed. Restart the app to apply changes.',
     'settings.newPath': 'New Path',
     'settings.restartNow': 'Restart Now',
+    'settings.accessibility': 'Accessibility',
+    'settings.fontSize': 'Font Size',
+    'settings.fontSize.small': 'S',
+    'settings.fontSize.medium': 'M',
+    'settings.fontSize.large': 'L',
+    'settings.fontSize.x-large': 'XL',
+    'settings.iconSize': 'Icon Size',
     // Common
     'common.cancel': 'Cancel',
     // Status bar

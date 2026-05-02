@@ -169,6 +169,14 @@
   --nav-width: 200px;
   --titlebar-height: 36px;
   --statusbar-height: 28px;
+  /* === 可访问性：字号/字体/图标大小 === */
+  --font-size-base: 14px;
+  --font-size-small: 12px;
+  --font-size-large: 16px;
+  --font-size-title: 15px;
+  --font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  --icon-size-base: 16px;
+  --icon-size-large: 20px;
   /* === 按钮危险色 === */
   --danger: #dc2626;
   --danger-hover: #b91c1c;
@@ -256,8 +264,8 @@
 }
 
 body {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-  font-size: 14px;
+  font-family: var(--font-family, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif);
+  font-size: var(--font-size-base, 14px);
   color: var(--text-primary);
   background-color: var(--bg-primary);
   overflow: hidden;
@@ -1259,13 +1267,39 @@ textarea:focus:not(:focus-visible) {
   overflow: hidden;
 }
 
-.settings-group-title {
+.settings-section-title {
   font-size: 11px;
   font-weight: 600;
   color: var(--text-muted);
   text-transform: uppercase;
   letter-spacing: 0.05em;
   padding: 8px 12px 4px;
+}
+
+.size-selector {
+  display: flex;
+  gap: 4px;
+}
+
+.size-btn {
+  padding: 4px 10px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--bg-secondary);
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.size-btn:hover {
+  background: var(--hover-bg);
+  border-color: var(--accent);
+}
+
+.size-btn.active {
+  background: var(--accent-subtle);
+  border-color: var(--accent);
+  color: var(--accent);
 }
 
 .settings-row {
