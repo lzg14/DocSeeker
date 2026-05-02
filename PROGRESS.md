@@ -1,6 +1,6 @@
 # DocSeeker 开发进度记录
 
-> 最后更新：2026-05-01
+> 最后更新：2026-05-02
 
 ---
 
@@ -36,6 +36,88 @@
 
 **教训**：新增 UI 组件时，直接从 LanguageContext 引入 `useLanguage` 并用 `t('key')` 翻译，不要硬编码任何用户可见文本。
 
+### 5. 数据库初始化顺序
+
+**问题**：自定义 dataPath 设置后重启，meta.db 没有在正确位置生成。
+
+**根因**：initMeta() 在 initConfig() 之前调用，导致 getDataPath() 读取到的是默认值而不是用户配置的路径。
+
+**教训**：initConfig() 必须先于 initMeta() 调用，确保配置加载完毕后再初始化使用路径的模块。
+
+### 6. 配置统一存储在 config.json
+
+**原则**：所有用户配置统一存储在 config.json（固定路径），不再使用 localStorage。
+
+**当前配置存储：**
+- config.json（固定路径）：主题、语言、快捷键、最小化到托盘、文件类型筛选等
+- localStorage（仅 UI 偏好）：字号、图标大小
+
+---
+
+---
+
+## 系统架构
+
+### 配置架构
+
+```
+config.json (固定位置: userData/db/config.json)
+├── app_settings
+│   ├── dataPath          # 数据文件存储路径（用户可自定义）
+│   ├── themeId           # 主题 (light/dark/system)
+│   ├── language          # 语言 (zh-CN/en)
+│   ├── hotkey            # 全局快捷键
+│   ├── autoLaunch        # 开机自启
+│   ├── minimizeToTray     # 最小化到托盘
+│   ├── doubleCtrlEnabled # 双击 Ctrl 热键
+│   └── realtimeMonitor   # 实时监控配置
+└── scan_settings
+    ├── timeoutMs
+    ├── maxFileSize
+    ├── fileTypes         # 文件类型筛选
+    └── ...
+```
+
+### 数据库架构
+
+```
+数据存储路径 (dataPath，可配置)
+├── meta.db              # 元数据（扫描目录、搜索历史、标签）
+├── shards/              # 数据分片
+│   ├── shard_0.db       # 分片 0
+│   ├── shard_1.db       # 分片 1
+│   └── ...
+└── usn/                 # USN 监控数据
+    └── usn_state.json
+
+固定路径 (userData/db) - 仅存储配置
+└── config.json          # 所有配置
+```
+
+### IPC 通信架构
+
+```
+Renderer (React)
+    │
+    ├── window.electron.getLanguage/setLanguage
+    ├── window.electron.getTheme/setTheme
+    ├── window.electron.getMinimizeToTray/setMinimizeToTray
+    ├── window.electron.getDataPath/setDataPath
+    ├── window.electron.getScanSettings/updateScanSettings
+    └── ... (80+ IPC handlers)
+
+Preload (electron/preload/index.ts)
+    └── 暴露安全的 API 给渲染进程
+
+Main Process (electron/main/)
+    ├── config.ts        # 配置管理
+    ├── database.ts      # 数据库初始化
+    ├── meta.ts          # 元数据库操作
+    ├── shardManager.ts  # 分片管理
+    ├── ipc.ts           # IPC 处理
+    └── ...
+```
+
 ---
 
 ---
@@ -46,8 +128,9 @@
 |------|------|------|------|
 | 搜索文档 | `search` | SearchPage | 首页，文件列表 + 预览 |
 | 扫描目录 | `scan` | ScanPage | 添加目录 + 开始扫描 + 文件夹管理 |
-| 语言与主题 | `language` | LanguagePage | 主题 + 语言切换 |
+| 设置 | `language` | LanguagePage | 主题 + 语言 + 文件类型 + 标签管理 |
 | 关于 | `guide` | GuidePage | 功能介绍 + 赞赏作者 |
+| 标签管理 | `tags` | TagsPage | 标签管理页（可从设置页打开） |
 
 ---
 
@@ -85,7 +168,8 @@
 - [x] 搜索结果排序（相关性/大小/修改时间）
 - [x] 搜索结果导出（CSV/HTML/TXT）
 - [x] 可访问性设置（字号调节/图标大小调节）
-- [x] 文件类型筛选（选择只扫描特定类型文件）
+- [x] 文件类型筛选（选择只扫描特定类型文件，通过模态框配置）
+- [x] 设置页重构（分组展示，模态框配置）
 
 ### 右键菜单功能
 - [x] 在文件夹中显示
@@ -120,16 +204,16 @@
 
 ### 标签管理
 - [x] 文件标签（用户自定义标签分类）
-- [x] 标签管理页面
+- [x] 标签管理（设置页模态框 + 独立页面）
 - [x] 标签筛选搜索
 
 ### 帮助页（关于页）
-- [x] 功能介绍（13项核心功能）
+- [x] 功能介绍（15项核心功能）
 - [x] 赞赏作者（含收款码）
 
 ### i18n
 - [x] 完整中英文翻译（700+ 翻译 key）
-- [x] 语言设置持久化（localStorage）
+- [x] 语言设置持久化（统一使用 config.json）
 
 ### 代码质量
 - [x] 清理无用文件和死代码
@@ -139,7 +223,8 @@
 - [x] 清理 IPC/preload 废弃 API
 - [x] 提取 formatSize 为共享工具函数
 - [x] TypeScript 编译零错误
-- [x] 数据库分片架构（config.db 快速启动 + shards 后台加载）
+- [x] 数据库分片架构（config.json 快速启动 + shards 后台加载）
+- [x] localStorage 迁移到 config.json（主题/语言/最小化到托盘）
 
 ---
 
@@ -159,6 +244,7 @@
 12. 本地优先：所有数据存储在本地，不上传云端，隐私安全
 13. 可访问性：字号/图标大小可调节，方便视力不好的用户
 14. 文件类型筛选：选择只扫描特定类型的文件，减少不必要的处理
+15. 模态框配置：设置页使用模态框配置文件类型和标签管理
 
 ---
 
@@ -182,49 +268,61 @@
 
 ## 关键文件
 
+### 前端组件
 | 文件 | 说明 |
 |------|------|
-| `src/context/LanguageContext.tsx` | i18n 翻译字典（700+ key） |
+| `src/context/LanguageContext.tsx` | i18n 翻译字典 + 语言/主题状态管理 |
 | `src/context/AppContext.tsx` | 全局状态（扫描进度等） |
-| `src/components/SideNav.tsx` | 左侧导航 |
-| `src/components/TitleBar.tsx` | 自定义标题栏 |
+| `src/components/TitleBar.tsx` | 自定义标题栏（含导航按钮） |
 | `src/components/StatusBar.tsx` | 状态栏 |
 | `src/components/ConfirmDialog.tsx` | 自定义确认对话框 |
-| `src/components/FileList.tsx` | 文件列表组件 |
+| `src/components/FileList.tsx` | 文件列表组件（含右键菜单） |
 | `src/components/FileDetail.tsx` | 文件预览组件 |
+| `src/components/FileTypesModal.tsx` | 文件类型配置模态框 |
+| `src/components/TagsModal.tsx` | 标签管理模态框 |
 | `src/styles.css` | 全局样式（含主题变量） |
-| `src/pages/ScanPage.tsx` | 扫描目录页 |
+
+### 页面组件
+| 文件 | 说明 |
+|------|------|
 | `src/pages/SearchPage.tsx` | 搜索文档页 |
-| `src/pages/LanguagePage.tsx` | 语言与主题页 |
+| `src/pages/ScanPage.tsx` | 扫描目录页 |
+| `src/pages/LanguagePage.tsx` | 设置页 |
 | `src/pages/GuidePage.tsx` | 关于页 |
 | `src/pages/TagsPage.tsx` | 标签管理页 |
-| `src/utils/format.ts` | 工具函数（formatSize） |
-| `electron/main/database.ts` | 数据库操作（SQLite） |
-| `electron/main/ipc.ts` | IPC 通信处理 |
+| `src/pages/FloatingSearch.tsx` | 浮动搜索窗口 |
+
+### 后端模块
+| 文件 | 说明 |
+|------|------|
 | `electron/main/index.ts` | Electron 主进程入口 |
+| `electron/main/config.ts` | 配置管理（读写 config.json） |
+| `electron/main/database.ts` | 数据库初始化（initConfig → initMeta） |
+| `electron/main/meta.ts` | 元数据库操作（扫描目录、搜索历史、标签） |
 | `electron/main/shardManager.ts` | 数据库分片管理 |
-| `electron/main/fileWatcher.ts` | 文件监控（增量扫描） |
-| `electron/main/scheduler.ts` | 定时任务调度 |
-| `electron/main/scanner.ts` | 扫描器（多格式解析） |
-| `electron/main/usnHandler.ts` | USN Journal 监控处理 |
-| `electron/preload/index.ts` | 预加载脚本 |
+| `electron/main/scanner.ts` | 扫描器（多格式解析 + OCR） |
+| `electron/main/scanWorker.ts` | 扫描 Worker（Worker thread） |
+| `electron/main/ipc.ts` | IPC 通信处理（80+ handlers） |
+| `electron/preload/index.ts` | 预加载脚本（暴露安全的 API） |
+
+### 工具脚本
+| 文件 | 说明 |
+|------|------|
 | `go/main.go` | Go 监控进程入口（USN Watcher + 双击 Ctrl） |
 | `go/keyboard_hook.go` | 双击 Ctrl 检测（GetAsyncKeyState 轮询） |
-| `scripts/extractOcr.py` | OCR 识别脚本（Tesseract） |
+| `electron/main/extractOcr.py` | PDF OCR 提取脚本 |
+| `scripts/auto-test-formats.js` | 格式自动测试脚本 |
 
 ---
 
-## Git 提交记录（近期）
+## 近期提交记录
 
 ```
-2d0945f docs: add OCR progress i18n keys
-2171ecf feat: display OCR progress bar in FileList
-9115f7d feat: stream OCR progress via stderr to renderer
-4ca2a4f feat: emit progress line per image in extractOcr.py
-395f3fa feat: add OCR progress overlay in FileList
-38f13ae docs: 更新 DATABASE-SCHEMA.md 概览，修正目录结构说明
-b082f50 fix: 简化数据路径配置逻辑
-7e085e5 fix: 修复自定义数据路径设置不生效的问题
+11a0ee5 refactor: migrate localStorage to config.json
+bb79a4e refactor: redesign settings page with modal dialogs
+c40031d fix: enable scroll for settings page with many options
+ad7f0b7 feat: add file type category filter for scanning
+f905c5f feat: add OCR tiered fallback strategy (Windows.Media.Ocr → Tesseract)
 ```
 
 ---
