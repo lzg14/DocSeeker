@@ -305,7 +305,6 @@ const translations: Record<Language, Record<string, string>> = {
     'settings.fileTypes.disableAll': '全不选',
     'settings.configure': '配置',
     'settings.manage': '管理',
-    'settings.tab.appearance': '外观',
     // Common
     'common.cancel': '取消',
     // Theme
@@ -602,7 +601,6 @@ const translations: Record<Language, Record<string, string>> = {
     'settings.fileTypes.disableAll': 'Disable All',
     'settings.configure': 'Configure',
     'settings.manage': 'Manage',
-    'settings.tab.appearance': 'Appearance',
     // Common
     'common.cancel': 'Cancel',
     // Status bar
