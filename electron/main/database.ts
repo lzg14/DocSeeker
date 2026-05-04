@@ -1,14 +1,14 @@
 /**
  * Database Module (shard-compatible)
  *
- * With the shard architecture, file data is stored in db/shards/shard_N.db files.
- * App settings are stored in db/config.db (config.ts).
- * Folder metadata and search history are stored in db/meta.db (meta.ts).
+ * With the shard architecture, file data is stored in shards/shard_N.db files.
+ * App settings are stored in config.json (config.ts).
+ * Folder metadata and search history are stored in meta.db (meta.ts).
  *
- * The old file-manager.db is replaced by:
- *   - db/config.db   — scan settings, app settings (theme, language, hotkey, etc.)
- *   - db/meta.db     — scanned folders, search history, saved searches
- *   - db/shards/     — file records split across multiple shard_N.db files
+ * Storage layout:
+ *   - config.json  — scan settings, app settings (theme, language, hotkey, etc.)
+ *   - meta.db      — scanned folders, search history, saved searches
+ *   - shards/      — file records split across multiple shard_N.db files
  */
 
 import { initConfig, closeConfig } from './config'
@@ -233,7 +233,7 @@ export function getTotalSizeByFolder(folderPath: string): number {
 }
 
 /**
- * Sum file_count from all scanned folders in config.db — the single source of truth
+ * Sum file_count from all scanned folders in meta.db — the single source of truth
  * for the total file count shown in the UI.
  */
 export function getTotalFileCountFromConfig(): number {

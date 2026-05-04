@@ -200,7 +200,7 @@ export function computeShardConfig(profile: MachineProfile): ShardConfig {
   return { maxSizeMB, parallelWorkers }
 }
 
-// ============ Profile Caching (persist to config.db) ============
+// ============ Profile Caching (persist to config.json) ============
 
 const PROFILE_KEY = 'shard_profile'
 const CONFIG_KEY = 'shard_config'
@@ -218,7 +218,7 @@ interface CachedConfig {
 }
 
 /**
- * Load cached machine profile from config.db.
+ * Load cached machine profile from config.json.
  * Returns null if not cached yet.
  */
 function loadCachedProfile(): MachineProfile | null {
@@ -233,7 +233,7 @@ function loadCachedProfile(): MachineProfile | null {
 }
 
 /**
- * Save machine profile to config.db for future sessions.
+ * Save machine profile to config.json for future sessions.
  */
 function saveProfileToCache(profile: MachineProfile): void {
   try {
@@ -245,7 +245,7 @@ function saveProfileToCache(profile: MachineProfile): void {
 }
 
 /**
- * Load cached shard config from config.db.
+ * Load cached shard config from config.json.
  * Returns null if not cached yet.
  */
 function loadCachedConfig(): ShardConfig | null {
@@ -260,7 +260,7 @@ function loadCachedConfig(): ShardConfig | null {
 }
 
 /**
- * Save shard config to config.db for future sessions.
+ * Save shard config to config.json for future sessions.
  */
 function saveConfigToCache(config: ShardConfig): void {
   try {
@@ -473,8 +473,8 @@ async function loadExistingShards(): Promise<void> {
 
 /**
  * Initialize the shard manager:
- * 1. Load or detect machine profile (cached in config.db)
- * 2. Load or compute shard config (cached in config.db)
+ * 1. Load or detect machine profile (cached in config.json)
+ * 2. Load or compute shard config (cached in config.json)
  * 3. Load existing shards in parallel
  */
 export async function initShardManager(): Promise<void> {
@@ -1413,7 +1413,7 @@ export type { Database }
 
 /**
  * Get file count and total size for a specific folder path across all shards.
- * Used to sync shard stats back to config.db after a scan completes.
+ * Used to sync shard stats back to meta.db after a scan completes.
  */
 export function getFolderStatsFromShards(folderPath: string): { fileCount: number; totalSize: number } {
   const prefix = folderPath.replace(/\\/g, '/').replace(/\/$/, '') + '/'

@@ -3,11 +3,6 @@ import log from 'electron-log/main'
 import { Worker } from 'worker_threads'
 import { join, extname } from 'path'
 
-// 调试开关：开发时设为 true，正式发布设为 false
-const DEBUG = false
-const debugLog = (...args: unknown[]) => {
-  if (DEBUG) log.info('[DEBUG]', ...args)
-}
 import {
   deleteFileByPath,
   removeFilesByFolderPath,
@@ -374,7 +369,7 @@ export function registerIpcHandlers(): void {
     }
   })
 
-  // Get file count — sum from config.db (the single source of truth)
+  // Get file count — sum from meta.db scanned_folders (the single source of truth)
   ipcMain.handle('get-file-count', async (): Promise<number> => {
     return getTotalFileCountFromConfig()
   })
@@ -536,7 +531,7 @@ export function registerIpcHandlers(): void {
                 if (scanShardId >= 0) {
                   await flushPendingBatches(scanShardId)
                 }
-                // Sync shard stats back to config.db (the single source of truth)
+                // Sync shard stats back to meta.db (the single source of truth)
                 const folder = getScannedFolderByPath(folderPath)
                 if (folder && folder.id) {
                   const shardStats = getFolderStatsFromShards(folderPath)
@@ -660,7 +655,7 @@ export function registerIpcHandlers(): void {
                   await flushPendingBatches(scanShardId)
                 }
                 if (folder && folder.id) {
-                  // Sync shard stats back to config.db after full scan
+                  // Sync shard stats back to meta.db after full scan
                   const shardStats = getFolderStatsFromShards(folderPath)
                   syncFolderStatsFromShardsFull(folder.id, folderPath, shardStats)
                 }
