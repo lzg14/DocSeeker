@@ -54,3 +54,4 @@ tests/unit/test_thumb_*/
 
 # Claude temp files
 tmpclaude-*/
+tmpclaude-*
