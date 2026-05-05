@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react'
 import { useLanguage, themes } from '../context/LanguageContext'
-import TagsModal from '../components/TagsModal'
 
 function LanguagePage(): JSX.Element {
   const { language, setLanguage, theme, setTheme, t } = useLanguage()
@@ -16,9 +15,6 @@ function LanguagePage(): JSX.Element {
   const [pathError, setPathError] = useState('')
   const [showRestartDialog, setShowRestartDialog] = useState(false)
   const [pendingDataPath, setPendingDataPath] = useState('')
-
-  // Modals
-  const [showTagsModal, setShowTagsModal] = useState(false)
 
   // Accessibility: font size, icon size
   const [fontSize, setFontSize] = useState(() => localStorage.getItem('fontSize') || 'medium')
@@ -369,22 +365,10 @@ function LanguagePage(): JSX.Element {
             </div>
           }
         />
-        <SettingsRow
-          label={t('tags.title')}
-          hint={t('tags.hint') || '管理文件标签'}
-          action={
-            <button className="btn btn-secondary" onClick={() => setShowTagsModal(true)}>
-              {t('settings.manage') || '管理'}
-            </button>
-          }
-        />
       </SettingsSection>
 
       {/* Restart dialog */}
       {showRestartDialog && <RestartDialog />}
-
-      {/* Modals */}
-      {showTagsModal && <TagsModal onClose={() => setShowTagsModal(false)} />}
     </div>
   )
 }
