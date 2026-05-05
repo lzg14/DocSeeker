@@ -1263,11 +1263,28 @@ textarea:focus:not(:focus-visible) {
   box-sizing: border-box;
 }
 
-.settings-group {
+/* Settings page - flat layout */
+.settings-page.settings-flat {
+  padding: 12px 16px;
+}
+
+.settings-page.settings-flat .settings-row {
   background: var(--bg-primary);
   border-radius: var(--radius);
-  margin-bottom: 8px;
-  overflow: hidden;
+  padding: 8px 12px;
+  margin-bottom: 4px;
+}
+
+.settings-page.settings-flat .settings-row + .settings-row {
+  border-top: none;
+}
+
+.settings-page.settings-flat .settings-section-title {
+  display: none;
+}
+
+.settings-page.settings-flat .settings-group {
+  margin-bottom: 0;
 }
 
 .settings-section-title {

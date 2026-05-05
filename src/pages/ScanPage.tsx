@@ -3,6 +3,7 @@ import { ScannedFolder } from '../types'
 import { useAppContext } from '../context/AppContext'
 import { useLanguage } from '../context/LanguageContext'
 import DeleteFolderConfirmDialog from '../components/DeleteFolderConfirmDialog'
+import FileTypesModal from '../components/FileTypesModal'
 import QuickSetup from '../components/QuickSetup'
 import { formatSize } from '../utils/format'
 
@@ -21,6 +22,7 @@ function ScanPage(): JSX.Element {
   const [loading, setLoading] = useState(true)
   const [confirmDelete, setConfirmDelete] = useState<ScannedFolder | null>(null)
   const [isDeleting, setIsDeleting] = useState(false)
+  const [showFileTypesModal, setShowFileTypesModal] = useState(false)
   const [includeHidden, setIncludeHidden] = useState(false)
   const [includeSystem, setIncludeSystem] = useState(false)
   const [ocrEnabled, setOcrEnabled] = useState(false)
@@ -220,6 +222,12 @@ function ScanPage(): JSX.Element {
         </div>
         <div className="config-header-actions">
           <button
+            className="btn btn-secondary"
+            onClick={() => setShowFileTypesModal(true)}
+          >
+            {t('scan.fileTypes') || '文件类型'}
+          </button>
+          <button
             className="btn btn-primary"
             onClick={handleAddFolder}
             disabled={isScanning}
@@ -313,6 +321,7 @@ function ScanPage(): JSX.Element {
           onCancel={() => setConfirmDelete(null)}
         />
       )}
+      {showFileTypesModal && <FileTypesModal onClose={() => setShowFileTypesModal(false)} />}
     </div>
   )
 }

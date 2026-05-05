@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react'
 import { useLanguage, themes } from '../context/LanguageContext'
-import FileTypesModal from '../components/FileTypesModal'
 import TagsModal from '../components/TagsModal'
 
 function LanguagePage(): JSX.Element {
@@ -19,7 +18,6 @@ function LanguagePage(): JSX.Element {
   const [pendingDataPath, setPendingDataPath] = useState('')
 
   // Modals
-  const [showFileTypesModal, setShowFileTypesModal] = useState(false)
   const [showTagsModal, setShowTagsModal] = useState(false)
 
   // Accessibility: font size, icon size
@@ -223,7 +221,7 @@ function LanguagePage(): JSX.Element {
   )
 
   return (
-    <div className="settings-page">
+    <div className="settings-page settings-flat">
       {/* Appearance & Language */}
       <SettingsSection title={t('settings.tab.appearance') || '外观'}>
         <div className="settings-row">
@@ -372,15 +370,6 @@ function LanguagePage(): JSX.Element {
           }
         />
         <SettingsRow
-          label={t('settings.fileTypes')}
-          hint={t('settings.fileTypesDesc') || '选择要扫描的文件类型'}
-          action={
-            <button className="btn btn-secondary" onClick={() => setShowFileTypesModal(true)}>
-              {t('settings.configure') || '配置'}
-            </button>
-          }
-        />
-        <SettingsRow
           label={t('tags.title')}
           hint={t('tags.hint') || '管理文件标签'}
           action={
@@ -395,7 +384,6 @@ function LanguagePage(): JSX.Element {
       {showRestartDialog && <RestartDialog />}
 
       {/* Modals */}
-      {showFileTypesModal && <FileTypesModal onClose={() => setShowFileTypesModal(false)} />}
       {showTagsModal && <TagsModal onClose={() => setShowTagsModal(false)} />}
     </div>
   )
