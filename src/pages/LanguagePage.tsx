@@ -29,10 +29,10 @@ function LanguagePage(): JSX.Element {
       'x-large': '18px',
     }
     const iconSizeMap: Record<string, string> = {
-      small: '14px',
+      small: '12px',
       medium: '16px',
-      large: '20px',
-      'x-large': '24px',
+      large: '22px',
+      'x-large': '28px',
     }
     const root = document.documentElement
     root.style.setProperty('--font-size-base', sizeMap[fontSize] || '14px')
