@@ -628,8 +628,8 @@ textarea:focus:not(:focus-visible) {
 }
 
 .title-bar-nav-btn svg {
-  width: 18px;
-  height: 18px;
+  width: var(--icon-size-base, 16px);
+  height: var(--icon-size-base, 16px);
 }
 
 .title-bar-nav-btn:hover {

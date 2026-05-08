@@ -158,12 +158,10 @@ function TagsPage(): JSX.Element {
 
       <style>{`
         .tags-page {
-          padding: 24px;
-          max-width: 800px;
-          margin: 0 auto;
+          padding: 16px 20px;
         }
         .tags-header {
-          margin-bottom: 24px;
+          margin-bottom: 16px;
         }
         .tags-header h2 {
           margin: 0 0 8px 0;
