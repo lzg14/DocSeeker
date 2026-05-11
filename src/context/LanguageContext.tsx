@@ -196,6 +196,7 @@ const translations: Record<Language, Record<string, string>> = {
     'scan.includeHidden': '隐藏文件',
     'scan.includeSystem': '系统文件',
     'scan.ocrEnable': '图片 OCR（仅 Windows）',
+    'scan.fileTypes': '文件类型',
     // Config / Scan page
     'config.title': '扫描设置',
     'config.loading': '加载中...',
@@ -491,6 +492,7 @@ const translations: Record<Language, Record<string, string>> = {
     'scan.includeHidden': 'Hidden Files',
     'scan.includeSystem': 'System Files',
     'scan.ocrEnable': 'Image OCR (Windows only)',
+    'scan.fileTypes': 'File Types',
     // Config / Scan page
     'config.title': 'Scan Settings',
     'config.loading': 'Loading...',
