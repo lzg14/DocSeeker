@@ -1304,7 +1304,7 @@ async function scanDirectory(dirPath: string, onProgress?: ProgressCallback, set
 }
 
 // Process a single file - always returns FileInfo for all files
-async function processFile(filePath: string): Promise<FileInfo | null> {
+async function processFile(filePath: string, ocrEnabledFlag: boolean): Promise<FileInfo | null> {
   try {
     const stats = await fs.stat(filePath)
     const name = path.basename(filePath)
@@ -1329,7 +1329,7 @@ async function processFile(filePath: string): Promise<FileInfo | null> {
 
     // Extract text content only for supported file types
     if (isSupported) {
-      fileInfo.content = await extractText(filePath, ext, stats.size, ocrEnabled)
+      fileInfo.content = await extractText(filePath, ext, stats.size, ocrEnabledFlag)
     }
 
     return fileInfo
@@ -1489,7 +1489,7 @@ async function runScan(): Promise<void> {
         continue
       }
 
-      const fileInfo = await processFile(filePath)
+      const fileInfo = await processFile(filePath, ocrEnabled)
       if (fileInfo) {
         fileBatch.push(fileInfo)
         filesProcessed++
