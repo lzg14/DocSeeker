@@ -230,6 +230,13 @@
   --nav-width: 200px;
   --titlebar-height: 36px;
   --statusbar-height: 28px;
+  /* === 可访问性：字号/图标大小 === */
+  --font-size-base: 14px;
+  --font-size-small: 12px;
+  --font-size-large: 16px;
+  --font-size-title: 15px;
+  --icon-size-base: 16px;
+  --icon-size-large: 20px;
   --danger: #ef4444;
   --danger-hover: #f87171;
   --danger-subtle: #2d1515;
