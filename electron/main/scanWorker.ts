@@ -6,6 +6,7 @@ import crypto from 'crypto'
 import log from 'electron-log/main'
 import { createExtractorFromData } from 'node-unrar-js'
 import exifr from 'exifr'
+import { withTimeout } from './timeout'
 // import { parseFile as parseAudioFile } from 'music-metadata'  // ESM模块，暂不启用
 
 // ============ 常量定义 ============
@@ -20,30 +21,6 @@ const MAX_ARCHIVE_DEPTH = 3  // 最多允许 3 层嵌套压缩包
 const ZIP_MAGIC = Buffer.from([0x50, 0x4b, 0x03, 0x04])  // "PK\x03\x04"
 // RAR 文件头魔数（RAR 4.x / 5.x 签名相同）
 const RAR_MAGIC = Buffer.from([0x52, 0x61, 0x72, 0x21, 0x1a, 0x07, 0x01, 0x00])
-
-// ============ 工具函数 ============
-
-// 检测文件是否为有效 ZIP（通过头部魔数）
-function isValidZip(buffer: Buffer): boolean {
-  return buffer.length >= 4 && buffer.slice(0, 4).equals(ZIP_MAGIC)
-}
-
-// 检测文件是否为有效 RAR（通过签名块魔数）
-function isValidRar(buffer: Buffer): boolean {
-  return buffer.length >= 7 && buffer.slice(0, 7).equals(RAR_MAGIC)
-}
-
-// 统一超时保护
-function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
-  let timer: ReturnType<typeof setTimeout>
-  const timeout = new Promise<T>((_, reject) => {
-    timer = setTimeout(() => reject(new Error(`Timeout after ${ms}ms`)), ms)
-  })
-  return Promise.race([
-    promise.finally(() => clearTimeout(timer)),
-    timeout
-  ])
-}
 
 // 安全的格式化时间
 function formatSize(bytes: number): string {
@@ -165,12 +142,7 @@ interface ScanWorkerData {
 
 // 错误统计
 interface ErrorStats {
-  timeout: number      // 超时错误
-  sizeLimit: number   // 大小限制跳过
-  invalidHeader: number  // 无效头部跳过
-  corrupted: number  // 损坏文件
-  permission: number  // 权限错误
-  unknown: number    // 未知错误
+  unknown: number
 }
 
 // 进度信息（带预估时间）
@@ -1395,11 +1367,6 @@ async function runScan(): Promise<void> {
 
   // 初始化错误统计
   const errorStats: ErrorStats = {
-    timeout: 0,
-    sizeLimit: 0,
-    invalidHeader: 0,
-    corrupted: 0,
-    permission: 0,
     unknown: 0
   }
 
