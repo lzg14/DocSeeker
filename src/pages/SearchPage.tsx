@@ -595,7 +595,7 @@ function SearchPage(): JSX.Element {
                   clearTimeout(debounceTimerRef.current)
                 }
                 debounceTimerRef.current = setTimeout(() => {
-                  performSearch(e.target.value, filters)
+                  performSearch(e.target.value, filtersRef.current)
                 }, 300)
               }}
               onKeyDown={(e) => {

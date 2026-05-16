@@ -86,7 +86,8 @@ function flushPendingUpdates(): void {
 
   // 如果已经有worker在运行，跳过这次调度
   if (contentWorker) {
-    log.info(`[usnHandler] Worker already running, skipping this flush`)
+    log.info(`[usnHandler] Worker already running, rescheduling flush`)
+    scheduleFlush()
     return
   }
 
@@ -119,6 +120,7 @@ function flushPendingUpdates(): void {
       ))
       log.info(`[usnHandler] Batch content update complete`)
 
+      contentWorker.removeAllListeners()
       contentWorker?.terminate()
       contentWorker = null
     } else if (msg.type === 'error') {
@@ -132,9 +134,24 @@ function flushPendingUpdates(): void {
         currentProcessingFiles = []
         scheduleFlush()
       }
+      contentWorker.removeAllListeners()
       contentWorker?.terminate()
       contentWorker = null
     }
+  })
+
+  contentWorker.on('error', (err) => {
+    log.error(`[usnHandler] Content worker crashed:`, err)
+    if (currentProcessingFiles.length > 0) {
+      log.info(`[usnHandler] Recovering ${currentProcessingFiles.length} files to queue`)
+      for (const f of currentProcessingFiles) {
+        pendingContentUpdates.add(f)
+      }
+      currentProcessingFiles = []
+      scheduleFlush()
+    }
+    contentWorker.removeAllListeners()
+    contentWorker = null
   })
 
   contentWorker.on('error', (err) => {

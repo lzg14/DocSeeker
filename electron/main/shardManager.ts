@@ -803,9 +803,10 @@ function searchShardDb(
     JOIN shard_files f ON fts.rowid = f.id
     WHERE ${whereClause}
     ORDER BY rank
+    LIMIT ?
   `)
 
-  stmt.bind(params)
+  stmt.bind([...params, 200])
 
   const results: SearchResult[] = []
   for (const row of stmt.iterate() as IterableIterator<Record<string, unknown>>) {
@@ -1056,9 +1057,10 @@ function searchShardDbNameOnly(
     JOIN shard_files f ON fts.rowid = f.id
     WHERE ${whereClause}
     ORDER BY rank
+    LIMIT ?
   `)
 
-  stmt.bind(params)
+  stmt.bind([...params, 200])
 
   const results: SearchResult[] = []
   for (const row of stmt.iterate() as IterableIterator<Record<string, unknown>>) {

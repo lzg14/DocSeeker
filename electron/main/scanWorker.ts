@@ -1310,9 +1310,9 @@ async function scanDirectory(dirPath: string, onProgress?: ProgressCallback, set
 }
 
 // Process a single file - always returns FileInfo for all files
-async function processFile(filePath: string, ocrEnabledFlag: boolean): Promise<FileInfo | null> {
+async function processFile(filePath: string, ocrEnabledFlag: boolean, existingStats?: fs.Stats): Promise<FileInfo | null> {
   try {
-    const stats = await fs.stat(filePath)
+    const stats = existingStats ?? await fs.stat(filePath)
     const name = path.basename(filePath)
     const ext = path.extname(name).toLowerCase()
     const isSupported = SUPPORTED_EXTENSIONS.has(ext)
@@ -1477,9 +1477,10 @@ async function runScan(): Promise<void> {
 
     try {
       // For incremental scans, check if file was modified since last scan
+      let existingStats: fs.Stats | undefined
       if (isIncremental) {
-        const stats = await fs.stat(filePath)
-        const fileMtime = stats.mtimeMs
+        existingStats = await fs.stat(filePath)
+        const fileMtime = existingStats.mtimeMs
 
         if (fileMtime <= lastScanTime) {
           // File hasn't been modified since last scan, skip it
@@ -1495,7 +1496,7 @@ async function runScan(): Promise<void> {
         continue
       }
 
-      const fileInfo = await processFile(filePath, ocrEnabled)
+      const fileInfo = await processFile(filePath, ocrEnabled, existingStats)
       if (fileInfo) {
         fileBatch.push(fileInfo)
         filesProcessed++

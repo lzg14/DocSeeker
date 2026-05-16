@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { FileRecord } from '../types'
 import { useLanguage } from '../context/LanguageContext'
 import { renderPdfPage } from '../utils/pdfRender'
@@ -28,6 +28,10 @@ function FileDetail({ file, formatSize, searchQuery = '' }: FileDetailProps): JS
   const [quoteKeyword, setQuoteKeyword] = useState('')
   const [fullContent, setFullContent] = useState<string | null>(null)
   const [showFullContent, setShowFullContent] = useState(false)
+  const mountedRef = useRef(true)
+  const thumbnailIdRef = useRef(0)
+
+  useEffect(() => () => { mountedRef.current = false }, [])
 
   const handleShowInFolder = () => window.electron.showInFolder(file.path)
   const handleOpenFile = () => window.electron.openFile(file.path)
@@ -97,26 +101,22 @@ function FileDetail({ file, formatSize, searchQuery = '' }: FileDetailProps): JS
     if (!file?.path) return
 
     const ext = file.path.split('.').pop()?.toLowerCase()
+    const id = ++thumbnailIdRef.current
+
+    const setIfCurrent = (data: string | null) => {
+      if (data && id === thumbnailIdRef.current && mountedRef.current) setThumbnail(data)
+    }
 
     if (ext === 'pdf') {
-      // PDF thumbnail: Windows uses Shell (main process), macOS/Linux use pdfjs-dist Canvas (renderer)
       window.electron.getPlatform().then(platform => {
         if (platform === 'win32') {
-          window.electron.thumbnailGet(file.path).then(data => {
-            if (data) setThumbnail(data)
-          })
+          window.electron.thumbnailGet(file.path).then(setIfCurrent)
         } else {
-          // macOS / Linux: pdfjs-dist Canvas in renderer
-          renderPdfPage(file.path).then(dataUrl => {
-            if (dataUrl) setThumbnail(dataUrl)
-          })
+          renderPdfPage(file.path).then(setIfCurrent)
         }
       })
     } else {
-      // Images and other: always through main process
-      window.electron.thumbnailGet(file.path).then(data => {
-        if (data) setThumbnail(data)
-      })
+      window.electron.thumbnailGet(file.path).then(setIfCurrent)
     }
   }, [file?.path])
 
@@ -125,8 +125,9 @@ function FileDetail({ file, formatSize, searchQuery = '' }: FileDetailProps): JS
     setFullContent(null)
     setShowFullContent(false)
     if (file?.path) {
+      const id = ++thumbnailIdRef.current
       window.electron.loadFileFullContent(file.path).then(content => {
-        setFullContent(content)
+        if (id === thumbnailIdRef.current && mountedRef.current) setFullContent(content)
       })
     }
   }, [file?.path])
