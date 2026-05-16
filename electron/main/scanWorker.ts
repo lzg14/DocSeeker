@@ -35,11 +35,13 @@ function isValidRar(buffer: Buffer): boolean {
 
 // 统一超时保护
 function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
+  let timer: ReturnType<typeof setTimeout>
+  const timeout = new Promise<T>((_, reject) => {
+    timer = setTimeout(() => reject(new Error(`Timeout after ${ms}ms`)), ms)
+  })
   return Promise.race([
-    promise,
-    new Promise<T>((_, reject) =>
-      setTimeout(() => reject(new Error(`Timeout after ${ms}ms`)), ms)
-    )
+    promise.finally(() => clearTimeout(timer)),
+    timeout
   ])
 }
 

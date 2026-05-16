@@ -494,11 +494,11 @@ export function registerIpcHandlers(): void {
               event.sender.send('scan-progress', { ...message.data, scanId })
               break
             case 'batch': {
+              const batchShardIdPromise = getCurrentShard()
               ;(async () => {
                 try {
-                  // For batch inserts, use a fresh shard selection
-                  scanShardId = await getCurrentShard()
-                  if (scanShardId < 0) {
+                  const batchShardId = await batchShardIdPromise
+                  if (batchShardId < 0) {
                     errors.push('No shard available')
                     return
                   }
@@ -513,10 +513,18 @@ export function registerIpcHandlers(): void {
                     is_supported: fileInfo.is_supported ?? 1
                   }))
 
-                  pendingBatches.set(scanShardId, (pendingBatches.get(scanShardId) ?? 0) + 1)
-                  const result = await insertFileBatch(scanShardId, records)
-                  pendingBatches.set(scanShardId, Math.max(0, (pendingBatches.get(scanShardId) ?? 1) - 1))
+                  pendingBatches.set(batchShardId, (pendingBatches.get(batchShardId) ?? 0) + 1)
+                  const result = await insertFileBatch(batchShardId, records)
+                  pendingBatches.set(batchShardId, Math.max(0, (pendingBatches.get(batchShardId) ?? 1) - 1))
                   filesProcessed += result.fileCount
+
+                  // Check if shard is full
+                  const shardInfo = getShardInfo().find(s => s.id === batchShardId)
+                  const config = getShardConfigInfo()
+                  if (shardInfo && config && shardInfo.currentSizeBytes >= (config.maxSizeMB * 1024 * 1024)) {
+                    const nextShard = await openNextShard()
+                    currentShardId = nextShard?.id ?? -1
+                  }
                 } catch (err) {
                   log.error('[IPC] Batch insert error:', err)
                   errors.push((err as Error).message)
@@ -610,10 +618,11 @@ export function registerIpcHandlers(): void {
               event.sender.send('scan-progress', { ...message.data, scanId })
               break
             case 'batch': {
+              const batchShardIdPromise = getCurrentShard()
               ;(async () => {
                 try {
-                  scanShardId = await getCurrentShard()
-                  if (scanShardId < 0) {
+                  const batchShardId = await batchShardIdPromise
+                  if (batchShardId < 0) {
                     errors.push('No shard available')
                     return
                   }
@@ -628,13 +637,13 @@ export function registerIpcHandlers(): void {
                     is_supported: fileInfo.is_supported ?? 1
                   }))
 
-                  pendingBatches.set(scanShardId, (pendingBatches.get(scanShardId) ?? 0) + 1)
-                  const result = await insertFileBatch(scanShardId, records)
-                  pendingBatches.set(scanShardId, Math.max(0, (pendingBatches.get(scanShardId) ?? 1) - 1))
+                  pendingBatches.set(batchShardId, (pendingBatches.get(batchShardId) ?? 0) + 1)
+                  const result = await insertFileBatch(batchShardId, records)
+                  pendingBatches.set(batchShardId, Math.max(0, (pendingBatches.get(batchShardId) ?? 1) - 1))
                   filesProcessed += result.fileCount
 
                   // Check if shard is full
-                  const shardInfo = getShardInfo().find(s => s.id === scanShardId)
+                  const shardInfo = getShardInfo().find(s => s.id === batchShardId)
                   const config = getShardConfigInfo()
                   if (shardInfo && config && shardInfo.currentSizeBytes >= (config.maxSizeMB * 1024 * 1024)) {
                     const nextShard = await openNextShard()

@@ -856,9 +856,10 @@ export async function searchAllShards(
       fileTypes: [...(options?.fileTypes ?? []), ...fieldInfo.extFilters]
     })
     if (fieldInfo.pathQuery) {
-      const lowerPath = r.path.toLowerCase()
       const lowerQuery = fieldInfo.pathQuery!.toLowerCase()
-      return lowerPath.includes(lowerQuery)
+      return nameOnlyResults.filter(r =>
+        r.path.toLowerCase().includes(lowerQuery)
+      )
     }
     return nameOnlyResults
   }
@@ -878,15 +879,16 @@ export async function searchAllShards(
   // (Workers are used for inserts; reads are fast enough for synchronous access)
   const searchPromises = readyShards.map(shard => {
     return (async () => {
+      let db: Database.Database | null = null
       try {
-        const db = new Database(shard.dbPath, { readonly: true })
+        db = new Database(shard.dbPath, { readonly: true })
         db.pragma('journal_mode = WAL')
-        const results = searchShardDb(db, ftsQuery, effectiveOptions, shard.id)
-        db.close()
-        return results
+        return searchShardDb(db, ftsQuery, effectiveOptions, shard.id)
       } catch (err) {
         log.warn(`[shardManager] Search failed for shard ${shard.id}:`, err)
         return []
+      } finally {
+        if (db) db.close()
       }
     })()
   })
@@ -978,15 +980,16 @@ export async function searchByFileName(
   // Search each shard in parallel with name-only FTS query
   const searchPromises = readyShards.map(shard => {
     return (async () => {
+      let db: Database.Database | null = null
       try {
-        const db = new Database(shard.dbPath, { readonly: true })
+        db = new Database(shard.dbPath, { readonly: true })
         db.pragma('journal_mode = WAL')
-        const results = searchShardDbNameOnly(db, ftsQuery, options, shard.id)
-        db.close()
-        return results
+        return searchShardDbNameOnly(db, ftsQuery, options, shard.id)
       } catch (err) {
         log.warn(`[shardManager] searchByFileName failed on shard ${shard.id}:`, err)
         return []
+      } finally {
+        if (db) db.close()
       }
     })()
   })
@@ -1157,8 +1160,9 @@ export function getSearchSnippets(
   const keywords = query.trim().split(/\s+/).filter(k => k.length > 0)
 
   for (const shard of readyShards) {
+    let db: Database.Database | null = null
     try {
-      const db = new Database(shard.dbPath, { readonly: true })
+      db = new Database(shard.dbPath, { readonly: true })
 
       const placeholders = filePaths.map(() => '?').join(', ')
       const stmt = db.prepare(`
@@ -1186,10 +1190,10 @@ export function getSearchSnippets(
           }
         }
       }
-
-      db.close()
     } catch (err) {
       log.warn(`[ShardManager] getSearchSnippets failed on shard ${shard.id}:`, err)
+    } finally {
+      if (db) db.close()
     }
   }
 
@@ -1425,8 +1429,9 @@ export function getFolderStatsFromShards(folderPath: string): { fileCount: numbe
   const readyShards = getReadyShards()
   log.info(`[ShardManager] getFolderStatsFromShards: folder="${folderPath}", prefix="${prefix}", readyShards=${readyShards.length}`)
   for (const shard of readyShards) {
+    let db: Database.Database | null = null
     try {
-      const db = new Database(shard.dbPath, { readonly: true })
+      db = new Database(shard.dbPath, { readonly: true })
       const stmt = db.prepare("SELECT COUNT(*) as count, COALESCE(SUM(size), 0) as total_size FROM shard_files WHERE path LIKE ? || '%'")
       const row = stmt.get(prefix) as { count: number; total_size: number } | undefined
       if (row) {
@@ -1434,9 +1439,10 @@ export function getFolderStatsFromShards(folderPath: string): { fileCount: numbe
         totalSize += row.total_size
         log.info(`[ShardManager] getFolderStatsFromShards: shard ${shard.id} matched ${row.count} files`)
       }
-      db.close()
     } catch (err) {
       log.warn(`[ShardManager] getFolderStatsFromShards failed on shard ${shard.id}:`, err)
+    } finally {
+      if (db) db.close()
     }
   }
   log.info(`[ShardManager] getFolderStatsFromShards: total=${totalCount} files, size=${totalSize}`)

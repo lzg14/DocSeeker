@@ -294,7 +294,7 @@ function SearchPage(): JSX.Element {
           (searchOpts.fileTypes?.length || searchOpts.sizeMin || searchOpts.sizeMax || searchOpts.dateFrom || searchOpts.dateTo)
 
         let ftsResults: FileRecord[]
-        if (hasFilters) {
+        if (bareQuery && hasFilters) {
           ftsResults = scope === 'filename'
             ? await window.electron.searchByFileName(bareQuery, searchOpts)
             : dedupEnabledRef.current
