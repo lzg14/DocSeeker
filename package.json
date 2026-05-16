@@ -87,6 +87,7 @@
     }
   },
   "dependencies": {
+    "@tanstack/react-virtual": "^3.13.24",
     "better-sqlite3": "^12.9.0",
     "chokidar": "^5.0.0",
     "electron-log": "^5.2.0",

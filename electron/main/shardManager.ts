@@ -636,17 +636,20 @@ export async function insertFileBatch(
   }
 
   return new Promise((resolve) => {
+    const timeoutId = setTimeout(() => {
+      worker.off('message', handler)
+      log.error(`[ShardManager] insertFileBatch timeout for shard ${shardId}`)
+      resolve({ success: false, fileCount: 0 })
+    }, 60000)
+
     const handler = (result: WorkerResult) => {
-      if (result.shardId === shardId) {
+      if (result.shardId === shardId && result.type === 'batch-complete') {
+        clearTimeout(timeoutId)
         worker.off('message', handler)
-        if (result.type === 'batch-complete') {
-          shard.fileCount = result.fileCount ?? shard.fileCount
-          shard.currentSizeBytes = require('fs').statSync(shard.dbPath).size
-          totalFilesInserted += files.length
-          resolve({ success: true, fileCount: result.fileCount ?? 0 })
-        } else {
-          resolve({ success: false, fileCount: 0 })
-        }
+        shard.fileCount = result.fileCount ?? shard.fileCount
+        shard.currentSizeBytes = require('fs').statSync(shard.dbPath).size
+        totalFilesInserted += files.length
+        resolve({ success: true, fileCount: result.fileCount ?? 0 })
       }
     }
 

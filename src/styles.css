@@ -71,13 +71,13 @@
 }
 
 .delete-folder-warning {
-  font-size: 14px;
+  font-size: var(--font-size-base);
   color: var(--text-primary);
   margin: 0 0 8px;
 }
 
 .delete-folder-cost {
-  font-size: 14px;
+  font-size: var(--font-size-base);
   color: #e53935;
   margin: 0 0 8px;
 }
@@ -87,7 +87,7 @@
 }
 
 .delete-folder-hint {
-  font-size: 12px;
+  font-size: var(--font-size-small);
   color: var(--text-secondary);
   margin: 0;
 }
@@ -98,7 +98,7 @@
 
 .delete-folder-confirm-input label {
   display: block;
-  font-size: 12px;
+  font-size: var(--font-size-small);
   color: var(--text-secondary);
   margin-bottom: 6px;
 }
@@ -106,7 +106,7 @@
 .delete-folder-confirm-input input {
   width: 100%;
   padding: 8px 12px;
-  font-size: 14px;
+  font-size: var(--font-size-base);
   border: 1px solid var(--border);
   border-radius: 4px;
   background: var(--bg-primary);
@@ -369,7 +369,7 @@ textarea:focus:not(:focus-visible) {
 .btn-small {
   height: 26px;
   padding: 0 10px;
-  font-size: 12px;
+  font-size: var(--font-size-small);
 }
 
 .btn-small:hover:not(:disabled) {
@@ -412,13 +412,13 @@ textarea:focus:not(:focus-visible) {
 }
 
 .empty-state p {
-  font-size: 14px;
+  font-size: var(--font-size-base);
   margin: 0;
   color: var(--text-secondary);
 }
 
 .empty-state .empty-state-hint {
-  font-size: 12px;
+  font-size: var(--font-size-small);
   color: var(--text-muted);
 }
 
@@ -452,13 +452,13 @@ textarea:focus:not(:focus-visible) {
 }
 
 .scanned-folders-header h3 {
-  font-size: 14px;
+  font-size: var(--font-size-base);
   font-weight: 600;
   margin: 0;
 }
 
 .folder-count {
-  font-size: 12px;
+  font-size: var(--font-size-small);
   color: #888;
   background-color: #f0f0f0;
   padding: 2px 8px;
@@ -513,7 +513,7 @@ textarea:focus:not(:focus-visible) {
 .folder-meta {
   display: flex;
   gap: 15px;
-  font-size: 12px;
+  font-size: var(--font-size-small);
   color: var(--text-secondary);
 }
 
@@ -536,7 +536,7 @@ textarea:focus:not(:focus-visible) {
   display: flex;
   justify-content: space-between;
   margin-bottom: 8px;
-  font-size: 12px;
+  font-size: var(--font-size-small);
 }
 
 .detail-row span:first-child {
@@ -578,7 +578,7 @@ textarea:focus:not(:focus-visible) {
 @media (max-width: 768px) {
   .tab-btn {
     padding: 12px 16px;
-    font-size: 14px;
+    font-size: var(--font-size-base);
   }
 }
 
@@ -771,7 +771,7 @@ textarea:focus:not(:focus-visible) {
 }
 
 .drag-hint-text {
-  font-size: 16px;
+  font-size: var(--font-size-large);
   font-weight: 600;
   color: #fff;
   padding: 12px 24px;
@@ -783,7 +783,7 @@ textarea:focus:not(:focus-visible) {
   position: absolute;
   top: 8px;
   right: 12px;
-  font-size: 12px;
+  font-size: var(--font-size-small);
   color: var(--accent);
   z-index: 50;
 }
@@ -827,7 +827,7 @@ textarea:focus:not(:focus-visible) {
   flex: 0 0 auto;
   height: 44px;
   padding: 0 20px;
-  font-size: 14px;
+  font-size: var(--font-size-base);
 }
 
 /* === App Layout - VS Code style === */
@@ -912,9 +912,16 @@ textarea:focus:not(:focus-visible) {
 /* === 文件列表 === */
 .file-list-wrapper {
   flex: 1;
-  overflow-y: auto;
   display: flex;
   flex-direction: column;
+  overflow: hidden;
+}
+
+.file-list-virtual-scroll {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  contain: strict;
 }
 
 /* === 二次筛选栏 === */
@@ -934,7 +941,7 @@ textarea:focus:not(:focus-visible) {
   padding: 0 10px;
   border: 1px solid var(--border);
   border-radius: 6px;
-  font-size: 12px;
+  font-size: var(--font-size-small);
   background: var(--bg-primary);
   color: var(--text-primary);
 }
@@ -950,7 +957,7 @@ textarea:focus:not(:focus-visible) {
   border: none;
   color: var(--text-muted);
   cursor: pointer;
-  font-size: 14px;
+  font-size: var(--font-size-base);
 }
 
 .secondary-filter-clear:hover {
@@ -1183,7 +1190,7 @@ textarea:focus:not(:focus-visible) {
   background: none;
   color: var(--primary-color);
   cursor: pointer;
-  font-size: 12px;
+  font-size: var(--font-size-small);
 }
 .usn-banner-btn:hover { background: var(--primary-light); }
 .usn-banner-btn-dismiss { border-color: var(--text-secondary); color: var(--text-secondary); }
@@ -1228,7 +1235,7 @@ textarea:focus:not(:focus-visible) {
 }
 
 .detail-grid-value {
-  font-size: 12px;
+  font-size: var(--font-size-small);
   color: var(--text-primary);
 }
 
@@ -1239,9 +1246,31 @@ textarea:focus:not(:focus-visible) {
 }
 
 .detail-content-preview {
-  font-size: 12px;
+  font-size: var(--font-size-small);
   color: var(--text-secondary);
   line-height: 1.6;
+  max-height: 180px;
+  overflow-y: hidden;
+}
+
+.detail-content-preview.expanded {
+  max-height: none;
+  overflow-y: auto;
+}
+
+.preview-toggle {
+  margin-left: auto;
+  font-size: var(--font-size-small);
+  color: var(--primary, #2563eb);
+  cursor: pointer;
+  border: none;
+  background: none;
+  padding: 2px 8px;
+  border-radius: 4px;
+}
+
+.preview-toggle:hover {
+  background: var(--hover-bg, rgba(0,0,0,0.05));
 }
 
 .detail-actions {
@@ -1438,7 +1467,7 @@ textarea:focus:not(:focus-visible) {
 }
 
 .scan-toggle-label {
-  font-size: 12px;
+  font-size: var(--font-size-small);
   color: var(--text-muted);
   white-space: nowrap;
 }
@@ -1488,7 +1517,7 @@ textarea:focus:not(:focus-visible) {
   border-radius: 4px;
   background: var(--bg-primary);
   color: var(--text-primary);
-  font-size: 12px;
+  font-size: var(--font-size-small);
   margin-left: 8px;
   cursor: pointer;
 }
@@ -1530,7 +1559,7 @@ textarea:focus:not(:focus-visible) {
 }
 
 .about-version {
-  font-size: 12px;
+  font-size: var(--font-size-small);
   color: var(--text-muted);
   margin-bottom: 16px;
 }
@@ -1693,7 +1722,7 @@ textarea:focus:not(:focus-visible) {
   background: var(--bg-secondary);
   color: var(--text-primary);
   cursor: pointer;
-  font-size: 14px;
+  font-size: var(--font-size-base);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1712,7 +1741,7 @@ textarea:focus:not(:focus-visible) {
   display: flex;
   align-items: center;
   gap: 8px;
-  font-size: 12px;
+  font-size: var(--font-size-small);
   color: var(--text-secondary);
   padding: 6px 8px;
   background: var(--bg-secondary);
@@ -1720,7 +1749,7 @@ textarea:focus:not(:focus-visible) {
 }
 
 .guide-feature-icon {
-  font-size: 16px;
+  font-size: var(--font-size-large);
   flex-shrink: 0;
 }
 
@@ -1728,7 +1757,7 @@ textarea:focus:not(:focus-visible) {
   width: 100%;
   border-collapse: collapse;
   margin-top: 10px;
-  font-size: 12px;
+  font-size: var(--font-size-small);
 }
 
 .guide-syntax-table th {
@@ -1774,7 +1803,7 @@ textarea:focus:not(:focus-visible) {
   padding: 6px 14px;
   background: transparent;
   border: none;
-  font-size: 12px;
+  font-size: var(--font-size-small);
   color: var(--text-muted);
   cursor: pointer;
   transition: all var(--transition-base);
@@ -1801,7 +1830,7 @@ textarea:focus:not(:focus-visible) {
   padding: 0 10px;
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  font-size: 12px;
+  font-size: var(--font-size-small);
   background: var(--bg-primary);
   color: var(--text-primary);
   cursor: pointer;
@@ -1816,7 +1845,7 @@ textarea:focus:not(:focus-visible) {
 
 .faq-item p {
   margin-top: 8px;
-  font-size: 12px;
+  font-size: var(--font-size-small);
   color: var(--text-muted);
 }
 
@@ -1856,7 +1885,7 @@ button, input, select {
   background: transparent;
   border: none;
   border-bottom: 2px solid transparent;
-  font-size: 12px;
+  font-size: var(--font-size-small);
   color: var(--text-muted);
   cursor: pointer;
   transition: all var(--transition-base);
@@ -1882,7 +1911,7 @@ button, input, select {
 .search-dropdown-empty {
   padding: 20px;
   text-align: center;
-  font-size: 12px;
+  font-size: var(--font-size-small);
   color: var(--text-muted);
 }
 
@@ -1968,7 +1997,7 @@ button, input, select {
   border: none;
   border-radius: 4px;
   color: var(--text-muted);
-  font-size: 14px;
+  font-size: var(--font-size-base);
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -1990,7 +2019,7 @@ button, input, select {
 }
 
 .dropdown-action {
-  font-size: 12px;
+  font-size: var(--font-size-small);
   color: var(--text-muted);
   background: transparent;
   border: none;
@@ -2024,7 +2053,7 @@ button, input, select {
   padding: 0 8px;
   border: 1px solid var(--border-light);
   border-radius: 4px;
-  font-size: 12px;
+  font-size: var(--font-size-small);
   background: var(--bg-primary);
   color: var(--text-primary);
   outline: none;
@@ -2053,7 +2082,7 @@ button, input, select {
   background: var(--bg-secondary);
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  font-size: 12px;
+  font-size: var(--font-size-small);
   color: var(--text-secondary);
   cursor: pointer;
   display: flex;
@@ -2136,7 +2165,7 @@ button, input, select {
   background: var(--bg-primary);
   border: 1px solid var(--border);
   border-radius: 20px;
-  font-size: 12px;
+  font-size: var(--font-size-small);
   color: var(--text-secondary);
   cursor: pointer;
   transition: all var(--transition-base);
@@ -2177,7 +2206,7 @@ button, input, select {
   padding: 0 8px;
   border: 1px solid var(--border);
   border-radius: 4px;
-  font-size: 12px;
+  font-size: var(--font-size-small);
   background: var(--bg-primary);
   color: var(--text-primary);
   outline: none;
@@ -2192,7 +2221,7 @@ button, input, select {
   padding: 0 8px;
   border: 1px solid var(--border);
   border-radius: 4px;
-  font-size: 12px;
+  font-size: var(--font-size-small);
   background: var(--bg-primary);
   color: var(--text-primary);
   outline: none;
@@ -2204,7 +2233,7 @@ button, input, select {
 }
 
 .filter-range-sep {
-  font-size: 12px;
+  font-size: var(--font-size-small);
   color: var(--text-muted);
 }
 
@@ -2228,7 +2257,7 @@ button, input, select {
   background: transparent;
   border: 1px solid var(--border);
   border-radius: 4px;
-  font-size: 12px;
+  font-size: var(--font-size-small);
   color: var(--text-muted);
   cursor: pointer;
   transition: all var(--transition-base);
@@ -2245,7 +2274,7 @@ button, input, select {
   background: var(--accent);
   border: none;
   border-radius: 4px;
-  font-size: 12px;
+  font-size: var(--font-size-small);
   color: #fff;
   cursor: pointer;
   transition: background-color var(--transition-base);
@@ -2282,7 +2311,7 @@ button, input, select {
   display: flex;
   align-items: center;
   gap: 8px;
-  font-size: 12px;
+  font-size: var(--font-size-small);
 }
 
 .syntax-item code {
@@ -2336,7 +2365,7 @@ button, input, select {
 
 .hotkey-btn {
   font-family: monospace;
-  font-size: 12px;
+  font-size: var(--font-size-small);
   min-width: 120px;
 }
 
@@ -2487,7 +2516,7 @@ button, input, select {
 }
 
 .theme-card-label {
-  font-size: 12px;
+  font-size: var(--font-size-small);
   color: var(--text-secondary);
   font-weight: 500;
   line-height: 1.2;
@@ -2774,7 +2803,7 @@ button, input, select {
   background: var(--bg-primary, #fff);
   padding: 2px 6px;
   border-radius: 4px;
-  font-size: 12px;
+  font-size: var(--font-size-small);
   color: var(--accent, #2563eb);
   border: 1px solid var(--border-color, #ddd);
 }
@@ -2795,7 +2824,7 @@ button, input, select {
   display: flex;
   align-items: center;
   gap: 4px;
-  font-size: 12px;
+  font-size: var(--font-size-small);
   height: 28px;
   padding: 0 8px;
   background: var(--bg-secondary);
@@ -2856,7 +2885,7 @@ button, input, select {
   padding: 4px 10px;
   border-radius: 12px;
   border: 1px solid;
-  font-size: 12px;
+  font-size: var(--font-size-small);
   font-weight: 500;
 }
 
@@ -2871,7 +2900,7 @@ button, input, select {
   background: rgba(0, 0, 0, 0.1);
   border: none;
   border-radius: 50%;
-  font-size: 12px;
+  font-size: var(--font-size-small);
   cursor: pointer;
   opacity: 0.7;
   transition: opacity 0.1s;
@@ -2882,7 +2911,7 @@ button, input, select {
 }
 
 .detail-tags-empty {
-  font-size: 12px;
+  font-size: var(--font-size-small);
   color: var(--text-muted);
 }
 
@@ -2896,7 +2925,7 @@ button, input, select {
   background: var(--bg-secondary);
   border: 1px solid var(--border);
   border-radius: 4px;
-  font-size: 16px;
+  font-size: var(--font-size-large);
   color: var(--text-secondary);
   cursor: pointer;
   margin-left: auto;
@@ -2963,7 +2992,7 @@ button, input, select {
 
 .tag-menu-empty {
   padding: 12px;
-  font-size: 12px;
+  font-size: var(--font-size-small);
   color: var(--text-muted);
   text-align: center;
 }
@@ -2982,7 +3011,7 @@ button, input, select {
   padding: 0 8px;
   border: 1px solid var(--border);
   border-radius: 4px;
-  font-size: 12px;
+  font-size: var(--font-size-small);
   background: var(--bg-primary);
   color: var(--text-primary);
   outline: none;
@@ -3002,7 +3031,7 @@ button, input, select {
   background: var(--accent);
   border: none;
   border-radius: 4px;
-  font-size: 16px;
+  font-size: var(--font-size-large);
   color: #fff;
   cursor: pointer;
 }
@@ -3075,7 +3104,7 @@ button, input, select {
 
 .quote-cards-header h3 {
   margin: 0;
-  font-size: 16px;
+  font-size: var(--font-size-large);
   font-weight: 600;
   color: var(--text-primary);
 }
@@ -3134,7 +3163,7 @@ button, input, select {
 }
 
 .quote-cards-actions .btn {
-  font-size: 12px;
+  font-size: var(--font-size-small);
   padding: 6px 12px;
 }
 
@@ -3148,14 +3177,14 @@ button, input, select {
   text-align: center;
   color: var(--text-muted);
   padding: 40px 20px;
-  font-size: 14px;
+  font-size: var(--font-size-base);
 }
 
 .quote-cards-loading {
   text-align: center;
   color: var(--text-muted);
   padding: 40px 20px;
-  font-size: 14px;
+  font-size: var(--font-size-base);
 }
 
 .quote-card {

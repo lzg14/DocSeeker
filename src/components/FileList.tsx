@@ -1,6 +1,9 @@
 import { useState, useEffect, useRef } from 'react'
+import { useVirtualizer } from '@tanstack/react-virtual'
 import { FileRecord } from '../types'
 import { useLanguage } from '../context/LanguageContext'
+
+const ROW_HEIGHT = 56
 
 interface ContextMenuState {
   visible: boolean
@@ -30,6 +33,15 @@ function FileList({
 }: FileListProps): JSX.Element {
   const { t } = useLanguage()
   const [contextMenu, setContextMenu] = useState<ContextMenuState>({ visible: false, x: 0, y: 0, file: null })
+  const parentRef = useRef<HTMLDivElement>(null)
+
+  const virtualizer = useVirtualizer({
+    count: files.length,
+    getScrollElement: () => parentRef.current,
+    estimateSize: () => ROW_HEIGHT,
+    overscan: 15,
+  })
+
   const [ocrStatus, setOcrStatus] = useState<{
     visible: boolean
     fileName: string
@@ -245,33 +257,46 @@ function FileList({
         <div>{t('filelist.size')}</div>
         <div>{t('filelist.modified')}</div>
       </div>
-      {files.map((file) => (
-        <div
-          key={file.id}
-          className={`file-row ${selectedFile?.id === file.id ? 'selected' : ''}`}
-          onClick={() => onSelectFile(file)}
-          onContextMenu={(e) => handleContextMenu(e, file)}
-        >
-          <div className="file-name-cell">
-            <span>{getFileIcon(file.is_supported === false ? 'unsupported' : file.file_type)}</span>
-            <div className="file-name-info">
-              <span className="file-name-text" title={file.path}>
-                {highlightName(file.name, searchQuery)}
-                <MatchTypeBadge matchType={file.match_type} />
-              </span>
-              {snippets[file.path] && (
-                <span
-                  className="file-snippet"
-                  dangerouslySetInnerHTML={{ __html: snippets[file.path] }}
-                />
-              )}
-            </div>
-          </div>
-          <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>{file.file_type || '-'}</div>
-          <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>{formatSize(file.size)}</div>
-          <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>{formatDate(file.updated_at)}</div>
+      <div ref={parentRef} className="file-list-virtual-scroll">
+        <div style={{ height: virtualizer.getTotalSize(), position: 'relative' }}>
+          {virtualizer.getVirtualItems().map((virtualRow) => {
+            const file = files[virtualRow.index]
+            return (
+              <div
+                key={file.id}
+                className={`file-row ${selectedFile?.id === file.id ? 'selected' : ''}`}
+                style={{
+                  position: 'absolute',
+                  top: virtualRow.start,
+                  width: '100%',
+                  height: ROW_HEIGHT,
+                }}
+                onClick={() => onSelectFile(file)}
+                onContextMenu={(e) => handleContextMenu(e, file)}
+              >
+                <div className="file-name-cell">
+                  <span>{getFileIcon(file.is_supported === false ? 'unsupported' : file.file_type)}</span>
+                  <div className="file-name-info">
+                    <span className="file-name-text" title={file.path}>
+                      {highlightName(file.name, searchQuery)}
+                      <MatchTypeBadge matchType={file.match_type} />
+                    </span>
+                    {snippets[file.path] && (
+                      <span
+                        className="file-snippet"
+                        dangerouslySetInnerHTML={{ __html: snippets[file.path] }}
+                      />
+                    )}
+                  </div>
+                </div>
+                <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>{file.file_type || '-'}</div>
+                <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>{formatSize(file.size)}</div>
+                <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>{formatDate(file.updated_at)}</div>
+              </div>
+            )
+          })}
         </div>
-      ))}
+      </div>
 
       {/* 右键菜单 */}
       {contextMenu.visible && contextMenu.file && (

@@ -27,6 +27,7 @@ function FileDetail({ file, formatSize, searchQuery = '' }: FileDetailProps): JS
   const [showQuoteCards, setShowQuoteCards] = useState(false)
   const [quoteKeyword, setQuoteKeyword] = useState('')
   const [fullContent, setFullContent] = useState<string | null>(null)
+  const [showFullContent, setShowFullContent] = useState(false)
 
   const handleShowInFolder = () => window.electron.showInFolder(file.path)
   const handleOpenFile = () => window.electron.openFile(file.path)
@@ -119,16 +120,16 @@ function FileDetail({ file, formatSize, searchQuery = '' }: FileDetailProps): JS
     }
   }, [file?.path])
 
-  // Load full content for quote cards when showing
+  // Load full content on file change
   useEffect(() => {
-    if (showQuoteCards && file?.path) {
+    setFullContent(null)
+    setShowFullContent(false)
+    if (file?.path) {
       window.electron.loadFileFullContent(file.path).then(content => {
         setFullContent(content)
       })
-    } else {
-      setFullContent(null)
     }
-  }, [showQuoteCards, file?.path])
+  }, [file?.path])
 
   // Tag management functions
   const handleAddTag = async (tag: Tag) => {
@@ -224,13 +225,27 @@ function FileDetail({ file, formatSize, searchQuery = '' }: FileDetailProps): JS
               {t('detail.line') || '行'}
             </span>
           )}
+          {(fullContent || file.content) && (
+            <button
+              className="btn btn-text preview-toggle"
+              onClick={() => setShowFullContent(v => !v)}
+            >
+              {showFullContent
+                ? (t('detail.showLess') || '收起')
+                : (t('detail.showFull') || '查看全部')}
+            </button>
+          )}
         </div>
         <div
-          className="detail-content-preview"
+          className={`detail-content-preview${showFullContent ? ' expanded' : ''}`}
           dangerouslySetInnerHTML={{
-            __html: file.content
-              ? highlightText(file.content.slice(0, 1000) + (file.content.length > 1000 ? '...' : ''), searchQuery)
-              : t('detail.noContent')
+            __html: showFullContent
+              ? (fullContent || file.content)
+                ? highlightText(fullContent || file.content || '', searchQuery)
+                : t('detail.noContent')
+              : (fullContent || file.content)
+                ? highlightText((fullContent || file.content)!.slice(0, 1000) + '...', searchQuery)
+                : t('detail.noContent')
           }}
         />
       </div>

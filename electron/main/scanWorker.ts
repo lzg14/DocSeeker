@@ -354,12 +354,16 @@ async function extractTextFromPptx(filePath: string, fileSize?: number): Promise
     )
 
     for (const slideFile of slideFiles) {
-      const slideContent = await zip.files[slideFile]?.async('string')
-      if (slideContent) {
-        const matches = slideContent.match(/<a:t>([^<]*)<\/a:t>/g)
-        if (matches) {
-          text += matches.map((m: string) => m.replace(/<a:t>|<\/a:t>/g, '')).join(' ') + '\n'
+      try {
+        const slideContent = await withTimeout(zip.files[slideFile]?.async('string') ?? Promise.resolve(''), TIMEOUT_MS)
+        if (slideContent) {
+          const matches = slideContent.match(/<a:t>([^<]*)<\/a:t>/g)
+          if (matches) {
+            text += matches.map((m: string) => m.replace(/<a:t>|<\/a:t>/g, '')).join(' ') + '\n'
+          }
         }
+      } catch {
+        log.warn(`[PPTX] Slide ${slideFile} timed out, skipping: ${filePath}`)
       }
     }
 
